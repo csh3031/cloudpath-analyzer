@@ -2,10 +2,11 @@
   "project": {
     "name": "CloudPath Analyzer",
     "version": "0.1.0-dev",
-    "vision_revision": "1.1",
+    "vision_revision": "1.2",
     "status": "early_development",
     "type": "predeployment_infrastructure_simulation",
-    "primary_document": "PROJECT_VISION.md"
+    "primary_document": "PROJECT_VISION.md",
+    "vision_updated_on": "2026-11-17"
   },
   "mission": {
     "primary": "Validate virtual infrastructure and communication paths before cloud deployment.",
@@ -36,6 +37,7 @@
     "deployment_free_validation",
     "virtual_infrastructure_modeling",
     "topology_visualization",
+    "independent_topology_and_trace_views",
     "virtual_packet_simulation",
     "non_stop_multi_issue_diagnostics",
     "communication_diagnostics",
@@ -55,7 +57,9 @@
     "must_distinguish_predicted_and_conditional_paths": true,
     "must_not_invent_unresolved_paths": true,
     "must_report_unexamined_coverage": true,
-    "must_preserve_existing_tests": true
+    "must_preserve_existing_tests": true,
+    "configuration_edges_are_not_packet_hops": true,
+    "must_support_non_color_status_cues": true
   },
   "mandatory_requirements": [
     {
@@ -63,12 +67,39 @@
       "name": "non_stop_multi_issue_diagnostics",
       "classification": "must_have_architecture_requirement",
       "description": "Continue independently or conditionally evaluable checks after the first predicted blocker; aggregate multiple findings without inventing downstream packet paths.",
-      "implementation_status": "planned_phase_2_4",
+      "implementation_status": "foundation_implemented_phase_2_4",
       "required_in": [
         "analysis_orchestration",
         "diagnostic_data_model",
         "visualization",
         "automated_tests"
+      ]
+    },
+    {
+      "id": "REQ-UI-VIEWS-001",
+      "name": "separate_topology_and_packet_trace_views",
+      "classification": "must_have_architecture_requirement",
+      "decision_status": "approved",
+      "implementation_status": "partially_implemented_topology_only",
+      "description": "Provide independently selectable Topology View and Packet Trace View, both consuming shared infrastructure identifiers and relevant diagnostic data. Do not present configuration edges as packet hops.",
+      "required_in": [
+        "visualization_architecture",
+        "view_navigation",
+        "shared_infrastructure_model",
+        "automated_tests"
+      ]
+    },
+    {
+      "id": "REQ-UI-SEMANTICS-002",
+      "name": "distinguish_predicted_path_and_conditional_checks",
+      "classification": "must_have_visualization_requirement",
+      "decision_status": "approved",
+      "implementation_status": "data_model_supported_visual_trace_pending",
+      "description": "Render predicted packet movement, first blocker, conditional downstream checks and unexamined segments with unambiguous labels and non-color-only cues.",
+      "required_in": [
+        "packet_trace_view",
+        "diagnostic_overlays",
+        "accessibility_tests"
       ]
     }
   ],
@@ -143,7 +174,10 @@
     ],
     "shared_model_with_analysis_engine": true,
     "render_conditional_check_as_actual_packet_travel": false,
-    "show_first_blocker_and_additional_findings": true
+    "show_first_blocker_and_additional_findings": true,
+    "separate_topology_and_packet_trace_views_required": true,
+    "view_switching_required": true,
+    "theme_decided": false
   },
   "simulation": {
     "primary": "virtual_network_path_analysis",
@@ -190,7 +224,7 @@
   "multi_issue_diagnostics": {
     "name": "Non-Stop Multi-Issue Diagnostics",
     "required": true,
-    "implementation_status": "not_yet_implemented",
+    "implementation_status": "foundation_implemented_phase_2_4",
     "stop_predicted_packet_at_blocker": true,
     "stop_entire_diagnostic_on_first_blocker": false,
     "continue_independent_checks": true,
@@ -238,7 +272,7 @@
       "do_not_fabricate_unresolved_downstream_path",
       "record_unknown_or_not_evaluated_with_reasons",
       "preserve_normal_case_behavior",
-      "preserve_existing_23_test_cases",
+      "preserve_existing_tests_and_add_new_diagnostic_tests",
       "provide_structured_results_ready_for_visualization"
     ]
   },
@@ -274,7 +308,7 @@
     ],
     "not_evaluated_is_check_level_only": true,
     "integrated_result_schema": {
-      "implementation_status": "planned",
+      "implementation_status": "foundation_implemented_phase_2_4",
       "top_level_fields": [
         "scenario",
         "predicted_connectivity",
@@ -319,9 +353,13 @@
     "orchestrator_aggregates_findings": true,
     "single_check_failure_must_not_abort_unrelated_checks": true,
     "suggested_new_files": [
-      "backend/models/diagnostics.py",
-      "backend/analyzer/communication_analyzer.py",
       "backend/analyzer/network_policy_analyzer.py"
+    ],
+    "separate_ui_views_from_common_models": true,
+    "initial_visualization_files": [
+      "backend/output/topology_html.py",
+      "frontend/static/topology_viewer.html",
+      "scripts/export_topology.py"
     ]
   },
   "implementation": {
@@ -333,21 +371,27 @@
       "standalone_aws_route_support",
       "main_route_table_support",
       "routing_exception_handling",
-      "routing_diagnostic_evidence"
+      "routing_diagnostic_evidence",
+      "non_stop_multi_issue_diagnostic_orchestrator_foundation",
+      "reference_graph_and_network_graph_separation",
+      "offline_html_topology_viewer_initial",
+      "offline_html_terraform_reference_viewer_initial",
+      "resource_detail_panel_initial"
     ],
-    "verified_tests": 23,
-    "verification_basis": "user_reported_pytest_output",
+    "verified_tests": 57,
+    "verification_basis": "user_reported_pytest_output_on_2026_11_17",
     "next": [
-      "multi_issue_diagnostic_model",
-      "communication_orchestrator_minimal_implementation",
-      "multi_issue_test_scenarios",
-      "network_graph_normalization"
+      "phase_3_2_visualization_usability_and_layout_research",
+      "separate_topology_and_packet_trace_view_navigation_contract",
+      "plan_and_implement_real_forwarding_path_simulation",
+      "implement_security_group_and_nacl_policy_evaluators",
+      "research_color_theme_anomaly_and_layout_options_before_commitment"
     ],
     "not_yet_implemented": [
-      "multi_issue_diagnostic_orchestrator",
-      "complete_packet_path_simulation",
-      "full_sg_nacl_iam_cors_analysis",
-      "interactive_topology_visualization"
+      "end_to_end_packet_path_simulation",
+      "packet_trace_view",
+      "full_sg_nacl_iam_cors_policy_analysis",
+      "verified_default_ui_theme_and_visual_status_color_scheme"
     ]
   },
   "roadmap": [
@@ -359,7 +403,7 @@
     {
       "phase": 2,
       "name": "virtual_infrastructure_model_enhancement",
-      "status": "in_progress",
+      "status": "completed_initial_scope",
       "subphases": [
         {
           "id": "2-1",
@@ -379,20 +423,42 @@
         {
           "id": "2-4",
           "name": "non_stop_multi_issue_diagnostic_foundation",
-          "status": "next",
+          "status": "completed_foundation",
           "required": true
         },
         {
           "id": "2-5",
           "name": "separate_network_and_dependency_graphs",
-          "status": "planned"
+          "status": "completed"
         }
       ]
     },
     {
       "phase": 3,
       "name": "basic_topology_visualization",
-      "status": "planned"
+      "status": "in_progress",
+      "subphases": [
+        {
+          "id": "3-1",
+          "name": "offline_topology_and_reference_viewer",
+          "status": "completed_initial_scope"
+        },
+        {
+          "id": "3-2",
+          "name": "visualization_navigation_usability_and_layout",
+          "status": "next",
+          "design_research_required": true
+        },
+        {
+          "id": "3-trace",
+          "name": "independent_packet_trace_view",
+          "status": "planned",
+          "depends_on": [
+            "path_simulation",
+            "diagnostic_visualization"
+          ]
+        }
+      ]
     },
     {
       "phase": 4,
@@ -447,6 +513,65 @@
     "architecture": "docs/ARCHITECTURE.md",
     "decisions": "docs/DECISIONS.md",
     "roadmap": "docs/ROADMAP.md",
-    "note": "Some documentation paths describe planned files, not verified existing files."
+    "note": "UI research document is planned, not verified on disk. Vision is updated through 2026-11-17 from user-reported 57 PASS.",
+    "ui_research_proposed": "docs/UI_VISUALIZATION_RESEARCH.md"
+  },
+  "visualization_architecture": {
+    "decision_status": "approved",
+    "shared_normalized_infrastructure_model": true,
+    "shared_resource_identifiers": true,
+    "independent_view_navigation_required": true,
+    "navigation_control": "undecided",
+    "views": {
+      "topology": {
+        "required": true,
+        "purpose": "infrastructure_configuration_and_resource_relationships",
+        "implementation_status": "initial_html_view_implemented_phase_3_1",
+        "packet_forwarding_claims_allowed": false
+      },
+      "packet_trace": {
+        "required": true,
+        "purpose": "predicted_packet_flow_and_diagnostic_findings",
+        "implementation_status": "planned_not_implemented",
+        "must_distinguish_predicted_conditional_and_independent_results": true
+      },
+      "terraform_references": {
+        "required_as_core_product_goal": false,
+        "purpose": "terraform_resource_reference_and_dependency_graph",
+        "implementation_status": "initial_html_view_implemented_phase_3_1",
+        "packet_forwarding_claims_allowed": false
+      }
+    },
+    "view_data_semantics": {
+      "configuration_graph_is_not_packet_path": true,
+      "conditional_checks_are_not_actual_packet_hops": true,
+      "visualization_must_preserve_evidence_coverage_and_assumptions": true,
+      "non_color_cues_required_for_diagnostic_status": true
+    }
+  },
+  "ui_design_research": {
+    "decision_status": "under_evaluation",
+    "do_not_lock_style_before_evidence": true,
+    "default_theme": "undecided",
+    "theme_candidates": [
+      "vscode_like_dark_gray",
+      "light"
+    ],
+    "resource_color_system": "under_evaluation",
+    "anomaly_visualization": "under_evaluation",
+    "graph_layout": "under_evaluation",
+    "interaction_design": "under_evaluation",
+    "evaluation_topics": [
+      "contrast_and_text_readability",
+      "non_color_status_discrimination",
+      "resource_search_time",
+      "infrastructure_hierarchy_comprehension",
+      "first_blocker_identification_accuracy",
+      "predicted_vs_conditional_path_confusion",
+      "scalability_to_large_topologies",
+      "zoom_pan_fit_view_and_resource_focus"
+    ],
+    "proposed_research_document": "docs/UI_VISUALIZATION_RESEARCH.md",
+    "research_document_created": false
   }
 }
