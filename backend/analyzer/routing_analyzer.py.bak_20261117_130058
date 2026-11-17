@@ -1,0 +1,347 @@
+import ipaddress
+import re
+
+
+REFERENCE_PATTERN = re.compile(
+    r"^\$\{([a-zA-Z_][\w-]*\.[a-zA-Z_][\w-]*)\.[^}]+\}$"
+)
+
+IMPLICIT_MAIN_PREFIX = "implicit_main:"
+
+
+def get_reference(value):
+    """Terraform 참조에서 리소스 ID를 추출한다."""
+    if not isinstance(value, str):
+        return None
+
+    match = REFERENCE_PATTERN.fullmatch(value)
+
+    if match:
+        return match.group(1)
+
+    return None
+
+
+def find_route_table(resources, subnet_id):
+    """
+    Subnet에 적용되는 Route Table을 찾는다.
+
+    우선순위:
+    1. 명시적 Subnet Route Table Association
+    2. VPC의 Main Route Table Association
+    3. Terraform으로 관리하는 Default Route Table
+    4. 새 VPC의 암묵적 Main Route Table
+    """
+
+    # 1. 명시적 연결부터 확인
+    explicit_associations = [
+        resource
+        for resource in resources
+        if (
+            resource.resource_type == "route_table_association"
+            and get_reference(
+                resource.attributes.get("subnet_id")
+            ) == subnet_id
+        )
+    ]
+
+    if explicit_associations:
+        if len(explicit_associations) != 1:
+            return None
+
+        return get_reference(
+            explicit_associations[0].attributes.get(
+                "route_table_id"
+            )
+        )
+
+    # 2. Subnet이 속한 VPC 확인
+    subnet = next(
+        (
+            resource
+            for resource in resources
+            if (
+                resource.id == subnet_id
+                and resource.resource_type == "subnet"
+            )
+        ),
+        None
+    )
+
+    if subnet is None:
+        return None
+
+    vpc_id = get_reference(
+        subnet.attributes.get("vpc_id")
+    )
+
+    if not vpc_id:
+        return None
+
+    # 3. 명시적으로 설정된 Main Route Table 탐색
+    main_associations = [
+        resource
+        for resource in resources
+        if (
+            resource.resource_type
+            == "main_route_table_association"
+            and get_reference(
+                resource.attributes.get("vpc_id")
+            ) == vpc_id
+        )
+    ]
+
+    # 4. Terraform이 관리하는 기본 테이블 탐색
+    default_tables = [
+        resource
+        for resource in resources
+        if (
+            resource.resource_type == "default_route_table"
+            and get_reference(
+                resource.attributes.get(
+                    "default_route_table_id"
+                )
+            ) == vpc_id
+        )
+    ]
+
+    # 충돌하거나 모호한 Main Route Table 구성
+    if len(main_associations) + len(default_tables) > 1:
+        return None
+
+    if main_associations:
+        return get_reference(
+            main_associations[0].attributes.get(
+                "route_table_id"
+            )
+        )
+
+    if default_tables:
+        return default_tables[0].id
+
+    # 5. 새 VPC에는 AWS가 기본 Main Route Table을 생성
+    vpc_exists = any(
+        resource.id == vpc_id
+        and resource.resource_type == "vpc"
+        for resource in resources
+    )
+
+    if vpc_exists:
+        return f"{IMPLICIT_MAIN_PREFIX}{vpc_id}"
+
+    # VPC 정보 자체를 확인할 수 없는 경우
+    return None
+
+
+def analyze_route(resources, subnet_id, destination_ip):
+    """
+    목적지 IP에 적용되는 라우팅 경로를 분석한다.
+
+    ROUTE_FOUND는 실제 통신 성공을 의미하지 않는다.
+    """
+
+    destination = ipaddress.ip_address(destination_ip)
+
+    route_table_id = find_route_table(
+        resources, subnet_id
+    )
+
+    if not route_table_id:
+        return {
+            "status": "UNKNOWN",
+            "subnet": subnet_id,
+            "destination": destination_ip,
+            "reason": (
+                "적용할 Route Table을 결정하지 못했습니다. "
+                "Subnet 및 Main Route Table 설정을 확인하세요."
+            )
+        }
+
+    subnet = next(
+        (
+            resource
+            for resource in resources
+            if resource.id == subnet_id
+            and resource.resource_type == "subnet"
+        ),
+        None
+    )
+
+    if subnet is None:
+        return {
+            "status": "UNKNOWN",
+            "reason": "Subnet 리소스를 찾지 못했습니다."
+        }
+
+    subnet_vpc = get_reference(
+        subnet.attributes.get("vpc_id")
+    )
+
+    implicit_main = route_table_id.startswith(
+        IMPLICIT_MAIN_PREFIX
+    )
+
+    if implicit_main:
+        # AWS가 자동 생성하는 기본 테이블의 단순 모델
+        vpc_ref = route_table_id[
+            len(IMPLICIT_MAIN_PREFIX):
+        ]
+        routes = []
+
+    else:
+        route_table = next(
+            (
+                resource
+                for resource in resources
+                if resource.id == route_table_id
+            ),
+            None
+        )
+
+        if route_table is None:
+            return {
+                "status": "UNKNOWN",
+                "reason": "Route Table 리소스를 찾지 못했습니다."
+            }
+
+        routes = list(
+            route_table.attributes.get("route", []) or []
+        )
+
+        if route_table.resource_type == "default_route_table":
+            vpc_ref = get_reference(
+                route_table.attributes.get(
+                    "default_route_table_id"
+                )
+            )
+        else:
+            vpc_ref = get_reference(
+                route_table.attributes.get("vpc_id")
+            )
+
+    # 서로 다른 VPC의 Route Table을 사용하지 않도록 확인
+    if not vpc_ref or vpc_ref != subnet_vpc:
+        return {
+            "status": "UNKNOWN",
+            "reason": (
+                "Subnet과 Route Table의 VPC 연결을 "
+                "확인할 수 없거나 서로 다릅니다."
+            )
+        }
+
+    # 독립적인 aws_route 리소스 추가
+    for resource in resources:
+        if resource.resource_type != "route":
+            continue
+
+        target_table = get_reference(
+            resource.attributes.get("route_table_id")
+        )
+
+        if target_table != route_table_id:
+            continue
+
+        routes.append({
+            "cidr_block": resource.attributes.get(
+                "destination_cidr_block"
+            ),
+            "gateway_id": resource.attributes.get(
+                "gateway_id"
+            ),
+            "nat_gateway_id": resource.attributes.get(
+                "nat_gateway_id"
+            )
+        })
+
+    # VPC의 기본 local route 추가
+    vpc = next(
+        (
+            resource
+            for resource in resources
+            if resource.id == vpc_ref
+            and resource.resource_type == "vpc"
+        ),
+        None
+    )
+
+    if vpc is None:
+        return {
+            "status": "UNKNOWN",
+            "reason": "VPC 리소스를 찾지 못했습니다."
+        }
+
+    vpc_cidr = vpc.attributes.get("cidr_block")
+
+    if not vpc_cidr:
+        return {
+            "status": "UNKNOWN",
+            "reason": "VPC CIDR 정보를 확인할 수 없습니다."
+        }
+
+    routes.append({
+        "cidr_block": vpc_cidr,
+        "target": "local"
+    })
+
+    # 목적지와 일치하는 라우팅 규칙 탐색
+    matched_routes = []
+
+    for route in routes:
+        cidr = route.get("cidr_block")
+
+        if not cidr:
+            continue
+
+        try:
+            network = ipaddress.ip_network(
+                cidr, strict=False
+            )
+        except (ValueError, TypeError):
+            return {
+                "status": "UNKNOWN",
+                "reason": (
+                    "해석할 수 없는 Route CIDR이 존재합니다: "
+                    f"{cidr}"
+                )
+            }
+
+        if destination in network:
+            matched_routes.append({
+                "network": network,
+                "route": route
+            })
+
+    if not matched_routes:
+        return {
+            "status": "NO_ROUTE",
+            "subnet": subnet_id,
+            "destination": destination_ip,
+            "route_table": route_table_id,
+            "reason": (
+                "목적지와 일치하는 경로가 없습니다."
+            )
+        }
+
+    # Longest Prefix Match
+    best_match = max(
+        matched_routes,
+        key=lambda item: item["network"].prefixlen
+    )
+
+    selected_route = best_match["route"]
+
+    next_hop = (
+        selected_route.get("gateway_id")
+        or selected_route.get("nat_gateway_id")
+        or selected_route.get("target")
+        or "unknown"
+    )
+
+    return {
+        "status": "ROUTE_FOUND",
+        "subnet": subnet_id,
+        "destination": destination_ip,
+        "route_table": route_table_id,
+        "matched_cidr": str(best_match["network"]),
+        "next_hop": get_reference(next_hop) or next_hop
+    }

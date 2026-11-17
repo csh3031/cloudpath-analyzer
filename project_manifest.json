@@ -1,0 +1,452 @@
+{
+  "project": {
+    "name": "CloudPath Analyzer",
+    "version": "0.1.0-dev",
+    "vision_revision": "1.1",
+    "status": "early_development",
+    "type": "predeployment_infrastructure_simulation",
+    "primary_document": "PROJECT_VISION.md"
+  },
+  "mission": {
+    "primary": "Validate virtual infrastructure and communication paths before cloud deployment.",
+    "primary_objectives": [
+      "reduce_cloud_validation_cost",
+      "reduce_troubleshooting_time",
+      "detect_predeployment_configuration_errors",
+      "reduce_repeated_debugging_cycles_through_multi_issue_diagnostics"
+    ],
+    "deployment_free_validation": true,
+    "virtual_infrastructure_simulation": true,
+    "explainable_diagnostics": true,
+    "multi_issue_diagnostics_required": true
+  },
+  "product_identity": {
+    "primary": "virtual_infrastructure_simulation_platform",
+    "core_capabilities": [
+      "virtual_infrastructure_modeling",
+      "infrastructure_topology_visualization",
+      "virtual_packet_path_simulation",
+      "communication_anomaly_diagnostics",
+      "cloud_specific_policy_analysis",
+      "non_stop_multi_issue_diagnostics"
+    ],
+    "long_term_goal": "hybrid_multicloud_infrastructure_analysis"
+  },
+  "priorities": [
+    "deployment_free_validation",
+    "virtual_infrastructure_modeling",
+    "topology_visualization",
+    "virtual_packet_simulation",
+    "non_stop_multi_issue_diagnostics",
+    "communication_diagnostics",
+    "cloud_policy_analysis",
+    "explainable_results",
+    "hybrid_cloud_extensibility"
+  ],
+  "quality_principles": {
+    "analysis_correctness_required": true,
+    "unknown_conditions_must_be_reported": true,
+    "diagnostic_evidence_required": true,
+    "unsupported_conditions_must_be_identified": true,
+    "route_found_implies_reachable": false,
+    "automatic_cloud_deployment_required": false,
+    "stop_all_checks_on_first_blocker": false,
+    "must_distinguish_packet_forwarding_from_diagnostic_continuation": true,
+    "must_distinguish_predicted_and_conditional_paths": true,
+    "must_not_invent_unresolved_paths": true,
+    "must_report_unexamined_coverage": true,
+    "must_preserve_existing_tests": true
+  },
+  "mandatory_requirements": [
+    {
+      "id": "REQ-MULTI-001",
+      "name": "non_stop_multi_issue_diagnostics",
+      "classification": "must_have_architecture_requirement",
+      "description": "Continue independently or conditionally evaluable checks after the first predicted blocker; aggregate multiple findings without inventing downstream packet paths.",
+      "implementation_status": "planned_phase_2_4",
+      "required_in": [
+        "analysis_orchestration",
+        "diagnostic_data_model",
+        "visualization",
+        "automated_tests"
+      ]
+    }
+  ],
+  "initial_scope": {
+    "cloud_provider": "aws",
+    "iac": [
+      "terraform_hcl",
+      "terraform_plan_json"
+    ],
+    "network_protocols": [
+      "ipv4"
+    ],
+    "resource_domains": [
+      "vpc",
+      "subnet",
+      "route_table",
+      "internet_gateway",
+      "nat_gateway",
+      "ec2_instance",
+      "network_interface",
+      "security_group",
+      "network_acl"
+    ],
+    "note": "Planned MVP support; not all listed functions are implemented."
+  },
+  "input_sources": {
+    "initial": [
+      "terraform_hcl",
+      "terraform_plan_json",
+      "user_simulation_request"
+    ],
+    "future": [
+      "manual_infrastructure_configuration",
+      "aws_api",
+      "on_premises_configuration",
+      "azure_adapter",
+      "gcp_adapter"
+    ]
+  },
+  "virtual_infrastructure": {
+    "enabled_as_product_goal": true,
+    "requires_cloud_deployment": false,
+    "core_mvp_feature": true,
+    "features": [
+      "resource_modeling",
+      "resource_relationships",
+      "network_topology",
+      "routing_configuration",
+      "security_configuration",
+      "virtual_environment_representation"
+    ]
+  },
+  "visualization": {
+    "priority": "core_mvp",
+    "views": [
+      "infrastructure_topology",
+      "communication_path",
+      "diagnostic_results"
+    ],
+    "features": [
+      "resource_topology",
+      "network_relationships",
+      "packet_path",
+      "packet_direction",
+      "policy_decisions",
+      "anomaly_highlighting",
+      "resource_details",
+      "diagnostic_evidence",
+      "multiple_findings",
+      "conditional_path_distinction",
+      "unknown_or_unevaluated_segments"
+    ],
+    "shared_model_with_analysis_engine": true,
+    "render_conditional_check_as_actual_packet_travel": false,
+    "show_first_blocker_and_additional_findings": true
+  },
+  "simulation": {
+    "primary": "virtual_network_path_analysis",
+    "requires_real_deployment": false,
+    "request_fields": [
+      "source",
+      "destination",
+      "protocol",
+      "port",
+      "direction",
+      "request_type"
+    ],
+    "analysis_features": [
+      "route_table_lookup",
+      "longest_prefix_match",
+      "next_hop_analysis",
+      "network_security_evaluation",
+      "return_path_analysis",
+      "communication_path_generation",
+      "separate_packet_flow_and_diagnostic_continuation"
+    ]
+  },
+  "policy_analysis": {
+    "network": [
+      "route_table",
+      "security_group",
+      "network_acl",
+      "gateway_configuration",
+      "network_interface"
+    ],
+    "cloud_authorization": [
+      "iam_policy",
+      "resource_policy",
+      "aws_api_permission"
+    ],
+    "application": [
+      "cors",
+      "http_request_policy",
+      "service_access_configuration"
+    ],
+    "separate_analysis_layers": true,
+    "note": "IAM/API and browser CORS authorization are separate from IP packet forwarding."
+  },
+  "multi_issue_diagnostics": {
+    "name": "Non-Stop Multi-Issue Diagnostics",
+    "required": true,
+    "implementation_status": "not_yet_implemented",
+    "stop_predicted_packet_at_blocker": true,
+    "stop_entire_diagnostic_on_first_blocker": false,
+    "continue_independent_checks": true,
+    "continue_conditional_checks_when_assumptions_can_be_stated": true,
+    "never_invent_unresolved_path": true,
+    "track_first_blocker": true,
+    "aggregate_all_identifiable_findings": true,
+    "report_unexamined_checks": true,
+    "track_check_dependencies": true,
+    "avoid_duplicate_findings": true,
+    "isolate_individual_check_failures": true,
+    "support_execution_limits": [
+      "max_path_depth",
+      "max_branch_count",
+      "loop_detection"
+    ],
+    "evaluation_modes": {
+      "PREDICTED_PATH": "Evaluate predicted forwarding along the currently configured path, which stops at a blocker.",
+      "CONDITIONAL_CHECK": "Evaluate downstream conditions under explicit assumptions; not evidence of actual packet traversal.",
+      "INDEPENDENT_CHECK": "Evaluate known configurations independently of whether the current path is traversable."
+    },
+    "required_fields_per_finding": [
+      "id",
+      "resource",
+      "status",
+      "evaluation_mode",
+      "reason",
+      "evidence"
+    ],
+    "conditional_fields": [
+      "assumptions",
+      "dependencies"
+    ],
+    "coverage_fields": [
+      "evaluated",
+      "unknown",
+      "not_evaluated",
+      "reasons"
+    ],
+    "acceptance_criteria": [
+      "report_first_blocker_and_additional_findings_in_one_scenario",
+      "keep_predicted_packet_stopped_after_first_blocker",
+      "label_follow_up_checks_conditional_or_independent",
+      "include_assumptions_and_dependencies_for_conditional_checks",
+      "do_not_fabricate_unresolved_downstream_path",
+      "record_unknown_or_not_evaluated_with_reasons",
+      "preserve_normal_case_behavior",
+      "preserve_existing_23_test_cases",
+      "provide_structured_results_ready_for_visualization"
+    ]
+  },
+  "diagnostics": {
+    "features": [
+      "anomaly_detection",
+      "failure_point_identification",
+      "configuration_error_analysis",
+      "evidence_reporting",
+      "recommended_actions",
+      "uncertainty_reporting",
+      "multi_issue_aggregation",
+      "first_blocker_identification",
+      "conditional_and_independent_evaluation",
+      "coverage_reporting"
+    ],
+    "route_statuses": [
+      "ROUTE_FOUND",
+      "NO_ROUTE",
+      "UNKNOWN"
+    ],
+    "connectivity_statuses": [
+      "REACHABLE",
+      "BLOCKED",
+      "UNKNOWN"
+    ],
+    "check_statuses": [
+      "PASS",
+      "BLOCKED",
+      "WARNING",
+      "UNKNOWN",
+      "NOT_EVALUATED"
+    ],
+    "not_evaluated_is_check_level_only": true,
+    "integrated_result_schema": {
+      "implementation_status": "planned",
+      "top_level_fields": [
+        "scenario",
+        "predicted_connectivity",
+        "first_blocker",
+        "findings",
+        "coverage"
+      ],
+      "finding_fields": [
+        "id",
+        "resource",
+        "status",
+        "evaluation_mode",
+        "reason",
+        "evidence",
+        "assumptions",
+        "dependencies"
+      ],
+      "first_blocker_type": "finding_id_or_null",
+      "findings_type": "array",
+      "coverage_type": "object"
+    }
+  },
+  "architecture": {
+    "layers": [
+      "input_adapters",
+      "normalized_infrastructure_model",
+      "virtual_infrastructure_topology",
+      "network_routing_engine",
+      "network_security_engine",
+      "cloud_authorization_analyzer",
+      "application_policy_analyzer",
+      "communication_scenario_orchestrator",
+      "multi_issue_diagnostic_aggregator",
+      "visualization_and_reporting"
+    ],
+    "separate_dependency_and_network_graphs": true,
+    "separate_iam_analysis": true,
+    "separate_application_policy_analysis": true,
+    "shared_model_for_analysis_and_visualization": true,
+    "extensible_input_adapters": true,
+    "individual_analyzers_emit_facts_and_evidence": true,
+    "orchestrator_aggregates_findings": true,
+    "single_check_failure_must_not_abort_unrelated_checks": true,
+    "suggested_new_files": [
+      "backend/models/diagnostics.py",
+      "backend/analyzer/communication_analyzer.py",
+      "backend/analyzer/network_policy_analyzer.py"
+    ]
+  },
+  "implementation": {
+    "completed": [
+      "terraform_hcl_basic_parser",
+      "infrastructure_resource_model",
+      "basic_topology_analyzer",
+      "basic_ipv4_routing_analyzer",
+      "standalone_aws_route_support",
+      "main_route_table_support",
+      "routing_exception_handling",
+      "routing_diagnostic_evidence"
+    ],
+    "verified_tests": 23,
+    "verification_basis": "user_reported_pytest_output",
+    "next": [
+      "multi_issue_diagnostic_model",
+      "communication_orchestrator_minimal_implementation",
+      "multi_issue_test_scenarios",
+      "network_graph_normalization"
+    ],
+    "not_yet_implemented": [
+      "multi_issue_diagnostic_orchestrator",
+      "complete_packet_path_simulation",
+      "full_sg_nacl_iam_cors_analysis",
+      "interactive_topology_visualization"
+    ]
+  },
+  "roadmap": [
+    {
+      "phase": 1,
+      "name": "basic_analysis_engine",
+      "status": "completed_basic_scope"
+    },
+    {
+      "phase": 2,
+      "name": "virtual_infrastructure_model_enhancement",
+      "status": "in_progress",
+      "subphases": [
+        {
+          "id": "2-1",
+          "name": "standalone_aws_route",
+          "status": "completed"
+        },
+        {
+          "id": "2-2",
+          "name": "main_route_table",
+          "status": "completed"
+        },
+        {
+          "id": "2-3",
+          "name": "routing_edge_cases_and_evidence",
+          "status": "completed"
+        },
+        {
+          "id": "2-4",
+          "name": "non_stop_multi_issue_diagnostic_foundation",
+          "status": "next",
+          "required": true
+        },
+        {
+          "id": "2-5",
+          "name": "separate_network_and_dependency_graphs",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "basic_topology_visualization",
+      "status": "planned"
+    },
+    {
+      "phase": 4,
+      "name": "terraform_input_expansion",
+      "status": "planned"
+    },
+    {
+      "phase": 5,
+      "name": "virtual_packet_simulation",
+      "status": "planned"
+    },
+    {
+      "phase": 6,
+      "name": "cloud_policy_analysis",
+      "status": "planned"
+    },
+    {
+      "phase": 7,
+      "name": "integrated_multi_issue_diagnostic_visualization",
+      "status": "planned"
+    },
+    {
+      "phase": 8,
+      "name": "hybrid_multicloud_expansion",
+      "status": "future"
+    }
+  ],
+  "constraints": {
+    "cloudformation_initial_support": false,
+    "automatic_cloud_deployment": false,
+    "complete_real_packet_emulation": false,
+    "all_aws_services_initially_supported": false,
+    "on_premises_initial_integration": false,
+    "multi_cloud_initial_implementation": false,
+    "performance_bottleneck_prediction_without_observations": false,
+    "scope_note": "Configuration-related blocking and reachability are distinct from throughput, latency and resource performance bottlenecks."
+  },
+  "future_expansion": [
+    "aws_live_state_analysis",
+    "terraform_drift_comparison",
+    "on_premises_networks",
+    "hybrid_vpn",
+    "azure",
+    "gcp",
+    "what_if_remediation_simulation",
+    "performance_analysis_with_assumptions_or_measurements"
+  ],
+  "documentation": {
+    "vision": "PROJECT_VISION.md",
+    "manifest": "project_manifest.json",
+    "readme": "README.md",
+    "architecture": "docs/ARCHITECTURE.md",
+    "decisions": "docs/DECISIONS.md",
+    "roadmap": "docs/ROADMAP.md",
+    "note": "Some documentation paths describe planned files, not verified existing files."
+  }
+}
