@@ -33,3 +33,6 @@ crash.log
 *.bak.*
 *.zip
 *.log
+
+# Generated Phase 3-1 HTML viewer
+outputs/topology.html
