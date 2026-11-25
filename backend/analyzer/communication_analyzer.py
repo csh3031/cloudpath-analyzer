@@ -84,6 +84,7 @@ def analyze_communication(
     resources: Sequence[Any],
     scenario: CommunicationScenario,
     policy_checks: Sequence[PolicyCheck] = (),
+    *, trace: bool = False, complete_routing_config: bool = False,
 ) -> dict[str, Any]:
     """첫 차단이 있어도 등록된 독립/조건부 검사를 계속 실행한다.
 
@@ -182,7 +183,7 @@ def analyze_communication(
                     dependencies=list(dict.fromkeys([*dependencies, *obs.dependencies])),
                 )
             coverage[check.name] = {
-                "state": "EVALUATED",
+                "state": "UNKNOWN" if any(obs.status == "UNKNOWN" for obs in observations) else "EVALUATED",
                 "reason": "등록된 정책 검사기가 결과를 반환했습니다.",
             }
         except Exception as error:  # 검사별 오류를 격리하고 남은 검사를 계속한다.
@@ -211,7 +212,7 @@ def analyze_communication(
     for entry in coverage.values():
         counts[entry["state"].lower()] += 1
 
-    return {
+    result = {
         "scenario": asdict(scenario),
         # 현재는 라우팅 한 단계만 검증 가능. 전체 통신 성공은 판정하지 않는다.
         "predicted_connectivity": "BLOCKED" if route_status == "NO_ROUTE" else "UNKNOWN",
@@ -229,3 +230,23 @@ def analyze_communication(
             **counts,
         },
     }
+
+    if trace:
+        from backend.analyzer.forwarding_analyzer import trace_forwarding
+        candidate = trace_forwarding(resources, scenario, complete_routing_config=complete_routing_config)
+        result["forwarding"].update(candidate)
+        result["forwarding"]["note"] = "정적 전달 후보 경로입니다. 정책 통과와 응답 경로는 별도 검증합니다."
+        result["predicted_connectivity"] = "UNKNOWN"
+        result["first_blocker"] = None
+        result["conditional_blockers"] = [f["id"] for f in result["findings"] if f["status"] == "BLOCKED" and f["evaluation_mode"] == "CONDITIONAL_CHECK"]
+        result["coverage"]["checks"]["full_path_simulation"] = {"state": "NOT_EVALUATED", "reason": "전달 후보만 분석; 정책 순서와 응답 경로는 미검증."}
+        result["coverage"]["checks"]["forwarding_candidate"] = {"state": "EVALUATED" if candidate["status"] in {"REACHED_DESTINATION", "NO_ROUTE", "LOOP_DETECTED"} else "UNKNOWN", "reason": candidate["reason"]}
+        if any(h["stage"] == "SAME_SUBNET" for h in candidate["hops"]):
+            result["forwarding"]["route_lookup"] = {"status": "NOT_APPLICABLE", "reason": "동일 Subnet 전달"}
+            for f in result["findings"]:
+                if f["check"] == "routing":
+                    f.update(status="PASS", reason="동일 Subnet 전달: Route Table 검사 대상 아님.", evidence=[{"check": "route_table_applicable", "value": False}])
+            result["coverage"]["checks"]["routing"] = {"state": "EVALUATED", "reason": "동일 Subnet: Route Table 검사 대상 아님."}
+        for state in ("evaluated", "unknown", "not_evaluated"):
+            result["coverage"][state] = sum(x["state"].lower()==state for x in result["coverage"]["checks"].values())
+    return result

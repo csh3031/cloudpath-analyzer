@@ -1,0 +1,125 @@
+{
+  "format_version": "1.2",
+  "complete": true,
+  "errored": false,
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_vpc.main",
+          "type": "aws_vpc",
+          "name": "main",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "vpc-abc",
+            "cidr_block": "10.0.0.0/16"
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_security_group.a",
+          "type": "aws_security_group",
+          "name": "a",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "sg-abc",
+            "vpc_id": "vpc-abc",
+            "ingress": [],
+            "egress": []
+          },
+          "sensitive_values": {}
+        }
+      ],
+      "child_modules": [
+        {
+          "address": "module.network",
+          "resources": [
+            {
+              "address": "module.network.aws_subnet.a",
+              "type": "aws_subnet",
+              "name": "a",
+              "mode": "managed",
+              "provider_name": "registry.terraform.io/hashicorp/aws",
+              "values": {
+                "id": "subnet-abc",
+                "vpc_id": "vpc-abc",
+                "cidr_block": "10.0.1.0/24"
+              },
+              "sensitive_values": {}
+            }
+          ]
+        },
+        {
+          "address": "module.compute",
+          "resources": [
+            {
+              "address": "module.compute.aws_instance.a",
+              "type": "aws_instance",
+              "name": "a",
+              "mode": "managed",
+              "provider_name": "registry.terraform.io/hashicorp/aws",
+              "values": {
+                "id": "i-abc",
+                "subnet_id": "subnet-abc",
+                "private_ip": "10.0.1.10",
+                "user_data": "synthetic-example-not-a-secret",
+                "vpc_security_group_ids": [
+                  "sg-abc"
+                ]
+              },
+              "sensitive_values": {}
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "aws_vpc.main",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "module.network.aws_subnet.a",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "module.compute.aws_instance.a",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_security_group.a",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    }
+  ]
+}

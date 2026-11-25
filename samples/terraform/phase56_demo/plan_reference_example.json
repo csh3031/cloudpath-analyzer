@@ -1,0 +1,481 @@
+{
+  "format_version": "1.2",
+  "complete": true,
+  "errored": false,
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_vpc.main",
+          "type": "aws_vpc",
+          "name": "main",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "vpc-demo",
+            "cidr_block": "10.0.0.0/16"
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_route_table.main",
+          "type": "aws_route_table",
+          "name": "main",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "rtb-demo",
+            "vpc_id": "vpc-demo",
+            "route": [
+              {
+                "cidr_block": "10.0.0.0/16",
+                "gateway_id": "local"
+              }
+            ]
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_subnet.a",
+          "type": "aws_subnet",
+          "name": "a",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "subnet-a",
+            "cidr_block": "10.0.1.0/24"
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_route_table_association.a",
+          "type": "aws_route_table_association",
+          "name": "a",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "rtbassoc-a",
+            "subnet_id": "subnet-a",
+            "route_table_id": "rtb-demo"
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_instance.a",
+          "type": "aws_instance",
+          "name": "a",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "i-a",
+            "subnet_id": "subnet-a",
+            "private_ip": "10.0.1.10",
+            "vpc_security_group_ids": [
+              "sg-a"
+            ]
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_security_group.a",
+          "type": "aws_security_group",
+          "name": "a",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "sg-a",
+            "vpc_id": "vpc-demo",
+            "ingress": [
+              {
+                "protocol": "tcp",
+                "cidr_blocks": [
+                  "10.0.2.0/24"
+                ],
+                "from_port": 0,
+                "to_port": 65535
+              }
+            ],
+            "egress": [
+              {
+                "protocol": "tcp",
+                "cidr_blocks": [
+                  "10.0.2.0/24"
+                ],
+                "from_port": 0,
+                "to_port": 65535
+              }
+            ]
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_network_acl.a",
+          "type": "aws_network_acl",
+          "name": "a",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "acl-a",
+            "vpc_id": "vpc-demo",
+            "subnet_ids": [
+              "subnet-a"
+            ],
+            "ingress": [
+              {
+                "rule_no": 100,
+                "protocol": "tcp",
+                "action": "allow",
+                "cidr_block": "10.0.2.0/24",
+                "from_port": 49152,
+                "to_port": 49152
+              }
+            ],
+            "egress": [
+              {
+                "rule_no": 100,
+                "protocol": "tcp",
+                "action": "allow",
+                "cidr_block": "10.0.2.0/24",
+                "from_port": 443,
+                "to_port": 443
+              },
+              {
+                "rule_no": 200,
+                "protocol": "tcp",
+                "action": "allow",
+                "cidr_block": "10.0.2.0/24",
+                "from_port": 5432,
+                "to_port": 5432
+              }
+            ]
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_subnet.b",
+          "type": "aws_subnet",
+          "name": "b",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "subnet-b",
+            "vpc_id": "vpc-demo",
+            "cidr_block": "10.0.2.0/24"
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_route_table_association.b",
+          "type": "aws_route_table_association",
+          "name": "b",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "rtbassoc-b",
+            "subnet_id": "subnet-b",
+            "route_table_id": "rtb-demo"
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_instance.b",
+          "type": "aws_instance",
+          "name": "b",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "i-b",
+            "subnet_id": "subnet-b",
+            "private_ip": "10.0.2.20",
+            "vpc_security_group_ids": [
+              "sg-b"
+            ]
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_security_group.b",
+          "type": "aws_security_group",
+          "name": "b",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "sg-b",
+            "vpc_id": "vpc-demo",
+            "ingress": [
+              {
+                "protocol": "tcp",
+                "cidr_blocks": [
+                  "10.0.1.0/24"
+                ],
+                "from_port": 0,
+                "to_port": 65535
+              }
+            ],
+            "egress": [
+              {
+                "protocol": "tcp",
+                "cidr_blocks": [
+                  "10.0.1.0/24"
+                ],
+                "from_port": 0,
+                "to_port": 65535
+              }
+            ]
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_network_acl.b",
+          "type": "aws_network_acl",
+          "name": "b",
+          "mode": "managed",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": {
+            "id": "acl-b",
+            "vpc_id": "vpc-demo",
+            "subnet_ids": [
+              "subnet-b"
+            ],
+            "ingress": [
+              {
+                "rule_no": 100,
+                "protocol": "tcp",
+                "action": "allow",
+                "cidr_block": "10.0.1.0/24",
+                "from_port": 443,
+                "to_port": 443
+              }
+            ],
+            "egress": [
+              {
+                "rule_no": 100,
+                "protocol": "tcp",
+                "action": "allow",
+                "cidr_block": "10.0.1.0/24",
+                "from_port": 49152,
+                "to_port": 49152
+              }
+            ]
+          },
+          "sensitive_values": {}
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "aws_vpc.main",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_route_table.main",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_subnet.a",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {
+          "vpc_id": true
+        },
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_route_table_association.a",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_instance.a",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_security_group.a",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_network_acl.a",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_subnet.b",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_route_table_association.b",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_instance.b",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_security_group.b",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_network_acl.b",
+      "mode": "managed",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "after_unknown": {},
+        "after_sensitive": {}
+      }
+    }
+  ],
+  "configuration": {
+    "provider_config": {
+      "aws": {
+        "full_name": "registry.terraform.io/hashicorp/aws"
+      }
+    },
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_vpc.main",
+          "mode": "managed",
+          "provider_config_key": "aws"
+        },
+        {
+          "address": "aws_route_table.main",
+          "mode": "managed",
+          "provider_config_key": "aws"
+        },
+        {
+          "address": "aws_subnet.a",
+          "mode": "managed",
+          "provider_config_key": "aws",
+          "expressions": {
+            "vpc_id": {
+              "references": [
+                "aws_vpc.main.id",
+                "aws_vpc.main"
+              ]
+            }
+          }
+        },
+        {
+          "address": "aws_route_table_association.a",
+          "mode": "managed",
+          "provider_config_key": "aws"
+        },
+        {
+          "address": "aws_instance.a",
+          "mode": "managed",
+          "provider_config_key": "aws"
+        },
+        {
+          "address": "aws_security_group.a",
+          "mode": "managed",
+          "provider_config_key": "aws"
+        },
+        {
+          "address": "aws_network_acl.a",
+          "mode": "managed",
+          "provider_config_key": "aws"
+        },
+        {
+          "address": "aws_subnet.b",
+          "mode": "managed",
+          "provider_config_key": "aws"
+        },
+        {
+          "address": "aws_route_table_association.b",
+          "mode": "managed",
+          "provider_config_key": "aws"
+        },
+        {
+          "address": "aws_instance.b",
+          "mode": "managed",
+          "provider_config_key": "aws"
+        },
+        {
+          "address": "aws_security_group.b",
+          "mode": "managed",
+          "provider_config_key": "aws"
+        },
+        {
+          "address": "aws_network_acl.b",
+          "mode": "managed",
+          "provider_config_key": "aws"
+        }
+      ]
+    }
+  }
+}

@@ -18,6 +18,13 @@ class CommunicationScenario:
     destination_port: int | None = None
     destination_resource: str | None = None
     request_type: str = "network"  # network | aws_api | browser_http
+    source_resource: str | None = None
+    source_ip: str | None = None
+    complete_config: bool = False
+    assume_direct_private: bool = False
+    complete_nacl_config: bool = False
+    assume_unmodified_default_nacl: bool = False
+    source_port: int | None = None
 
 
 @dataclass(frozen=True)

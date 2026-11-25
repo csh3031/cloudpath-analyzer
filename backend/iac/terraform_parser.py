@@ -13,6 +13,8 @@ RESOURCE_CATEGORIES = {
     "aws_nat_gateway": ("network", "nat_gateway"),
     "aws_security_group": ("security", "security_group"),
     "aws_network_acl": ("security", "network_acl"),
+    "aws_default_network_acl": ("security", "default_network_acl"),
+    "aws_network_interface": ("network", "network_interface"),
     "aws_instance": ("compute", "instance"),
     "aws_route_table_association": ("network", "route_table_association")
 }

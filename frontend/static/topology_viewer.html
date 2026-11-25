@@ -1,0 +1,1237 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CloudPath Analyzer · Infrastructure Viewer</title>
+  <style>
+    :root { font-family: system-ui,-apple-system,"Noto Sans KR","Segoe UI",sans-serif; color:#16253c; background:#eef3f9; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; }
+    .header { background:#102744; color:white; padding:20px 28px; display:flex; align-items:center; gap:20px; justify-content:space-between; flex-wrap:wrap; }
+    .brand { font-weight:800; font-size:21px; letter-spacing:-.6px; }
+    .brand span { color:#8cc4ff; }
+    .subtitle { color:#afc4dc; margin-top:4px; font-size:12px; }
+    .tabs { display:flex; background:#1b385a; padding:4px; border-radius:10px; gap:5px; }
+    .tab { border:0; border-radius:7px; background:transparent; color:#cfdeef; padding:10px 14px; cursor:pointer; font-weight:700; }
+    .tab[aria-pressed="true"] { background:#f7fbff; color:#183a64; }
+    .shell { padding:22px; max-width:1800px; margin:0 auto; }
+    .notice { border:1px solid #cbdaf0; background:#e8f0fe; color:#29466f; padding:11px 15px; border-radius:10px; margin-bottom:16px; font-size:13px; }
+    .metrics { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+    .metric { background:#fff; box-shadow:0 2px 9px #182d5010; padding:10px 15px; border-radius:10px; min-width:134px; }
+    .metric b { font-size:21px; display:block; }
+    .metric span { color:#647791; font-size:12px; }
+    .content { display:grid; grid-template-columns:minmax(0,1fr) 315px; gap:16px; align-items:start; }
+    .panel { background:#fff; border:1px solid #e0e7f1; border-radius:13px; overflow:hidden; box-shadow:0 3px 13px #1937540c; }
+    .panel-head { padding:15px 17px; border-bottom:1px solid #e3e9f2; display:flex; justify-content:space-between; gap:15px; align-items:center; }
+    .panel-title { font-size:15px; font-weight:800; }
+    .panel-sub { font-size:11px; color:#6f8095; margin-top:3px; }
+    .legend { display:flex; gap:12px; flex-wrap:wrap; padding:10px 17px; border-bottom:1px solid #eef1f5; color:#66778c; font-size:11px; }
+    .legend-item { display:flex; gap:6px; align-items:center; }
+    .line { width:22px; border-top:2px solid #7c91a9; }
+    .line.dashed { border-top:2px dashed #d58e24; }
+    .line.route { border-top:2px dashed #24a184; }
+    .scroll-area { width:100%; overflow:auto; background:radial-gradient(#dfe6ef 1px, transparent 1px) 0 0/22px 22px,#f9fbfe; max-height:75vh; min-height:420px; }
+    #topology { position:relative; min-height:420px; }
+    #links { position:absolute; inset:0; pointer-events:none; overflow:visible; z-index:2; }
+    #regions { position:absolute; inset:0; z-index:1; pointer-events:none; }
+    #nodes { position:absolute; inset:0; z-index:3; pointer-events:none; }
+    .region { position:absolute; border:2px solid #81a4d3; border-radius:17px; background:#e8f1ff90; box-shadow:inset 0 0 0 1px #fff; }
+    .region-label { position:absolute; top:10px; left:15px; font-size:11px; color:#4a6c94; font-weight:700; letter-spacing:.2px; }
+    .node { position:absolute; text-align:left; background:#fff; width:218px; min-height:64px; border:1px solid #cbd7e6; border-left:4px solid #87a0bd; border-radius:10px; padding:10px 11px; cursor:pointer; pointer-events:auto; box-shadow:0 4px 11px #142a4211; transition:border-color .12s,transform .12s,box-shadow .12s; }
+    .node:hover { transform:translateY(-2px); box-shadow:0 6px 15px #142a4225; }
+    .node.selected { border-color:#1461b4; outline:2px solid #4b95eb55; }
+    .node.vpc { background:#204d86; border-color:#204d86; color:#fff; }
+    .node.subnet { border-left-color:#3294db; }
+    .node.route_table,.node.default_route_table { border-left-color:#d58e24; }
+    .node.internet_gateway,.node.nat_gateway { border-left-color:#27a17e; }
+    .node.security_group,.node.network_acl { border-left-color:#915fe2; }
+    .node .type { text-transform:uppercase; font-size:10px; opacity:.78; font-weight:700; letter-spacing:.4px; }
+    .node .name { font-size:13px; font-weight:800; margin:3px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .node .id { font-family:monospace; font-size:9.5px; opacity:.76; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .node.synthetic { border-style:dashed; }
+    .side-content { padding:18px; }
+    .side-content p { color:#697b91; font-size:13px; line-height:1.6; }
+    .detail-label { font-size:11px; font-weight:800; color:#71839a; text-transform:uppercase; margin-top:15px; }
+    .detail-value { margin-top:5px; font-size:13px; overflow-wrap:anywhere; }
+    .chip { background:#edf4fd; padding:4px 8px; border-radius:7px; display:inline-block; font-size:11px; color:#315d91; margin:4px 4px 0 0; }
+    .chip.warn { background:#fff4dd; color:#9b6614; }
+    .route-list { margin:5px 0 0; padding:0; list-style:none; }
+    .route-list li { font-family:monospace; font-size:11px; line-height:1.5; background:#f1f5fa; padding:9px; border-radius:7px; margin-top:6px; overflow-wrap:anywhere; }
+    pre { background:#f1f5fa; border-radius:8px; padding:12px; font-size:11px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .issue-box { margin-top:12px; background:#fff6e7; color:#795115; padding:10px; border-radius:8px; font-size:12px; max-height:160px; overflow:auto; }
+    .foot { color:#76889c; font-size:11px; margin-top:12px; line-height:1.7; }
+    @media(max-width:850px) { .content { grid-template-columns:1fr; } .scroll-area { max-height:55vh; } .shell { padding:12px; } .header { padding:16px; } }
+      /* Phase 3-2 navigation only; theme/color decisions remain under research. */
+    .diagram-heading { flex-wrap:wrap; }
+    .zoom-tools { display:flex; align-items:center; flex-wrap:wrap; gap:5px; }
+    .zoom-tools button { min-width:34px; border:1px solid #c8d6e6; border-radius:7px; background:#f8fbff; color:#223c60; padding:7px 9px; font:600 12px system-ui,sans-serif; cursor:pointer; }
+    .zoom-tools button:hover,.zoom-tools button:focus-visible { background:#e3effe; outline-color:#3a7fc9; }
+    #zoom-label { min-width:45px; text-align:center; color:#536780; font-size:12px; font-variant-numeric:tabular-nums; }
+    .scroll-area { height:min(65vh,720px); max-height:none; min-height:420px; cursor:grab; touch-action:pan-x pan-y; }
+    .scroll-area.dragging { cursor:grabbing; user-select:none; }
+    #canvas-stage { position:relative; margin-inline:auto; }
+    #topology { position:absolute; left:0; top:0; transform-origin:top left; }
+    .node-note { font-size:9px; color:#526780; margin:4px 0 2px; line-height:1.3; }
+    .node.vpc .node-note { color:#f3f7ff; }
+    .node { min-height:80px; }
+    .region { pointer-events:none; }
+    .egress-region { border:1px solid #9fd2d3; background:#e0f7f21f; }
+    .internal-region { border:1px dashed #a9bcd5; background:#eff2f83b; }
+    .external-region { border:1px dashed #c2c7d0; background:#f5f7fb; }
+    .other-region,.unresolved-region,.local-policy-region { border:1px dashed #afb7c6; background:#f3f5f8; }
+    .subnet-region { border:2px solid #649bd0; border-radius:10px; background:#dcecff90; }
+    .subnet-region .region-label { color:#214e7c; max-width:calc(100% - 30px); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    .reference-column { border:1px dashed #c3cfdf; background:#eef3f93b; }
+    .region-label { max-width:95%; line-height:1.4; }
+    .node.route_table { background:#fffdf8; }
+    .node.route_table_association { background:#f7f9fc; border-left-width:2px; }
+    .node .cidr { font:600 10px ui-monospace,monospace; opacity:.82; margin:2px 0; }
+    .node { min-height:70px; transition:opacity .15s,border-color .12s,box-shadow .12s; }
+    .node.dimmed { opacity:.32; }
+    .node.connected { box-shadow:0 0 0 2px #80b5eb88,0 4px 10px #142a421a; }
+    .link-path { transition:opacity .15s,stroke-width .15s; }
+    .link-path.dimmed { opacity:.14; }
+    .link-path.focused { stroke-width:3.5; stroke-opacity:1; }
+    .raw-metadata { margin-top:16px; }
+    .raw-metadata summary { cursor:pointer; color:#617996; font-size:12px; font-weight:700; }
+    .scroll-area:focus-visible { outline:2px solid #3e83c8; outline-offset:-2px; }
+    @media (prefers-reduced-motion:reduce) { .node,.link-path { transition:none; } }
+    /* Phase 3-4: fixed layout footprint, measured before routing. */
+    .node { height:112px; overflow:hidden; }
+    .node:hover { transform:none; }
+    .node-note { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .policy-layer-tools { padding:9px 17px; border-bottom:1px solid #e3e9f2; font-size:12px; }
+    .policy-layer-tools label { display:inline-flex; align-items:center; gap:4px; margin:4px 12px 4px 0; }
+    .policy-layer-tools .swatch { display:inline-block; width:23px; border-top:3px dashed; }
+    .policy-layer-tools .swatch.next { border-top-style:solid; }
+    .policy-layer-tools p { margin:5px 0; color:#526780; }
+    .routing-status { padding:8px 17px; font-size:12px; color:#526780; border-bottom:1px solid #eef1f5; }
+    .routing-status ul { margin:6px 0; max-height:150px; overflow:auto; overflow-wrap:anywhere; }
+    .routing-status summary { cursor:pointer; }
+
+    .node.trace-related { outline:2px solid #2563eb; outline-offset:2px; }
+    .node.trace-first { outline:4px solid #b91c1c; outline-offset:3px; }
+    .node.trace-conditional { outline:4px dashed #b91c1c; outline-offset:3px; }
+    .node.trace-inspected { box-shadow:0 0 0 7px #fbbf2480; }
+    #trace-overlay-bar { padding:10px 17px; border-bottom:1px solid #e3e9f2; font-size:12px; }
+    #overlay-status { margin:7px 0 0; line-height:1.6; overflow-wrap:anywhere; }
+    .trace-candidate { pointer-events:none; }
+    /* Phase 5-1: separate logical packet trace. */
+    [hidden] { display:none !important; }
+    .trace-tools { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:16px; }
+    .trace-tools button,.trace-tools select,.trace-tools input { max-width:100%; padding:8px; border:1px solid #cbd7e6; border-radius:7px; background:white; color:#16253c; }
+    .trace-tools button { cursor:pointer; }
+    .trace-tools button:disabled { opacity:.5; cursor:default; }
+    .trace-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; padding:16px; }
+    .trace-summary { padding:16px; border-top:1px solid #e0e7f1; overflow-wrap:anywhere; }
+    .trace-lane { min-width:0; padding:14px; border:1px solid #dce5f0; border-radius:10px; background:#f8fbff; }
+    .trace-endpoint { padding:10px; background:#e5eef9; border-radius:7px; overflow-wrap:anywhere; font-size:13px; }
+    .trace-arrow { text-align:center; color:#647791; padding:3px; font-size:18px; }
+    .trace-step { position:relative; display:block; width:100%; text-align:left; padding:10px; border:1px solid #cbd7e6; border-left:5px solid #647791; border-radius:8px; background:#fff; color:#16253c; cursor:pointer; overflow-wrap:anywhere; }
+    .trace-step[data-status="PASS"] { border-left-color:#16805b; }
+    .trace-step[data-status="BLOCKED"] { border-left-color:#c52f3c; }
+    .trace-step[data-mode="CONDITIONAL"] { border-style:dashed; background:#f2f4f8; }
+    .trace-step[aria-current="step"] { outline:3px solid #4178bd; outline-offset:2px; }
+    .trace-step .trace-small { font-size:11px; color:#536780; margin-top:4px; }
+    .trace-step[data-playing="true"]::after { content:'▶'; position:absolute; right:8px; top:7px; color:#1558ae; animation:trace-pulse .8s infinite alternate; }
+    @keyframes trace-pulse { to { opacity:.35; } }
+    @media(prefers-reduced-motion:reduce) { .trace-step[data-playing="true"]::after { animation:none; } }
+    .trace-evidence { max-height:420px; overflow:auto; }
+    .trace-natural { border-left:3px solid #647791; background:#f4f7fb; padding:12px; margin:12px 0; border-radius:5px; overflow-wrap:anywhere; }
+    .trace-natural p { margin:6px 0; }
+    .trace-natural-inline { margin-top:7px; font-size:12px; line-height:1.5; font-weight:600; }
+    .trace-policy-label { margin-top:6px; font-size:12px; font-weight:600; }
+    .trace-rule-inline { margin-top:4px; font-size:11px; line-height:1.45; overflow-wrap:anywhere; }
+    .trace-node-tooltip { position:fixed; z-index:1000; box-sizing:border-box; width:380px; max-width:calc(100vw - 20px); max-height:calc(100vh - 20px); overflow:hidden; background:#fff; color:#15273e; border:1px solid #8497ae; border-radius:8px; padding:12px; box-shadow:0 6px 24px #15273e33; pointer-events:none; font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
+    .trace-node-tooltip[hidden] { display:none; }
+    .resource-tip-toggle { display:flex; align-items:center; gap:5px; font-size:12px; color:#344963; cursor:pointer; white-space:nowrap; }
+    .resource-tip-title { font-size:14px; font-weight:700; margin-bottom:4px; }
+    .resource-tip-row { display:grid; grid-template-columns:95px minmax(0,1fr); gap:6px; margin:3px 0; }
+    .resource-tip-key { color:#526780; }
+    .resource-tip-note { color:#526780; margin-top:6px; }
+    .resource-tip-divider { border:0; border-top:1px solid #dce5ef; margin:8px 0; }
+    .trace-node-evidence { margin:8px 0; padding:8px; background:#f4f7fb; border-left:3px solid #647791; border-radius:4px; font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
+    .trace-node-evidence[data-status="BLOCKED"] { border-left-color:#b91c1c; }
+    .trace-node-evidence[data-status="UNKNOWN"], .trace-node-evidence[data-status="WARNING"] { border-left-color:#b7791f; }
+    .trace-node-reason { font-weight:600; margin:5px 0; }
+
+    @media(max-width:760px) { .trace-grid { grid-template-columns:1fr; } .tabs { flex-wrap:wrap; } }
+  </style>
+</head>
+<body>
+  <script type="application/json" id="graph-data">__CLOUDPATH_GRAPH_DATA__</script>
+  <header class="header">
+    <div><div class="brand">CloudPath <span>Analyzer</span></div><div class="subtitle">Phase 6-1 · HCL / Plan / AWS Inventory / Packet Trace</div></div>
+    <nav id="graph-mode" class="tabs" aria-label="그래프 종류">
+      <button class="tab" data-mode="network_graph" aria-pressed="true">Network Topology</button>
+      <button class="tab" data-mode="reference_graph" aria-pressed="false">IaC 참조 관계</button>
+      <button class="tab" id="packet-trace-tab" aria-pressed="false">Packet Trace</button>
+    </nav>
+  </header>
+  <section class="shell" id="upload-panel" hidden style="padding-bottom:0">
+    <div class="panel" style="padding:16px">
+      <h3 style="margin-top:0">Terraform 구성 입력</h3>
+      <p>같은 루트 모듈의 .tf 파일(최대 50개) 또는 Terraform Plan JSON 또는 AWS Inventory JSON 한 개를 선택하세요 (합계 5 MiB). 성공 시 기존 입력 전체를 교체합니다. 배포하지 않으며 파일은 영구 저장하지 않습니다.</p>
+      <div id="snapshot-info" role="status"></div>
+      <details><summary>현재 입력 파일 및 지원 제한</summary><ul id="snapshot-files"></ul><ul id="snapshot-warnings"></ul><p>HCL의 Module 확장, 변수/함수 평가, tfvars, state, override는 미지원. Plan JSON은 확정 ID 관계를 표시하며 제한된 직접 IPv4 구성만 통신 판정을 지원합니다. 표현식 참조 후보는 실제 연결을 의미하지 않습니다. Plan에는 비밀값이 평문으로 포함될 수 있으므로 로컬에서만 취급하세요.</p></details>
+      <form id="upload-form" style="margin-top:12px"><label for="upload-files">분석 입력 파일</label> <input id="upload-files" type="file" accept=".tf,.json" multiple required> <button id="upload-run" type="submit">구성 분석 및 교체</button></form>
+      <p id="upload-status" role="status"></p>
+    </div>
+  </section>
+  <main class="shell" id="graph-view">
+    <div class="notice" id="mode-notice"><strong>구성 관계도</strong> · 라우팅 대상과 정책 연결을 나타냅니다. <strong>실제 패킷 이동 경로가 아닙니다.</strong> 서브넷 분류는 확인 가능한 경로 설정에 근거하며, 인터넷 접속 성공을 보장하지 않습니다.</div>
+    <div class="metrics"><div class="metric"><b id="node-count">—</b><span>Resources / Nodes</span></div><div class="metric"><b id="edge-count">—</b><span>Configuration Links</span></div><div class="metric"><b id="route-count">—</b><span>Route Rules</span></div><div class="metric"><b id="issue-count">—</b><span>Graph Issues</span></div></div>
+    <div class="content">
+      <section class="panel" aria-label="인프라 구성도">
+        <div class="panel-head diagram-heading">
+          <div><div id="view-title" class="panel-title">가상 네트워크 토폴로지</div><div class="panel-sub">리소스 클릭: 관련 연결 강조 · 빈 공간 드래그: 이동 · Ctrl+휠: 확대/축소</div></div>
+          <div class="zoom-tools" role="group" aria-label="그래프 확대 및 이동">
+            <button type="button" id="zoom-out" aria-label="축소">−</button>
+            <output id="zoom-label" aria-live="polite" aria-label="확대 비율">100%</output>
+            <button type="button" id="zoom-in" aria-label="확대">+</button>
+            <button type="button" id="zoom-reset" title="100% 크기">100%</button>
+            <button type="button" id="zoom-fit" title="모든 노드를 화면에 맞춤">화면 맞춤</button>
+            <label class="resource-tip-toggle" title="일반 리소스 정보만 제어하며 분석 판정 팝업은 유지합니다"><input type="checkbox" id="resource-hover-toggle" checked> 리소스 정보 팝업</label>
+          </div>
+        </div>
+        <div id="graph-legend" class="legend"><span class="legend-item"><span class="line"></span> VPC·Subnet 논리 영역</span><span class="legend-item"><span class="line dashed"></span> Route Table 적용 관계</span><span class="legend-item"><span class="line route"></span> 라우트 대상 (패킷 경로 아님)</span></div>
+        <div id="policy-layer-tools" class="policy-layer-tools" hidden aria-label="구성 관계 표시 설정">
+          <strong>정책·전달 관계 오버레이</strong><br>
+          <label><input type="checkbox" data-policy-layer="sg"><span class="swatch" style="border-color:#7951a8"></span> SG 적용</label>
+          <label><input type="checkbox" data-policy-layer="acl"><span class="swatch" style="border-color:#b45369"></span> NACL · Subnet 경계</label>
+          <label><input type="checkbox" data-policy-layer="association"><span class="swatch" style="border-color:#c47b16"></span> Route Table 연결</label>
+          <label><input type="checkbox" data-policy-layer="next"><span class="swatch next" style="border-color:#16719a"></span> 라우트 대상 →</label>
+          <label><input type="checkbox" data-policy-layer="other"><span class="swatch" style="border-color:#7897c5"></span> 기타 구성 연결</label>
+          <button id="policy-all" type="button">모두 표시</button> <button id="policy-none" type="button">모두 숨기기</button>
+          <p>선은 구성 관계이며 실제 패킷 이동이 아닙니다. local 경로와 미확정 대상은 Route Table 상세에서 확인하세요. Packet Trace 강조는 독립적입니다.</p>
+        </div>
+        <div id="trace-overlay-bar" hidden><label for="overlay-direction">분석 방향 </label><select id="overlay-direction" disabled><option value="request">요청</option><option value="response">응답</option></select> <button id="overlay-clear" type="button" disabled>강조 해제</button> <button id="overlay-back" type="button">Packet Trace로 이동</button><p id="overlay-status"></p></div>
+        <div id="routing-status" class="routing-status" aria-live="polite"></div>
+        <div class="scroll-area" id="canvas-viewport" tabindex="0" aria-label="인프라 구성도 이동 및 확대 가능 영역"><div id="canvas-stage"><div id="topology"><svg id="links" aria-hidden="true"></svg><div id="regions"></div><div id="nodes"></div></div></div></div>
+      </section>
+      <aside class="panel" aria-label="리소스 상세 정보">
+        <div class="panel-head"><div class="panel-title">리소스 상세</div></div>
+        <div id="details" class="side-content"><p>왼쪽 구성도에서 리소스를 선택해 주세요.</p></div>
+      </aside>
+    </div>
+    <div class="foot">CloudPath Analyzer · Terraform 구성 파일로 생성한 논리 그래프입니다. 실제 AWS 리소스를 생성하거나 조회하지 않았습니다. 구성 정보가 불완전하면 연결을 임의로 보완하지 않습니다.</div>
+  </main>
+  <main class="shell" id="packet-trace-view" hidden>
+    <div class="notice"><strong>Packet Trace · 정적 IaC 예측</strong> — 실제 패킷 캡처가 아닙니다. 구조도 강조는 입력 파일 지문이 일치하는 경우에만 허용합니다. 결과 자체의 진위는 검증하지 않습니다. PASS는 실제 서비스 응답을 보장하지 않습니다.</div>
+    <section class="panel" aria-label="패킷 흐름 분석">
+      <div class="panel-head"><div><div class="panel-title">요청 및 응답 흐름</div><div class="panel-sub">웹 분석 또는 Phase 4-4 결과 JSON을 선택하세요.</div></div></div>
+      <div class="trace-tools"><label for="trace-select">분석 결과</label><select id="trace-select" aria-label="분석 결과"></select><label for="trace-file">JSON 추가</label><input id="trace-file" type="file" accept=".json,application/json" multiple><button id="trace-play" type="button" disabled>재생</button><button id="trace-next" type="button" disabled>다음 단계</button><button id="trace-reset" type="button" disabled>초기화</button></div>
+      <div class="trace-summary" id="live-analysis" hidden>
+        <h3>새 통신 시나리오 분석</h3><p>현재 Terraform 입력 구성의 명시적 IPv4 주소만 선택 가능합니다. 실제 패킷을 보내지 않습니다.</p>
+        <form id="live-form">
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end">
+            <label>출발지 <select id="live-source" required></select></label>
+            <label>목적지 <select id="live-destination" required></select></label>
+            <label>프로토콜 <select id="live-protocol"><option value="tcp">TCP</option><option value="udp">UDP</option></select></label>
+            <label>출발지 포트 <input id="live-sport" type="number" min="1" max="65535" step="1" value="49152" required></label>
+            <label>목적지 포트 <input id="live-dport" type="number" min="1" max="65535" step="1" value="443" required></label>
+          </div>
+          <fieldset style="margin:12px 0"><legend>분석 가정 (확실한 경우에만 선택)</legend>
+            <label><input type="checkbox" id="live-complete_config"> SG 구성 완전</label>
+            <label><input type="checkbox" id="live-complete_nacl_config"> NACL 구성 완전</label>
+            <label><input type="checkbox" id="live-complete_routing_config"> 라우팅 구성 완전</label>
+            <label><input type="checkbox" id="live-assume_direct_private"> 동일 VPC 직접 통신</label>
+            <label><input type="checkbox" id="live-assume_tracked_response"> 유효한 SG 연결 추적 가정</label>
+            <label><input type="checkbox" id="live-assume_unmodified_default_nacl"> 미관리 기본 NACL 변경 없음 가정</label>
+          </fieldset>
+          <button id="live-run" type="submit" disabled>분석 실행</button> <button id="live-save" type="button" disabled>결과 JSON 저장</button>
+          <span id="live-status" role="status"></span>
+        </form>
+      </div>
+      <div class="trace-summary" id="trace-message" role="status">분석 JSON을 선택하세요.</div>
+      <div id="trace-result" hidden>
+        <div class="trace-summary" id="trace-overall"></div>
+        <div class="trace-grid" id="trace-lanes"></div>
+        <div class="trace-summary" id="trace-play-status" aria-live="polite"></div>
+        <div class="trace-summary"><h3>선택 단계의 판정 근거</h3><div id="trace-detail">단계를 선택하세요.</div></div>
+        <div class="trace-summary"><details><summary>분석 가정 · 지원 범위 · Coverage</summary><pre id="trace-coverage"></pre></details></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+/* CloudPath Phase 3-4: pure, renderer-independent orthogonal routing.
+ * Rectangles: {x,y,w,h}, all in the same unscaled layout coordinate system.
+ * Supports solid obstacles; group portals and renderer integration are separate.
+ */
+(function(root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.CloudPathOrthogonalRouter = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function() {
+  'use strict';
+  const rect = r => r && [r.x,r.y,r.w,r.h].every(Number.isFinite) && r.w>0 && r.h>0 && Number.isFinite(r.x+r.w) && Number.isFinite(r.y+r.h);
+  const inflate = (r,c) => ({l:r.x-c,t:r.y-c,r:r.x+r.w+c,b:r.y+r.h+c});
+  const eq = (a,b) => a.x===b.x && a.y===b.y;
+  const interior = (p,r) => p.x>r.l && p.x<r.r && p.y>r.t && p.y<r.b;
+  function clear(a,b,boxes) {
+    if (a.x===b.x) return !boxes.some(r=>a.x>r.l && a.x<r.r && Math.max(a.y,b.y)>r.t && Math.min(a.y,b.y)<r.b);
+    if (a.y===b.y) return !boxes.some(r=>a.y>r.t && a.y<r.b && Math.max(a.x,b.x)>r.l && Math.min(a.x,b.x)<r.r);
+    return false;
+  }
+  function ports(r,c,spread=false) {
+    const x=r.x+r.w/2,y=r.y+r.h/2;
+    const base=[
+      {a:{x:r.x,y},s:{x:r.x-c,y},dir:0,side:'left'},
+      {a:{x:r.x+r.w,y},s:{x:r.x+r.w+c,y},dir:0,side:'right'},
+      {a:{x,y:r.y},s:{x,y:r.y-c},dir:1,side:'top'},
+      {a:{x,y:r.y+r.h},s:{x,y:r.y+r.h+c},dir:1,side:'bottom'}
+    ];
+    if(!spread)return base;
+    for(const f of [.25,.75]){const xx=r.x+r.w*f,yy=r.y+r.h*f;base.push({a:{x:r.x,y:yy},s:{x:r.x-c,y:yy},dir:0,side:'left'},{a:{x:r.x+r.w,y:yy},s:{x:r.x+r.w+c,y:yy},dir:0,side:'right'},{a:{x:xx,y:r.y},s:{x:xx,y:r.y-c},dir:1,side:'top'},{a:{x:xx,y:r.y+r.h},s:{x:xx,y:r.y+r.h+c},dir:1,side:'bottom'});}
+    return base;
+  }
+  class Heap {
+    constructor(){this.a=[];}
+    push(v){const a=this.a;let i=a.length;a.push(v);while(i){let p=(i-1)>>1;if(a[p][0]<=v[0])break;a[i]=a[p];i=p;}a[i]=v;}
+    pop(){const a=this.a,top=a[0],v=a.pop();if(a.length){let i=0;while(i*2+1<a.length){let j=i*2+1;if(j+1<a.length&&a[j+1][0]<a[j][0])j++;if(a[j][0]>=v[0])break;a[i]=a[j];i=j;}a[i]=v;}return top;}
+    get size(){return this.a.length;}
+  }
+  const unique = a => [...new Set(a)].sort((a,b)=>a-b);
+  function simplify(points){const out=[];for(const p of points){if(out.length&&eq(out[out.length-1],p))continue;while(out.length>=2){const a=out[out.length-2],b=out[out.length-1];if((a.x===b.x&&b.x===p.x&&(b.y-a.y)*(p.y-b.y)>=0)||(a.y===b.y&&b.y===p.y&&(b.x-a.x)*(p.x-b.x)>=0))out.pop();else break;}out.push(p);}return out;}
+  function routeOrthogonal({source,target,obstacles=[],clearance=12,bendPenalty=20,maxGridPoints=20000,bounds=null,spreadPorts=false}={}) {
+    const fail=reason=>({status:'unrouted',reason,points:[]});
+    if(!rect(source)||!rect(target)||!Array.isArray(obstacles)||!obstacles.every(rect)||!Number.isFinite(clearance)||clearance<=0||!Number.isFinite(bendPenalty)||bendPenalty<0||!Number.isInteger(maxGridPoints)||maxGridPoints<1||(bounds!==null&&!rect(bounds)))return fail('invalid_geometry');
+    const limits=bounds&&inflate(bounds,0), inside=p=>!limits||(p.x>=limits.l&&p.x<=limits.r&&p.y>=limits.t&&p.y<=limits.b);
+    const ext=obstacles.map(r=>inflate(r,clearance)), src=inflate(source,clearance), dst=inflate(target,clearance), boxes=[src,dst,...ext];
+    const starts=ports(source,clearance,spreadPorts).filter(p=>inside(p.a)&&inside(p.s)&&clear(p.a,p.s,[dst,...ext])&&!boxes.some(b=>interior(p.s,b)));
+    const ends=ports(target,clearance,spreadPorts).filter(p=>inside(p.a)&&inside(p.s)&&clear(p.a,p.s,[src,...ext])&&!boxes.some(b=>interior(p.s,b)));
+    if(!starts.length||!ends.length)return fail('no_clear_port');
+    let xs=boxes.flatMap(b=>[b.l,b.r]),ys=boxes.flatMap(b=>[b.t,b.b]);
+    for(const p of [...starts,...ends]){xs.push(p.s.x);ys.push(p.s.y);}
+    if(limits){xs.push(limits.l,limits.r);ys.push(limits.t,limits.b);xs=xs.filter(x=>x>=limits.l&&x<=limits.r);ys=ys.filter(y=>y>=limits.t&&y<=limits.b);}else{xs.push(Math.min(...xs)-clearance,Math.max(...xs)+clearance);ys.push(Math.min(...ys)-clearance,Math.max(...ys)+clearance);}
+    xs=unique(xs);ys=unique(ys);const nx=xs.length,ny=ys.length,n=nx*ny;
+    if(n>maxGridPoints)return fail('grid_limit');
+    const xidx=new Map(xs.map((v,i)=>[v,i])),yidx=new Map(ys.map((v,i)=>[v,i]));
+    const key=p=>yidx.get(p.y)*nx+xidx.get(p.x), point=k=>({x:xs[k%nx],y:ys[Math.floor(k/nx)]});
+    const valid=new Uint8Array(n);for(let k=0;k<n;k++)valid[k]=!boxes.some(b=>interior(point(k),b));
+    const d=new Float64Array(n*2);d.fill(Infinity);const prev=new Int32Array(n*2);prev.fill(-1);const startPort=new Map(),endPorts=new Map(),q=new Heap();
+    for(const p of starts){let s=key(p.s)*2+p.dir;d[s]=clearance;startPort.set(s,p);q.push([d[s],s]);}
+    for(const p of ends){let k=key(p.s);if(!endPorts.has(k))endPorts.set(k,[]);endPorts.get(k).push(p);}
+    let best=Infinity,finish=-1,finishPort=null;
+    while(q.size){const [cost,s]=q.pop();if(cost!==d[s])continue;if(cost>=best)break;const k=s>>1,dir=s%2,p=point(k);
+      for(const e of endPorts.get(k)||[]){const total=cost+clearance+(dir!==e.dir?bendPenalty:0);if(total<best){best=total;finish=s;finishPort=e;}}
+      const ix=k%nx,iy=Math.floor(k/nx),ns=[];if(ix>0)ns.push([k-1,0]);if(ix+1<nx)ns.push([k+1,0]);if(iy>0)ns.push([k-nx,1]);if(iy+1<ny)ns.push([k+nx,1]);
+      for(const [j,nd] of ns){if(!valid[j])continue;const t=point(j);if(!clear(p,t,boxes))continue;const next=j*2+nd,c=cost+Math.abs(p.x-t.x)+Math.abs(p.y-t.y)+(dir!==nd?bendPenalty:0);if(c<d[next]){d[next]=c;prev[next]=s;q.push([c,next]);}}
+    }
+    if(finish<0)return fail('no_path');
+    const rev=[];let s=finish;while(s>=0){rev.push(point(s>>1));if(prev[s]<0)break;s=prev[s];}const sp=startPort.get(s);
+    if(!sp)return fail('internal_path_error');
+    const points=simplify([sp.a,...rev.reverse(),finishPort.a]);
+    // Validate against actual rectangles expanded to the requested clearance,
+    // excluding the endpoint stub's intentional approach to its own box.
+    // The graph already checks all intermediate segments against both endpoints.
+    for(let i=1;i<points.length;i++)if(!clear(points[i-1],points[i],ext))return fail('internal_collision');
+    return {status:'routed',points,sourceSide:sp.side,targetSide:finishPort.side,cost:best};
+  }
+  function svgPath(result){return result&&result.status==='routed'?result.points.map((p,i)=>`${i?'L':'M'} ${p.x} ${p.y}`).join(' '):'';}
+  return {routeOrthogonal,svgPath};
+});
+
+  </script>
+  <script>
+"use strict";
+// Phase 3-3: semantic configuration diagrams, NEVER simulated packet hops.
+const GRAPHS = JSON.parse(document.getElementById('graph-data').textContent);
+const ns = 'http://www.w3.org/2000/svg';
+const topology = document.getElementById('topology');
+const stage = document.getElementById('canvas-stage');
+const viewport = document.getElementById('canvas-viewport');
+const nodeLayer = document.getElementById('nodes');
+const regionLayer = document.getElementById('regions');
+const linkLayer = document.getElementById('links');
+const details = document.getElementById('details');
+const zoomLabel = document.getElementById('zoom-label');
+const POS_W = 218, POS_H = 112, STEP_X = 263;
+const MIN_ZOOM = 0.20, MAX_ZOOM = 2.25;
+let mode = 'network_graph';
+let selectedId = null;
+let focusActive = false;
+let currentLayout = null;
+let zoom = 1;
+
+const text = (value) => String(value == null ? '—' : value);
+const make = (tag, className, value) => {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (value !== undefined) element.textContent = text(value);
+  return element;
+};
+const svgEl = (tag, attrs) => {
+  const element = document.createElementNS(ns, tag);
+  Object.entries(attrs).forEach(([key,value]) => element.setAttribute(key,String(value)));
+  return element;
+};
+const clamp = (value, min, max) => Math.max(min,Math.min(max,value));
+const displayOf = (id) => (GRAPHS.resource_display || {})[id] || {};
+const unresolved = (value) => typeof value === 'string' && /\$\{|\bvar\.|\blocal\./.test(value);
+const renderDetailRow = (label, value) => {
+  details.append(make('div', 'detail-label', label));
+  details.append(make('div', 'detail-value', value));
+};
+function selectNode(id, byUser = true) {
+  selectedId = id;
+  if (byUser) focusActive = true;
+  const graph = GRAPHS[mode];
+  const node = graph.nodes.find(item => item.id === id);
+  details.replaceChildren();
+  if (!node) {
+    details.append(make('p', '', '리소스를 선택해 주세요.'));
+    updateFocus();
+    return;
+  }
+  details.append(make('h3', '', node.name || node.id));
+  renderDetailRow('리소스 ID', node.id);
+  renderDetailRow('리소스 종류', node.resource_type || node.type || 'unknown');
+  renderDetailRow('Provider', node.provider || '—');
+  const display = displayOf(id);
+  if (display.cidr_block) {
+    renderDetailRow(unresolved(display.cidr_block) ? 'CIDR (미해결 표현식)' : 'CIDR',display.cidr_block);
+  }
+  if (display.availability_zone) {
+    renderDetailRow('가용 영역', display.availability_zone);
+  }
+  if (node.synthetic) renderDetailRow('주의', '분석기가 추론한 가상 리소스 (실제 AWS ID 아님)');
+  const relationships = graph.edges.filter(edge => edge.source === id || edge.target === id);
+  details.append(make('div','detail-label',`관련 연결 (${relationships.length})`));
+  if (!relationships.length) details.append(make('p','','표시 가능한 연결 관계가 없습니다.'));
+  relationships.forEach(edge => {
+    const other = edge.source === id ? edge.target : edge.source;
+    details.append(make('span','chip',`${relationshipLabel(graph,edge)}: ${other}`));
+  });
+  if (mode === 'network_graph') {
+    const rules = (graph.route_rules || []).filter(rule => rule.route_table === id || rule.target === id);
+    if (rules.length) {
+      details.append(make('div','detail-label',`연관 라우팅 규칙 (${rules.length})`));
+      const list = make('ul','route-list');
+      rules.forEach(rule => list.append(make('li','',routeRuleLabel(rule))));
+      details.append(list);
+    }
+  }
+  const traceSteps=activeNodeTraceSteps(id);
+  if(traceSteps.length){
+    details.append(make('h3','','현재 분석 판정 근거'));
+    for(const step of traceSteps)appendTraceNodeEvidence(details,step,traceOverlay.data,false);
+  }
+  const raw = make('details','raw-metadata');
+  const summary = make('summary','','그래프 노드 JSON 보기');
+  raw.append(summary,make('pre','',JSON.stringify(node,null,2)));
+  details.append(raw);
+  updateFocus();
+}
+function updateFocus() {
+  const graph = GRAPHS[mode];
+  const active = focusActive && selectedId && graph.nodes.some(node => node.id === selectedId);
+  const near = new Set(active ? [selectedId] : []);
+  if (active) {
+    for (const edge of graph.edges) {
+      if (edge.source === selectedId) near.add(edge.target);
+      if (edge.target === selectedId) near.add(edge.source);
+    }
+    if (mode === 'network_graph') for (const rule of graph.route_rules || []) {
+      if (rule.route_table === selectedId && rule.target) near.add(rule.target);
+      if (rule.target === selectedId) near.add(rule.route_table);
+    }
+  }
+  nodeLayer.querySelectorAll('.node').forEach(element => {
+    element.classList.toggle('selected', element.dataset.id === selectedId);
+    element.classList.toggle('dimmed', Boolean(active) && !near.has(element.dataset.id));
+    element.classList.toggle('connected', Boolean(active) && near.has(element.dataset.id) && element.dataset.id !== selectedId);
+  });
+  linkLayer.querySelectorAll('.link-path').forEach(element => {
+    const connected = element.dataset.source === selectedId || element.dataset.target === selectedId;
+    element.classList.toggle('dimmed', Boolean(active) && !connected);
+    element.classList.toggle('focused', Boolean(active) && connected);
+  });
+  applyOverlayFocus();
+}
+function routeEvidenceForSubnet(graph, subnetId, tableId, vpcId, index) {
+  // Never determine public/private status from a subnet name or UI position.
+  if (!tableId) return {kind:'unknown',label:'Route Table 확인 불가',reason:'경로 미확인'};
+  const rules = (graph.route_rules || []).filter(rule => rule.route_table === tableId);
+  const defaultRules = rules.filter(rule => rule.destination === '0.0.0.0/0');
+  if (defaultRules.some(rule => rule.status !== 'RESOLVED'))
+    return {kind:'unknown',label:'기본경로 해석 불가',reason:'미해결 라우팅 규칙'};
+  const internet = defaultRules.find(rule => {
+    if (rule.target_kind !== 'gateway_id' || rule.status !== 'RESOLVED') return false;
+    if (index.get(rule.target)?.resource_type !== 'internet_gateway') return false;
+    return graph.edges.some(edge => edge.source === vpcId && edge.target === rule.target && edge.relation === 'attached_to');
+  });
+  if (internet) return {kind:'igw',label:'IGW 기본경로 구성',reason:'0.0.0.0/0 → IGW (접속 성공 미판정)'};
+  if (defaultRules.some(rule => rule.status === 'RESOLVED' && rule.target_kind === 'nat_gateway_id'))
+    return {kind:'nat',label:'NAT 기본경로 구성',reason:'0.0.0.0/0 → NAT (직접 IGW 아님)'};
+  if (defaultRules.length) return {kind:'other',label:'기타 기본경로 구성',reason:'0.0.0.0/0 대상 확인 필요'};
+  return {kind:'no_igw',label:'IGW 기본경로 없음',reason:'제공된 구성에 IGW 기본경로 없음 (격리 판정 아님)'};
+}
+function positionNetwork(graph) {
+  // Containment is based on verified structural edges, never on policy/attachment guesses.
+  const nodes=graph.nodes,index=new Map(nodes.map(n=>[n.id,n]));
+  const sorted=items=>items.slice().sort((a,b)=>a.id.localeCompare(b.id));
+  const vpcs=sorted(nodes.filter(n=>n.resource_type==='vpc'));
+  const positions=new Map(),regions=[],labels=new Map(),assigned=new Set();
+  const parent=new Map(),subnetTable = new Map(),candidates=new Map();
+  const subnetTypes=new Set(['instance','network_interface','nat_gateway']);
+  for(const edge of graph.edges){
+    const source=index.get(edge.source),target=index.get(edge.target);
+    if(!source||!target)continue;
+    const valid=(edge.relation === 'contains' &&
+      ((source.resource_type==='subnet' && subnetTypes.has(target.resource_type)) ||
+       (source.resource_type==='vpc' && ['subnet','route_table','default_route_table','security_group','network_acl'].includes(target.resource_type)))) ||
+      (edge.relation === 'attached_to' && source.resource_type==='vpc' && target.resource_type==='internet_gateway');
+    if(valid){if(!candidates.has(target.id))candidates.set(target.id,new Set());candidates.get(target.id).add(source.id);}
+    if(edge.relation === 'uses_route_table')subnetTable.set(edge.source,edge.target);
+  }
+  for(const [id,parents] of candidates)if(parents.size===1)parent.set(id,[...parents][0]);
+  function rootVpc(id){
+    let cur=id;const seen=new Set();
+    while(parent.has(cur)&&!seen.has(cur)){seen.add(cur);cur=parent.get(cur);if(index.get(cur)?.resource_type==='vpc')return cur;}
+    return null;
+  }
+  // A policy may be placed near a subnet only if every known application
+  // resolves to that same subnet. It is still outside the subnet boundary.
+  const policyTypes=new Set(['security_group','network_acl','route_table','default_route_table']);
+  const policyScopes=new Map();
+  for(const e of graph.edges){
+    let policy,scope;
+    if(e.relation==='uses_route_table'){policy=e.target;scope=e.source;}
+    else if(e.relation==='applies_to'&&policyTypes.has(index.get(e.source)?.resource_type)){
+      policy=e.source;scope=index.get(e.target)?.resource_type==='subnet'?e.target:parent.get(e.target);
+    }else continue;
+    if(!policyScopes.has(policy))policyScopes.set(policy,new Set());
+    policyScopes.get(policy).add(index.get(scope)?.resource_type==='subnet'?scope:null);
+  }
+  const near=new Map();
+  for(const [id,scopes] of policyScopes){
+    const scope=[...scopes][0];
+    if(scopes.size===1&&scope&&rootVpc(id)&&rootVpc(id)===rootVpc(scope)){
+      if(!near.has(scope))near.set(scope,[]);near.get(scope).push(index.get(id));
+    }
+  }
+  const policyOrder={network_acl:0,route_table:1,default_route_table:1,security_group:2};
+  for(const ps of near.values())ps.sort((a,b)=>(policyOrder[a.resource_type]??9)-(policyOrder[b.resource_type]??9)||a.id.localeCompare(b.id));
+  const childrenOf=subnet=>sorted(nodes.filter(n=>parent.get(n.id)===subnet.id&&!assigned.has(n.id)));
+  const baseX=36,pad=44,gap=100,step=270,rowStep=164;
+  let cursorY=110,worldW=690;
+  const put=(n,x,y)=>{positions.set(n.id,{x,y,w:POS_W,h:POS_H});assigned.add(n.id);};
+  const gridWidth=c=>2*pad+POS_W+(c-1)*step;
+  const cardCols=subnet=>Math.min(3,Math.max(1,childrenOf(subnet).length,(near.get(subnet.id)||[]).length));
+  function placeSubnet(subnet,x,y,w,cols){
+    const children=childrenOf(subnet),policies=(near.get(subnet.id)||[]).filter(n=>!assigned.has(n.id));
+    const rows=Math.ceil((children.length+1)/cols),h=children.length?58+rows*rowStep:194;
+    regions.push({x,y,w,h,name:'Subnet 경계 · '+(subnet.name||subnet.id),kind:'subnet-region',subnetId:subnet.id});
+    put(subnet,x+pad,y+42);
+    children.forEach((n,j)=>{const k=j+1;put(n,x+pad+(k%cols)*step,y+42+Math.floor(k/cols)*rowStep);});
+    if(!policies.length)return h;
+    const py=y+h+72,ph=54+Math.ceil(policies.length/cols)*rowStep;
+    regions.push({x,y:py,w,h:ph,name:'이 Subnet의 확인된 적용 정책 (소속 아님)',kind:'local-policy-region'});
+    policies.forEach((n,j)=>put(n,x+pad+(j%cols)*step,py+46+Math.floor(j/cols)*rowStep));
+    return h+72+ph;
+  }
+  function dimensions(subnets){
+    const cols=Math.max(1,...subnets.map(cardCols)),w=gridWidth(cols),count=Math.min(subnets.length||1,cols>=3?2:3,Math.max(1,Math.floor(1900/(w+gap))));
+    return {cols,w,count,width:Math.max(620,count*w+(count-1)*gap+2*pad)};
+  }
+  function placeGrid(subnets,x,y,d){
+    let next=y;
+    for(let i=0;i<subnets.length;i+=d.count){
+      const row=subnets.slice(i,i+d.count);let tallest=0;
+      row.forEach((n,j)=>{tallest=Math.max(tallest,placeSubnet(n,x+j*(d.w+gap),next,d.w,d.cols));});
+      next+=tallest+100;
+    }
+    return next;
+  }
+  for(const vpc of vpcs){
+    const allSubnets=sorted(nodes.filter(n=>n.resource_type==='subnet'&&rootVpc(n.id)===vpc.id));
+    const groups={igw:[],nat:[],no_igw:[],other:[],unknown:[]};
+    for(const subnet of allSubnets){const label=routeEvidenceForSubnet(graph,subnet.id,subnetTable.get(subnet.id),vpc.id,index);groups[label.kind].push(subnet);labels.set(subnet.id,label.reason);}
+    const outbound=[...groups.igw,...groups.nat],internal=[...groups.no_igw,...groups.other,...groups.unknown];
+    const ordered=[...outbound,...internal],d=dimensions(ordered),width=d.width;
+    worldW=Math.max(worldW,baseX+width+48);
+    const gateways=sorted(nodes.filter(n=>n.resource_type==='internet_gateway'&&parent.get(n.id)===vpc.id));
+    const attachedPolicies=new Set(ordered.flatMap(n=>(near.get(n.id)||[]).map(p=>p.id)));
+    const shared=sorted(nodes.filter(n=>!assigned.has(n.id)&&rootVpc(n.id)===vpc.id&&n.resource_type!=='subnet'&&!subnetTypes.has(n.resource_type)&&n.resource_type!=='internet_gateway'&&!attachedPolicies.has(n.id)));
+    const vpcRegion={x:baseX,y:cursorY,w:width,h:0,name:`VPC 구성 영역 · ${vpc.name||vpc.id}`,kind:'vpc-region'};regions.push(vpcRegion);
+    if(gateways.length)regions.push({x:baseX+width-380,y:cursorY-94,w:380,h:66,name:'외부 인터넷 (설명용 영역 · 실제 AWS 리소스 아님)',kind:'external-region'});
+    const header=[vpc,...gateways],hc=Math.max(1,Math.floor((width-2*pad-32+step-POS_W)/step));
+    header.forEach((n,i)=>put(n,baseX+pad+(i%hc)*step,cursorY+42+Math.floor(i/hc)*rowStep));
+    let next=cursorY+42+Math.ceil(header.length/hc)*rowStep+36;
+    // Shared policies remain unique and outside every subnet.
+    if(shared.length){
+      const h=52+Math.ceil(shared.length/hc)*rowStep,sw=gridWidth(Math.min(hc,shared.length)),sx=baseX+Math.floor((width-sw)/2);
+      regions.push({x:sx,y:next,w:sw,h,name:'VPC 공용 정책·리소스 (서브넷 소속이 아닌 적용 관계)',kind:'other-region'});
+      shared.forEach((n,i)=>put(n,sx+pad+(i%hc)*step,next+44+Math.floor(i/hc)*rowStep));
+      next+=h+80;
+    }
+    // Route categories are compact headers, never empty full-height lanes.
+    for(const group of [{items:outbound,kind:'egress-region',name:'기본 출구 경로 구성 (IGW / NAT)'},{items:internal,kind:'internal-region',name:'IGW 기본경로 미설정·기타·미확인 서브넷'}]){
+      if(!group.items.length)continue;
+      regions.push({x:baseX+pad,y:next,w:width-2*pad,h:32,name:group.name,kind:group.kind});
+      next=placeGrid(group.items,baseX+pad,next+68,d);
+    }
+    vpcRegion.h=next-cursorY+28;cursorY+=vpcRegion.h+140;
+  }
+  // A known subnet membership is still useful when its VPC cannot be resolved.
+  const orphanSubnets=sorted(nodes.filter(n=>n.resource_type==='subnet'&&!assigned.has(n.id)));
+  const d=dimensions(orphanSubnets),unknownIndex=regions.length,unknownY=cursorY;
+  const unknownRegion={x:baseX,y:unknownY,w:d.width,h:0,name:'연결 관계 미확인·VPC 외부 리소스 (임의 연결 없음)',kind:'unresolved-region'};
+  if(orphanSubnets.length)cursorY=placeGrid(orphanSubnets,baseX+pad,cursorY+58,d);
+  const loose=sorted(nodes.filter(n=>!assigned.has(n.id)));
+  if(loose.length){
+    const n=Math.min(4,loose.length),start=cursorY+48;unknownRegion.w=Math.max(unknownRegion.w,gridWidth(n));
+    loose.forEach((r,i)=>put(r,baseX+pad+(i%n)*step,start+Math.floor(i/n)*rowStep));cursorY=start+Math.ceil(loose.length/n)*rowStep;
+  }
+  if(orphanSubnets.length||loose.length){unknownRegion.h=cursorY-unknownY+24;regions.splice(unknownIndex,0,unknownRegion);worldW=Math.max(worldW,baseX+unknownRegion.w+48);cursorY+=64;}
+  for(const n of nodes)if(n.resource_type==='route_table'||n.resource_type==='default_route_table')labels.set(n.id,'서브넷에 적용된 라우팅 정책 (패킷 홉 아님)');
+  return {positions,regions,labels,width:worldW,height:Math.max(470,cursorY+30)};
+}
+function positionReference(graph) {
+  // A code-dependency graph. Classify by Terraform resource roles, not packet flow.
+  const nodes=[...graph.nodes].sort((a,b)=>a.id.localeCompare(b.id));
+  const groups=[
+    {name:'기반 리소스 (VPC)',types:new Set(['vpc'])},
+    {name:'네트워크 구성 (Subnet / Gateway / Route Table)',types:new Set(['subnet','route_table','default_route_table','internet_gateway','nat_gateway'])},
+    {name:'관계 정의 (Association / Route)',types:new Set(['route_table_association','main_route_table_association','route'])},
+    {name:'기타 리소스·정책',types:null},
+  ];
+  const groupsWithNodes=groups.map(g=>({name:g.name,nodes:nodes.filter(n=>g.types?g.types.has(n.resource_type):!groups.slice(0,3).some(prev=>prev.types.has(n.resource_type)))})).filter(g=>g.nodes.length);
+  const positions=new Map(),regions=[],labels=new Map();
+  const x=40,w=275,gap=40,y=78;
+  let maxH=380;
+  groupsWithNodes.forEach((group,i)=>{
+    const colX=x+i*(w+gap);
+    const regionHeight=80+group.nodes.length*152;
+    maxH=Math.max(maxH,regionHeight);
+    regions.push({x:colX,y:25,w,h:regionHeight,name:group.name,kind:'reference-column'});
+    group.nodes.forEach((node,j)=>{
+      positions.set(node.id,{x:colX+24,y:y+j*152,w:POS_W,h:POS_H});
+      if (node.resource_type==='route_table_association') labels.set(node.id,'서브넷 ↔ Route Table 연결 정의');
+    });
+  });
+  return {positions,regions,labels,width:Math.max(690,55+groupsWithNodes.length*(w+gap)),height:maxH+70};
+}
+// Coordinates are unscaled DOM layout geometry. Group fills are semantic zones:
+// endpoint groups may be entered/exited; unrelated groups and all labels are obstacles.
+function overlaps(a,b) {
+  return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
+}
+function domBox(el) {
+  return {x:el.offsetLeft,y:el.offsetTop,w:el.offsetWidth,h:el.offsetHeight};
+}
+// Routing lanes are visual only. Prefer a distinct path, never invent a link.
+function pathSegments(points){return points.slice(1).map((b,i)=>({a:points[i],b}));}
+function parallelOverlap(points,reserved,gap=9){
+  let score=0;
+  for(const {a,b} of pathSegments(points))for(const {a:c,b:d} of reserved){
+    const vertical=a.x===b.x;
+    if(vertical!==(c.x===d.x))continue;
+    const dist=vertical?Math.abs(a.x-c.x):Math.abs(a.y-c.y);
+    if(dist>=gap)continue;
+    const axis=vertical?'y':'x';
+    const length=Math.max(0,Math.min(Math.max(a[axis],b[axis]),Math.max(c[axis],d[axis]))-Math.max(Math.min(a[axis],b[axis]),Math.min(c[axis],d[axis])));
+    score+=length*(1-dist/gap);
+  }
+  return score;
+}
+function routeWithLanes(from,to,obstacles,bounds,reserved){
+  let result=CloudPathOrthogonalRouter.routeOrthogonal({source:from,target:to,obstacles,clearance:12,bounds});
+  if(result.status!=='routed'||!reserved.length||obstacles.length>90||reserved.length>160)return result;
+  let score=parallelOverlap(result.points,reserved);
+  // Try spaced ports and lanes from existing geometry, bounded for large layouts.
+  if(score>0){
+    for(const clearance of [22,32]){
+      const alt=CloudPathOrthogonalRouter.routeOrthogonal({source:from,target:to,obstacles,clearance,bounds,spreadPorts:true});
+      if(alt.status!=='routed')continue;
+      const overlap=parallelOverlap(alt.points,reserved);
+      if(overlap<score){result=alt;score=overlap;if(!score)break;}
+    }
+  }
+  return result;
+}
+function lineBetween(from,to,color,dash,relation,source,target,directed,geometry,layer='reference') {
+  const fail=reason=>({source,target,relation,reason});
+  if (!from || !to) return fail('missing_endpoint');
+  if (source===target) return fail('self_link');
+  const obstacles=[...geometry.nodes].filter(([id])=>id!==source&&id!==target).map(([,box])=>box);
+  obstacles.push(...geometry.regions.filter(box=>!overlaps(from,box)&&!overlaps(to,box)));
+  obstacles.push(...geometry.labels);
+  const result=routeWithLanes(from,to,obstacles,geometry.bounds,geometry.reserved);
+  if (result.status!=='routed') return fail(result.reason);
+  geometry.overlap+=parallelOverlap(result.points,geometry.reserved)>0?1:0;
+  geometry.reserved.push(...pathSegments(result.points));
+  const path=svgEl('path',{d:CloudPathOrthogonalRouter.svgPath(result),fill:'none',stroke:color,'stroke-width':'2','stroke-opacity':'.85','stroke-dasharray':dash||'none',class:'link-path',...(directed?(layer==='next'?{'marker-end':'url(#policy-next-arrow)'}:{'marker-end':'url(#reference-arrow)'}):{})});
+  path.dataset.source=source;path.dataset.target=target;path.dataset.layer=layer;
+  const title=svgEl('title',{});title.textContent=relation;
+  path.append(title);linkLayer.append(path);
+  return null;
+}
+// Configuration overlay categories are independent from Packet Trace.
+const policyControls=[...document.querySelectorAll('[data-policy-layer]')];
+function relationshipLayer(graph,edge){
+  const types=new Map(graph.nodes.map(n=>[n.id,n.resource_type]));
+  if(edge.relation==='applies_to'&&types.get(edge.source)==='security_group')return 'sg';
+  if(edge.relation==='applies_to'&&types.get(edge.source)==='network_acl'&&types.get(edge.target)==='subnet')return 'acl';
+  if(edge.relation==='uses_route_table')return 'association';
+  return 'other';
+}
+function relationshipLabel(graph,edge){
+  if(graph!==GRAPHS.network_graph)return edge.relation;
+  const layer=relationshipLayer(graph,edge);
+  if(layer==='sg')return 'SG 적용 (ENI/Instance)';
+  if(layer==='acl')return 'NACL 적용 (Subnet 경계)';
+  if(layer==='association')return 'Route Table 연결'+(edge.selection?' · '+edge.selection:'');
+  return edge.relation;
+}
+function routeRuleLabel(rule){
+  const target=rule.target==='local'?'local (VPC 내부 라우팅)':rule.target||'미확인';
+  return `${rule.destination??'목적지 미확인'} → ${target} [${rule.observed_state==='blackhole'?'blackhole · 비활성':rule.status}]`;
+}
+function policyLines(graph){
+  const types=new Map(graph.nodes.map(n=>[n.id,n.resource_type]));
+  const eniToInstance=new Map(graph.edges.filter(e=>e.relation==='attached_to'&&types.get(e.source)==='network_interface'&&types.get(e.target)==='instance').map(e=>[e.source,e.target]));
+  const eniGroups=new Set(graph.edges.filter(e=>e.relation==='applies_to'&&types.get(e.source)==='security_group'&&eniToInstance.has(e.target)).map(e=>JSON.stringify([e.source,eniToInstance.get(e.target)])));
+  const style={sg:['#7951a8','8 4'],acl:['#b45369','3 4'],association:['#c47b16','10 4'],other:['#7897c5','6 5']};
+  const out=[];
+  for(const edge of graph.edges){
+    if(edge.relation==='contains')continue;
+    const layer=relationshipLayer(graph,edge);
+    // Prefer the actual ENI when an equivalent instance summary is present.
+    if(layer==='sg'&&types.get(edge.target)==='instance'&&eniGroups.has(JSON.stringify([edge.source,edge.target])))continue;
+    const [color,dash]=style[layer];out.push({...edge,layer,color,dash,label:relationshipLabel(graph,edge),directed:false});
+  }
+  // A route target arrow is a declaration, not a proof of delivery. Local and
+  // missing targets are represented in the detail/tooltip only.
+  const targets=new Map();
+  for(const r of graph.route_rules||[]){
+    if(r.status!=='RESOLVED'||r.observed_state==='blackhole'||r.target==='local'||!types.has(r.target)||!types.has(r.route_table))continue;
+    const key=JSON.stringify([r.route_table,r.target]);
+    if(!targets.has(key))targets.set(key,{source:r.route_table,target:r.target,layer:'next',color:'#16719a',dash:'',directed:true,labels:[]});
+    targets.get(key).labels.push(routeRuleLabel(r));
+  }
+  for(const r of targets.values())out.push({...r,label:'정의된 라우트 대상 (패킷 홉 아님): '+r.labels.join('; ')});
+  return out;
+}
+let currentPolicySegments=[];
+function renderLinks(graph,layout) {
+  // Render after nodes are attached; never use the estimated POS_H as obstacle height.
+  linkLayer.querySelectorAll('.link-path').forEach(el=>el.remove());
+  const nodes=new Map([...nodeLayer.querySelectorAll('.node')].map(el=>[el.dataset.id,domBox(el)]));
+  const labels=[...regionLayer.querySelectorAll('.region-label')].map(el=>{
+    const r=el.parentElement;
+    return {x:r.offsetLeft+r.clientLeft+el.offsetLeft,y:r.offsetTop+r.clientTop+el.offsetTop,w:el.offsetWidth,h:el.offsetHeight};
+  }).filter(r=>r.w>0&&r.h>0);
+  const subnetBounds=new Map([...regionLayer.querySelectorAll('[data-subnet-id]')].map(el=>[el.dataset.subnetId,domBox(el)]));
+  const geometry={nodes,labels,regions:[...regionLayer.children].map(domBox),bounds:{x:0,y:0,w:layout.width,h:layout.height},reserved:[],overlap:0};
+  let count=0;const failures=[];
+  const all=mode==='network_graph'?policyLines(graph):graph.edges.map(e=>({...e,layer:'reference',color:'#7D91A8',dash:'3 5',label:e.relation,directed:true}));
+  const enabled=new Set(policyControls.filter(el=>el.checked).map(el=>el.dataset.policyLayer));
+  const lines=all.filter(e=>e.layer==='reference'||enabled.has(e.layer));
+  for(const e of lines){
+    const boundary=e.layer==='acl'?subnetBounds.get(e.target):null;
+    const failure=lineBetween(nodes.get(e.source),boundary||nodes.get(e.target),e.color,e.dash,e.label,e.source,e.target,e.directed,geometry,e.layer);
+    if(failure)failures.push(failure);else count++;
+  }
+  currentPolicySegments=geometry.reserved;
+  const status=document.getElementById('routing-status');
+  status.replaceChildren(make('span','',`연결선 표시 ${count} / ${lines.length} · 미표시 ${failures.length} · 토글로 숨김 ${all.length-lines.length} · 근접·중첩 잔존 ${geometry.overlap} · 표시 실패는 통신 차단 판정이 아닙니다.`));
+  if(mode==='network_graph'){
+    const local=(graph.route_rules||[]).filter(r=>r.target==='local').length;
+    const unresolved=(graph.route_rules||[]).filter(r=>r.status!=='RESOLVED'||r.observed_state==='blackhole'||(r.target!=='local'&&!nodes.has(r.target))).length;
+    if(local||unresolved)status.append(make('div','',`선으로 표시하지 않는 local ${local}개 · 미확정/비활성/미수집 라우트 ${unresolved}개 (상세에서 확인)`));
+  }
+  if(failures.length){
+    const disclosure=make('details','');const list=make('ul','');
+    disclosure.append(make('summary','','미표시 연결 및 사유'));
+    failures.forEach(f=>list.append(make('li','',`${f.source||'미확인'} → ${f.target||'미확인'} · ${f.relation} [${f.reason}]`)));
+    disclosure.append(list);status.append(disclosure);
+  }
+}
+function refreshPolicyLayers(){
+  if(mode!=='network_graph'||!currentLayout)return;
+  hideTraceTooltip();renderLinks(GRAPHS[mode],currentLayout);updateFocus();
+  // Re-route visual trace lines around currently visible policy lanes.
+  if(traceOverlay){linkLayer.querySelectorAll('.trace-candidate').forEach(p=>p.remove());document.getElementById('trace-candidate-arrow')?.parentElement.remove();renderOverlay();}
+}
+for(const el of policyControls)el.addEventListener('change',refreshPolicyLayers);
+for(const [id,value] of [['policy-all',true],['policy-none',false]])document.getElementById(id).addEventListener('click',()=>{for(const el of policyControls)el.checked=value;refreshPolicyLayers();});
+function setZoom(nextZoom,centerX,centerY) {
+  if (!currentLayout) return;
+  hideTraceTooltip();
+  const oldZoom = zoom;
+  const worldX = centerX === undefined ? (viewport.scrollLeft+viewport.clientWidth/2)/oldZoom : centerX;
+  const worldY = centerY === undefined ? (viewport.scrollTop+viewport.clientHeight/2)/oldZoom : centerY;
+  zoom = clamp(nextZoom,MIN_ZOOM,MAX_ZOOM);
+  topology.style.transform=`scale(${zoom})`;
+  stage.style.width=`${Math.ceil(currentLayout.width*zoom)}px`;
+  stage.style.height=`${Math.ceil(currentLayout.height*zoom)}px`;
+  zoomLabel.textContent=`${Math.round(zoom*100)}%`;
+  viewport.scrollLeft=worldX*zoom-viewport.clientWidth/2;
+  viewport.scrollTop=worldY*zoom-viewport.clientHeight/2;
+}
+function fitView() {
+  if (!currentLayout) return;
+  const availableW=Math.max(100,viewport.clientWidth-30);
+  const availableH=Math.max(100,viewport.clientHeight-30);
+  const fit=clamp(Math.min(availableW/currentLayout.width,availableH/currentLayout.height,1.5),MIN_ZOOM,MAX_ZOOM);
+  setZoom(fit,currentLayout.width/2,currentLayout.height/2);
+}
+// Phase 5-7-1: shared evidence presentation, not a policy evaluator.
+function explainTraceStep(data,step){
+  const val=v=>v==null?'미확인':String(v);
+  const ev=(data.findings.find(x=>x.id===step.finding_id)?.evidence||[]);
+  const evidence=Array.isArray(ev)?ev.filter(x=>x&&typeof x==='object'&&!Array.isArray(x)):[];
+  const reverse=data.session_trace.response.steps.some(x=>x.id===step.id);
+  const tuple=reverse?(data.session_trace.response.tuple||{}):data.scenario;
+  const direction=step.stage.endsWith('EGRESS')?'아웃바운드(Egress)':step.stage.endsWith('INGRESS')?'인바운드(Ingress)':'전달';
+  const flow=`${reverse?'응답':'요청'} ${val(tuple.protocol).toUpperCase()} · 목적지 ${val(tuple.destination_ip)}:${val(tuple.destination_port)}`;
+  const sg=step.stage.startsWith('SG_'), acl=step.stage.startsWith('NACL_'), forwarding=step.stage==='FORWARDING';
+  const policy=sg?'Security Group (보안 그룹)':acl?'Network ACL (서브넷 접근 제어)':forwarding?'Route Table / Forwarding':'정책 종류 미확인';
+  const owners=[...new Set(evidence.map(e=>sg?e.group:acl?e.acl:forwarding&&e.stage==='ROUTE_LOOKUP'?e.resource:null).filter(x=>typeof x==='string'&&x))];
+  const ownerText=owners.length?owners.join(', '):'정책 리소스 ID 미기록';
+  const matched=evidence.filter(e=>e.match==='MATCH');
+  const skipped=evidence.some(e=>e.applicable===false);
+  const tracked=evidence.some(e=>e.match==='ASSUMED_TRACKED_RESPONSE');
+  const f=data.findings.find(x=>x.id===step.finding_id)||{};
+  let message=val(step.reason||f.reason), applied=[], checked=[];
+  if(acl){
+    const rule=matched.find(e=>e.rule_number!=null);
+    if(skipped)message='이 구간에서는 서브넷 경계 NACL 검사가 적용되지 않습니다.';
+    else if(rule&&step.status==='BLOCKED'&&rule.action==='deny')message=rule.rule_number==='*'?'일치하는 명시적 규칙이 없어 Network ACL의 기본 DENY(*)가 적용됩니다.':`Network ACL 첫 일치 규칙 ${val(rule.rule_number)}의 DENY 정책에 의해 차단됩니다.`;
+    else if(rule&&step.status==='PASS'&&rule.action==='allow')message=`Network ACL 첫 일치 규칙 ${val(rule.rule_number)}의 ALLOW 정책에 의해 허용됩니다.`;
+    if(rule&&!skipped)applied.push(`${rule.rule_number==='*'?'기본 규칙(*)':`규칙 ${val(rule.rule_number)}`} · ${val(rule.action).toUpperCase()}${rule.rule?` · ${val(rule.rule)}`:''}`);
+  }else if(sg){
+    if(tracked&&step.status==='PASS'){message='유효한 SG 연결 추적 상태를 가정하여 응답이 허용됩니다.';applied.push('연결 추적 가정 (개별 규칙 일치 판정 아님)');}
+    else if(matched.length&&step.status==='PASS'){message='연결된 Security Group의 허용 규칙과 일치합니다.';for(const e of matched)applied.push(`${val(e.rule)} · ALLOW`);}
+    else if(step.status==='BLOCKED'){message='분석된 Security Group에서 이 통신을 허용하는 규칙이 확인되지 않았습니다.';applied.push('허용 규칙 없음 (SG에는 명시적 DENY 규칙 없음)');}
+  }else if(forwarding){
+    for(const r of evidence.filter(e=>e.stage==='ROUTE_LOOKUP')){
+      if(r.status==='ROUTE_FOUND'&&step.status==='PASS'){message=`목적지와 일치하는 경로 ${val(r.matched_cidr)} → ${val(r.next_hop)}가 확인되었습니다. 정책 통과와는 별개입니다.`;applied.push(`${val(r.matched_cidr)} → ${val(r.next_hop)}`);}
+      else checked.push(`${val(r.resource)} · ${val(r.status)}`);
+    }
+  }
+  for(const e of evidence){
+    if(!(sg||acl)||(!e.rule&&e.rule_number==null)||!e.match)continue;
+    const label=acl&&e.rule_number!=null?`규칙 ${val(e.rule_number)}${e.action?` · ${val(e.action).toUpperCase()}`:''}`:'';
+    const result=({MATCH:'일치',NO_MATCH:'불일치',UNKNOWN:'미확정'})[e.match]||val(e.match);
+    checked.push([label,e.rule,e.group||e.acl,result].filter(Boolean).join(' · '));
+  }
+  applied=[...new Set(applied)];checked=[...new Set(checked)];
+  const conditional=step.evaluation_mode!=='PREDICTED_PATH';
+  const facts=[`검사 정책: ${policy} · ${direction}`,`정책 리소스: ${ownerText}`, ...applied.map(x=>`적용 근거: ${x}`),...checked.map(x=>`검사 규칙: ${x}`)];
+  return {message,flow,direction,policy,ownerText,applied,checked,facts,conditional};
+}
+function traceStepResources(data,step){
+  const ids=new Set([step.resource]);
+  const f=data.findings.find(x=>x.id===step.finding_id);
+  for(const e of Array.isArray(f?.evidence)?f.evidence:[]){
+    if(step.stage.startsWith('SG_')&&typeof e?.group==='string')ids.add(e.group);
+    if(step.stage.startsWith('NACL_')&&typeof e?.acl==='string')ids.add(e.acl);
+    if(step.stage==='FORWARDING'&&e?.stage==='ROUTE_LOOKUP'&&typeof e.resource==='string')ids.add(e.resource);
+  }
+  return ids;
+}
+function nodeTraceSteps(data,key,id){
+  const steps=data.session_trace[key].steps.filter(s=>traceStepResources(data,s).has(id));
+  const rank=s=>s.id===data.first_blocker_step?0:s.status==='BLOCKED'?1:['UNKNOWN','WARNING'].includes(s.status)?2:3;
+  return steps.sort((a,b)=>rank(a)-rank(b));
+}
+function traceEvidenceLabel(data,step){
+  if(step.id===data.first_blocker_step&&step.status==='BLOCKED')return '최초 예상 차단';
+  if(data.conditional_blockers.includes(step.finding_id)&&step.status==='BLOCKED')return '후속 조건부 차단';
+  return step.evaluation_mode==='PREDICTED_PATH'?'예상 검사':'조건부 검사';
+}
+
+// Phase 5-2: candidate overlay, not observed traffic or configuration edges.
+let traceOverlay=null;
+const overlayBar=document.getElementById('trace-overlay-bar');
+const overlayDirection=document.getElementById('overlay-direction');
+const overlayStatus=document.getElementById('overlay-status');
+const traceTooltip=document.createElement('div');
+traceTooltip.id='trace-node-tooltip';traceTooltip.className='trace-node-tooltip';traceTooltip.setAttribute('role','tooltip');traceTooltip.hidden=true;document.body.append(traceTooltip);
+let tooltipAnchor=null;
+const resourceHoverToggle=document.getElementById('resource-hover-toggle');
+function resourceTipRow(target,label,value){
+  if(value===undefined||value===null||value==='')return;
+  const row=make('div','resource-tip-row');
+  row.append(make('span','resource-tip-key',label),make('span','',String(value).slice(0,240)));target.append(row);
+}
+function appendResourceTooltip(target,id){
+  const graph=GRAPHS[mode],node=graph.nodes.find(n=>n.id===id);if(!node)return;
+  const display=displayOf(id);
+  target.append(make('div','resource-tip-title',String(node.name||id).slice(0,180)));
+  resourceTipRow(target,'리소스 ID',id);
+  resourceTipRow(target,'종류',node.resource_type||node.type||'unknown');
+  resourceTipRow(target,'Provider',node.provider);
+  if(['instance','network_interface','nat_gateway'].includes(node.resource_type)){
+    const net=GRAPHS.network_graph;
+    const subnetIds=new Set(net.nodes.filter(n=>n.resource_type==='subnet').map(n=>n.id));
+    const parents=[...new Set(net.edges.filter(e=>e.relation==='contains'&&e.target===id&&subnetIds.has(e.source)).map(e=>e.source))];
+    resourceTipRow(target,'소속 Subnet',parents.length===1?parents[0]:parents.length>1?'관계 충돌 · 미확정':'미확인');
+  }
+  resourceTipRow(target,unresolved(display.cidr_block)?'CIDR (미해결)':'CIDR',display.cidr_block);
+  resourceTipRow(target,'가용 영역',display.availability_zone);
+  resourceTipRow(target,'사설 IP',display.private_ip);
+  if(Array.isArray(display.private_ips)&&display.private_ips.length)resourceTipRow(target,'사설 IP 목록',display.private_ips.slice(0,3).join(', ')+(display.private_ips.length>3?' 외 '+(display.private_ips.length-3)+'개':''));
+  resourceTipRow(target,'수집 상태',display.observed_state);
+  resourceTipRow(target,'연결 유형',display.connectivity_type);
+  resourceTipRow(target,'인터페이스 유형',display.observed_interface_type);
+  if(display.ingress_inline_count!==undefined)resourceTipRow(target,'Inline Ingress',display.ingress_inline_count+'개');
+  if(display.egress_inline_count!==undefined)resourceTipRow(target,'Inline Egress',display.egress_inline_count+'개');
+  const edges=graph.edges.filter(e=>e.source===id||e.target===id);
+  resourceTipRow(target,'관련 연결',edges.length+'개 (현재 그래프)');
+  const ordered=edges.slice().sort((a,b)=>Number(['applies_to','uses_route_table'].includes(b.relation))-Number(['applies_to','uses_route_table'].includes(a.relation)));
+  for(const e of ordered.slice(0,3))resourceTipRow(target,relationshipLabel(graph,e),e.source===id?e.target:e.source);
+  const rules=(GRAPHS.network_graph.route_rules||[]).filter(r=>r.route_table===id);
+  if(rules.length){resourceTipRow(target,'표시 라우트',rules.length+'개');for(const rule of rules.slice(0,3))resourceTipRow(target,'라우트',routeRuleLabel(rule));}
+  if(node.synthetic)target.append(make('div','resource-tip-note','분석기가 추론한 가상 리소스 · 실제 AWS ID 아님'));
+  target.append(make('div','resource-tip-note','구성 정보 · 미확인 값은 생략 · 클릭하여 상세 보기'));
+}
+function hideTraceTooltip(){
+  if(tooltipAnchor)tooltipAnchor.removeAttribute('aria-describedby');
+  tooltipAnchor=null;traceTooltip.hidden=true;traceTooltip.replaceChildren();
+}
+function appendTraceNodeEvidence(target,step,data,compact){
+  const x=explainTraceStep(data,step), box=make('div','trace-node-evidence');
+  box.dataset.status=step.status;
+  box.append(make('strong','',`${step.id} · ${step.status} · ${traceEvidenceLabel(data,step)}`),make('div','',`${x.policy} · ${x.direction}`),make('div','',`정책: ${x.ownerText}`),make('div','',x.flow),make('div','trace-node-reason',x.message));
+  for(const fact of x.applied.slice(0,compact?2:undefined))box.append(make('div','','적용: '+fact));
+  const rules=compact?x.checked.filter(r=>!r.endsWith(' · 일치')).slice(0,2):x.checked;
+  for(const rule of rules)box.append(make('div','','검사: '+rule));
+  if(compact&&(x.applied.length>2||x.checked.filter(r=>!r.endsWith(' · 일치')).length>2))box.append(make('div','','나머지 규칙: 리소스 클릭 또는 단계 상세'));
+  target.append(box);
+}
+function activeNodeTraceSteps(id){
+  return traceOverlay&&mode==='network_graph'?nodeTraceSteps(traceOverlay.data,overlayDirection.value,id):[];
+}
+function showTraceTooltip(element,id){
+  hideTraceTooltip();const steps=activeNodeTraceSteps(id);
+  if(!steps.length&&!resourceHoverToggle.checked)return;
+  if(steps.length){
+    const d=traceOverlay.data;traceTooltip.append(make('strong','',id),make('div','',`${overlayDirection.value==='request'?'요청':'응답'} 방향 · 정적 예상 판정`));
+    // Prioritize diagnosis above resource information when the overlay is active.
+    appendTraceNodeEvidence(traceTooltip,steps[0],d,true);
+    if(steps.length>1)traceTooltip.append(make('div','',`다른 검사 ${steps.length-1}개 · 리소스를 클릭하여 확인`));
+  }
+  if(resourceHoverToggle.checked){
+    if(steps.length)traceTooltip.append(make('hr','resource-tip-divider'));
+    appendResourceTooltip(traceTooltip,id);
+  }
+  traceTooltip.hidden=false;tooltipAnchor=element;element.setAttribute('aria-describedby',traceTooltip.id);
+  const r=element.getBoundingClientRect(),t=traceTooltip.getBoundingClientRect(),margin=10;
+  const left=clamp(r.right+margin+t.width<=window.innerWidth?r.right+margin:r.left-t.width-margin,margin,Math.max(margin,window.innerWidth-t.width-margin));
+  const top=clamp(r.top,margin,Math.max(margin,window.innerHeight-t.height-margin));
+  traceTooltip.style.left=`${left}px`;traceTooltip.style.top=`${top}px`;
+}
+resourceHoverToggle.addEventListener('change',hideTraceTooltip);
+viewport.addEventListener('scroll',hideTraceTooltip,{passive:true});
+window.addEventListener('resize',hideTraceTooltip);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')hideTraceTooltip();});
+document.getElementById('packet-trace-tab').addEventListener('click',hideTraceTooltip);
+
+function overlayCompatibility(d) {
+  if (!d || !/^sha256-(?:files|plan)-v1:[a-f0-9]{64}$/.test(GRAPHS.input_identity||'') || d.input_identity!==GRAPHS.input_identity) return '입력 파일 지문 없음 또는 불일치 · 구조도 연동 불가';
+  const ids=new Set(GRAPHS.network_graph.nodes.map(n=>n.id));
+  if (![d.scenario.source_resource,d.scenario.destination_resource,d.scenario.source_subnet].every(x=>ids.has(x))) return '출발지/목적지/서브넷 식별 불가 · 구조도 연동 불가';
+  if (d.session_trace.scope_supported!==true) return '현재 분석 지원 범위 밖 · 구조도 연동 불가';
+  for (const f of [d.forwarding,d.session_trace.response.forwarding]) {
+    if (!Array.isArray(f?.hops)||!f.hops.length||f.hops.some(h=>!h||!ids.has(h.resource))) return '전달 후보 리소스 미확인 · 구조도 연동 불가';
+  }
+  return '';
+}
+function clearOverlay() {
+  hideTraceTooltip();
+  traceOverlay=null;
+  if(mode==='network_graph'&&!document.getElementById('graph-view').hidden) render();
+}
+function applyOverlayFocus() {
+  if (!traceOverlay||mode!=='network_graph') return;
+  const d=traceOverlay.data, key=overlayDirection.value, lane=d.session_trace[key];
+  const f=key==='request'?d.forwarding:lane.forwarding;
+  const nodes=new Map([...nodeLayer.querySelectorAll('.node')].map(el=>[el.dataset.id,el]));
+  const related=new Set(f.hops.map(h=>h.resource));
+  const first=new Set(), conditional=new Set(), inspected=new Set();
+  for(const step of lane.steps) {
+    const ids=traceStepResources(d,step);
+    for(const id of ids) if(nodes.has(id)) {
+      related.add(id);
+      if(step.id===d.first_blocker_step&&step.status==='BLOCKED') first.add(id);
+      else if(d.conditional_blockers.includes(step.finding_id)&&step.status==='BLOCKED') conditional.add(id);
+      if(step.id===traceOverlay.stepId) inspected.add(id);
+    }
+  }
+  for(const [id,el] of nodes){
+    el.classList.toggle('dimmed',!related.has(id));
+    el.classList.remove('connected');
+    el.classList.toggle('trace-related',related.has(id));
+    el.classList.toggle('trace-first',first.has(id));
+    el.classList.toggle('trace-conditional',!first.has(id)&&conditional.has(id));
+    el.classList.toggle('trace-inspected',inspected.has(id));
+  }
+  linkLayer.querySelectorAll('.link-path').forEach(el=>{const relevant=related.has(el.dataset.source)&&related.has(el.dataset.target)&&['sg','acl','association'].includes(el.dataset.layer);el.classList.toggle('dimmed',!relevant);el.classList.toggle('focused',relevant);});
+}
+function renderOverlay(){
+  overlayBar.hidden=mode!=='network_graph';
+  const active=mode==='network_graph'&&traceOverlay;
+  overlayDirection.disabled=!active;
+  document.getElementById('overlay-clear').disabled=!active;
+  if(!active){overlayStatus.textContent='Packet Trace 탭에서 분석 결과를 선택해 구조도에 표시하세요.';return;}
+  const d=traceOverlay.data,key=overlayDirection.value,lane=d.session_trace[key], f=key==='request'?d.forwarding:lane.forwarding;
+  const nodes=new Map([...nodeLayer.querySelectorAll('.node')].map(el=>[el.dataset.id,domBox(el)]));
+  const labels=[...regionLayer.querySelectorAll('.region-label')].map(el=>{const r=el.parentElement;return{x:r.offsetLeft+r.clientLeft+el.offsetLeft,y:r.offsetTop+r.clientTop+el.offsetTop,w:el.offsetWidth,h:el.offsetHeight};}).filter(r=>r.w&&r.h);
+  const regions=[...regionLayer.children].map(domBox);
+  const defs=svgEl('defs',{}), marker=svgEl('marker',{id:'trace-candidate-arrow',markerWidth:7,markerHeight:7,refX:6,refY:3,orient:'auto'});
+  marker.append(svgEl('path',{d:'M0 0 L6 3 L0 6Z',fill:'#2563eb'}));defs.append(marker);linkLayer.append(defs);
+  let shown=0, missed=0;const reserved=currentPolicySegments.slice();
+  for(let i=1;i<f.hops.length;i++){
+    const a=f.hops[i-1].resource,b=f.hops[i].resource;if(a===b)continue;
+    const from=nodes.get(a),to=nodes.get(b);if(!from||!to){missed++;continue;}
+    const obstacles=[...nodes].filter(([id])=>id!==a&&id!==b).map(([,box])=>box);
+    obstacles.push(...regions.filter(box=>!overlaps(from,box)&&!overlaps(to,box)),...labels);
+    const res=routeWithLanes(from,to,obstacles,{x:0,y:0,w:currentLayout.width,h:currentLayout.height},reserved);
+    if(res.status!=='routed'){missed++;continue;}
+    reserved.push(...pathSegments(res.points));
+    const path=svgEl('path',{d:CloudPathOrthogonalRouter.svgPath(res),fill:'none',stroke:'#2563eb','stroke-width':3.5,'stroke-dasharray':'8 5','marker-end':'url(#trace-candidate-arrow)',class:'trace-candidate'});
+    path.dataset.source=a;path.dataset.target=b;const title=svgEl('title',{});title.textContent=`논리적 전달 후보 ${i} → ${i+1} (정책 통과 아님)`;path.append(title);linkLayer.append(path);shown++;
+  }
+  applyOverlayFocus();
+  overlayStatus.textContent=`${traceOverlay.name} · ${key==='request'?'요청':'응답'} ${lane.status} · 전체 ${d.predicted_connectivity} · 전달 후보 선 ${shown}, 미표시 ${missed} · 파란 점선: 정책 제외 후보 / 빨간 실선 테두리: 최초 차단 / 붉은 점선 테두리: 후속 조건부 차단 · 파일 지문 일치(결과 진위 검증 아님)`;
+}
+function openTraceOverlay(data,name,key,step){
+  const why=overlayCompatibility(data);if(why)return why;
+  traceOverlay={data,name,stepId:step?.id||null};overlayDirection.value=key;
+  document.getElementById('packet-trace-view').hidden=true;document.getElementById('graph-view').hidden=false;
+  mode='network_graph';selectedId=step?.resource||data.scenario[key==='request'?'source_resource':'destination_resource'];focusActive=false;render();
+  return '';
+}
+overlayDirection.addEventListener('change',()=>{if(traceOverlay){traceOverlay.stepId=null;render();}});
+document.getElementById('overlay-clear').addEventListener('click',clearOverlay);
+document.getElementById('overlay-back').addEventListener('click',()=>document.getElementById('packet-trace-tab').click());
+
+function render() {
+  hideTraceTooltip();
+  const graph=GRAPHS[mode];
+  if (!graph) return;
+  document.getElementById('policy-layer-tools').hidden=mode!=='network_graph';
+  document.querySelectorAll('.tab').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.mode===mode)));
+  document.getElementById('view-title').textContent=mode==='network_graph'?'가상 네트워크 구성도 (라우팅 정책 포함)':'IaC 참조·의존성 그래프 (패킷 경로 아님)';
+  document.getElementById('mode-notice').textContent=mode==='network_graph'
+    ? '서브넷 경계는 소속 관계입니다. 단일 Subnet 적용이 확인된 정책은 경계 밖 가까운 위치에, 공유·미확인 정책은 별도 배치합니다. 위치는 실제 통신 순서가 아닙니다.'
+    : '참조 방향은 Terraform에서 A가 B를 참조하는 A → B 방향입니다. 배치된 상자와 선은 네트워크의 패킷 이동을 뜻하지 않습니다.';
+  document.getElementById('graph-legend').textContent=mode==='network_graph'
+    ? '구조도: VPC·Subnet 경계는 소속 관계, 정책 오버레이는 적용·라우트 대상 관계 (패킷 홉 아님)'
+    : 'IaC 참조 그래프: 기반 리소스 → 네트워크 구성 → 연결 정의로 분류 (참조 방향은 화살표로 표시)';
+  if(String(GRAPHS.input_identity||'').startsWith('sha256-plan-v1:')) {
+    if(mode==='reference_graph'){document.getElementById('view-title').textContent='Plan ID 관계도 (코드 의존성 아님)';document.getElementById('mode-notice').textContent='확정된 AWS ID로 복원한 관계입니다. 원본 HCL의 참조 표현식이나 패킷 이동 경로가 아닙니다.';document.getElementById('graph-legend').textContent='Plan ID 관계: 확인된 리소스 ID만 연결합니다.';}
+    else document.getElementById('mode-notice').textContent='Plan의 알려진 값만 표시합니다. 미확정 관계 및 기본 라우팅은 추정하지 않습니다. 통신 분석 지원 범위는 입력 제한 안내를 확인하세요.';
+  }
+  if(String(GRAPHS.input_identity||'').startsWith('sha256-aws-v1:')) {
+    document.getElementById('view-title').textContent=mode==='network_graph'?'AWS 수집 구성도 (스냅샷)':'AWS ID 관계도 (코드 의존성 아님)';
+    document.getElementById('mode-notice').textContent='수집 파일에 기록된 구성 관계입니다. 현재 실시간 상태나 실제 패킷 관측이 아니며 통신 판정은 아직 지원하지 않습니다.';
+    document.getElementById('graph-legend').textContent='AWS 구성 관계 · 확인된 연결만 표시 (패킷 홉 아님)';
+  }
+  document.getElementById('node-count').textContent=graph.nodes.length;
+  document.getElementById('edge-count').textContent=graph.edges.length;
+  document.getElementById('route-count').textContent=(graph.route_rules||[]).length;
+  document.getElementById('issue-count').textContent=(graph.issues||[]).length;
+  const layout=mode==='network_graph'?positionNetwork(graph):positionReference(graph);
+  currentLayout=layout;
+  topology.style.width=`${layout.width}px`;
+  topology.style.height=`${layout.height}px`;
+  linkLayer.setAttribute('width',String(layout.width));linkLayer.setAttribute('height',String(layout.height));
+  linkLayer.setAttribute('viewBox',`0 0 ${layout.width} ${layout.height}`);
+  nodeLayer.replaceChildren(); regionLayer.replaceChildren(); linkLayer.replaceChildren();
+  // Arrowheads are declared relationship directions, never observed packet hops.
+  if(mode==='network_graph'){const defs=svgEl('defs',{}),marker=svgEl('marker',{id:'policy-next-arrow',markerWidth:8,markerHeight:8,refX:7,refY:3,orient:'auto'});marker.append(svgEl('path',{d:'M0 0 L7 3 L0 6Z',fill:'#16719a'}));defs.append(marker);linkLayer.append(defs);}
+  if (mode==='reference_graph') {
+    const defs=svgEl('defs',{});
+    const marker=svgEl('marker',{id:'reference-arrow',markerWidth:'8',markerHeight:'8',refX:'7',refY:'3',orient:'auto',markerUnits:'strokeWidth'});
+    marker.append(svgEl('path',{d:'M0,0 L0,6 L7,3 z',fill:'#7D91A8'}));
+    defs.append(marker);linkLayer.append(defs);
+  }
+  layout.regions.forEach(region => {
+    const element=make('div','region '+(region.kind||''));
+    Object.assign(element.style,{left:`${region.x}px`,top:`${region.y}px`,width:`${region.w}px`,height:`${region.h}px`});
+    if(region.subnetId)element.dataset.subnetId=region.subnetId;
+    element.append(make('div','region-label',region.name));regionLayer.append(element);
+  });
+  graph.nodes.forEach(node => {
+    const p=layout.positions.get(node.id);if(!p)return;
+    const type=node.resource_type || node.type || 'resource';
+    const element=make('button','node '+type+(node.synthetic?' synthetic':''));
+    element.type='button';element.dataset.id=node.id;element.setAttribute('aria-label',node.id);
+    Object.assign(element.style,{left:`${p.x}px`,top:`${p.y}px`,width:`${p.w}px`});
+    element.append(make('div','type',type.replaceAll('_',' ')));
+    element.append(make('div','name',node.name||node.id));
+    const nodeNote=layout.labels && layout.labels.get(node.id);
+    if (nodeNote) element.append(make('div','node-note',nodeNote));
+    const cidr=displayOf(node.id).cidr_block;
+    if (cidr) element.append(make('div','cidr',unresolved(cidr)?'CIDR: 미해결':cidr));
+    element.append(make('div','id',node.id));
+    element.addEventListener('pointerenter',()=>showTraceTooltip(element,node.id));
+    element.addEventListener('pointerleave',hideTraceTooltip);
+    element.addEventListener('focus',()=>showTraceTooltip(element,node.id));
+    element.addEventListener('blur',hideTraceTooltip);
+    element.addEventListener('click',()=>{hideTraceTooltip();selectNode(node.id,true);});
+    nodeLayer.append(element);
+  });
+  renderLinks(graph,layout);
+  if (!selectedId || !graph.nodes.some(node=>node.id===selectedId)) {
+    selectedId=graph.nodes.length ? graph.nodes[0].id : null;
+    focusActive=false;
+  }
+  if (selectedId) selectNode(selectedId,false);
+  else details.replaceChildren(make('p','','표시할 인프라 리소스가 없습니다.'));
+  if ((graph.issues||[]).length) {
+    const issueBox=make('div','issue-box');
+    issueBox.append(make('strong','',`그래프 문제: ${graph.issues.length}건`));
+    graph.issues.slice(0,10).forEach(issue=>issueBox.append(make('p','',JSON.stringify(issue))));
+    details.append(issueBox);
+  }
+  renderOverlay();
+  fitView();
+}
+// Interactive controls
+for (const button of document.querySelectorAll('.tab[data-mode]')) {
+  button.addEventListener('click',()=>{document.getElementById('packet-trace-view').hidden=true;document.getElementById('graph-view').hidden=false;mode=button.dataset.mode;render();});
+}
+document.getElementById('zoom-in').addEventListener('click',()=>setZoom(zoom*1.2));
+document.getElementById('zoom-out').addEventListener('click',()=>setZoom(zoom/1.2));
+document.getElementById('zoom-fit').addEventListener('click',fitView);
+document.getElementById('zoom-reset').addEventListener('click',()=>setZoom(1));
+viewport.addEventListener('wheel',event=>{
+  if (!event.ctrlKey || !currentLayout) return;
+  event.preventDefault();
+  hideTraceTooltip();
+  const bounds=viewport.getBoundingClientRect();
+  const wx=(viewport.scrollLeft+event.clientX-bounds.left)/zoom;
+  const wy=(viewport.scrollTop+event.clientY-bounds.top)/zoom;
+  const factor=event.deltaY<0 ? 1.12 : 1/1.12;
+  // Keep the mouse coordinate anchored.
+  const next=clamp(zoom*factor,MIN_ZOOM,MAX_ZOOM);
+  zoom=next;
+  topology.style.transform=`scale(${zoom})`;
+  stage.style.width=`${Math.ceil(currentLayout.width*zoom)}px`;
+  stage.style.height=`${Math.ceil(currentLayout.height*zoom)}px`;
+  zoomLabel.textContent=`${Math.round(zoom*100)}%`;
+  viewport.scrollLeft=wx*zoom-(event.clientX-bounds.left);
+  viewport.scrollTop=wy*zoom-(event.clientY-bounds.top);
+},{passive:false});
+let drag=null;
+viewport.addEventListener('pointerdown',event=>{
+  if (event.button!==0 || event.target.closest('.node') || event.target.closest('button')) return;
+  drag={x:event.clientX,y:event.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};
+  viewport.classList.add('dragging');
+  viewport.setPointerCapture(event.pointerId);
+});
+viewport.addEventListener('pointermove',event=>{
+  if (!drag) return;
+  viewport.scrollLeft=drag.left-(event.clientX-drag.x);
+  viewport.scrollTop=drag.top-(event.clientY-drag.y);
+});
+function finishDrag(){drag=null;viewport.classList.remove('dragging');}
+viewport.addEventListener('pointerup',finishDrag);
+viewport.addEventListener('pointercancel',finishDrag);
+viewport.addEventListener('keydown',event=>{
+  if (event.key==='+' || event.key==='=') {event.preventDefault();setZoom(zoom*1.2);}
+  if (event.key==='-') {event.preventDefault();setZoom(zoom/1.2);}
+  if (event.key==='0') {event.preventDefault();fitView();}
+});
+render();
+  </script>
+
+  <script>
+  (()=>{
+    'use strict';
+    const $=id=>document.getElementById(id), view=$('packet-trace-view'), select=$('trace-select'), result=$('trace-result');
+    const entries=[], controls=['trace-play','trace-next','trace-reset'];
+    let data=null, timeline=[], cursor=-1, timer=null, active=null;
+    const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e;};
+    const show=(v)=>v===null||v===undefined?'미확인':String(v);
+    const obj=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
+    const states=new Set(['PASS','BLOCKED','UNKNOWN','WARNING','NOT_APPLICABLE','NOT_EVALUATED']);
+    function validate(d){
+      if(!obj(d)||d.analysis_type!=='STATIC_IAC_PREDICTION'||!obj(d.scenario)||!obj(d.session_trace)||d.session_trace.schema_version!=='1.0'||!Array.isArray(d.findings)||!['REACHABLE','BLOCKED','UNKNOWN'].includes(d.predicted_connectivity))throw Error('Phase 4-4 STATIC_IAC_PREDICTION / session_trace 1.0 결과가 아닙니다.');
+      const t=d.session_trace, ids=new Set(), findingIds=new Set();
+      for(const f of d.findings){if(!obj(f)||typeof f.id!=='string'||findingIds.has(f.id))throw Error('Finding ID 오류');findingIds.add(f.id);}
+      for(const key of ['request','response']){const lane=t[key];if(!obj(lane)||!states.has(lane.status)||!Array.isArray(lane.steps)||lane.steps.length>200)throw Error('요청/응답 단계 형식 오류');for(const s of lane.steps){if(!obj(s)||typeof s.id!=='string'||ids.has(s.id)||typeof s.stage!=='string'||!states.has(s.status)||!['PREDICTED_PATH','CONDITIONAL','CONDITIONAL_CHECK','INDEPENDENT_CHECK'].includes(s.evaluation_mode)||!findingIds.has(s.finding_id))throw Error('단계 ID, 상태 또는 근거 참조 오류');ids.add(s.id);}}
+      if(d.first_blocker_step!=null&&!ids.has(d.first_blocker_step))throw Error('최초 차단 단계 참조 오류');
+      if(d.first_blocker!=null&&!findingIds.has(d.first_blocker))throw Error('최초 차단 근거 참조 오류');
+      if(!Array.isArray(d.conditional_blockers)||d.conditional_blockers.some(x=>!findingIds.has(x)))throw Error('조건부 차단 근거 참조 오류');
+      return d;
+    }
+    function add(name,d){validate(d);const index=entries.length;entries.push({name,d});const opt=el('option',name);opt.value=String(index);select.append(opt);}
+    function stop(){if(timer!==null){clearInterval(timer);timer=null;}$('trace-play').textContent='재생';if(active)active.removeAttribute('data-playing');}
+    function reset(){stop();cursor=-1;active=null;for(const e of view.querySelectorAll('[aria-current]'))e.removeAttribute('aria-current');$('trace-play-status').textContent='재생 전 · 논리적 예상 검사 단계 (실제 패킷 이동 아님)';$('trace-detail').textContent='단계를 선택하세요.';}
+    function inspect(step,button){if(active){active.removeAttribute('aria-current');active.removeAttribute('data-playing');}active=button;active.setAttribute('aria-current','step');const f=data.findings.find(x=>x.id===step.finding_id), box=$('trace-detail');box.replaceChildren(el('strong',`${step.id} · ${step.stage} · ${step.status}`),el('p',`${show(step.resource)} | ${show(step.evaluation_mode)} | ${show(step.finding_id)}`),el('p',show(step.reason)));const explanation=explainTraceStep(data,step);const summary=el('div',undefined,'trace-natural');summary.append(el('strong',explanation.message),el('p',`${explanation.flow} · ${explanation.direction}`));if(explanation.conditional)summary.append(el('p','조건부 검사: 선행 경로가 성립한다고 가정한 판정입니다.'));for(const fact of explanation.facts)summary.append(el('div',fact,'trace-small'));const raw=el('details');raw.append(el('summary','원본 JSON 판정 근거 펼치기'),el('pre',JSON.stringify(f||{},null,2),'trace-evidence'));box.append(summary,raw);const jump=el('button','이 단계의 리소스를 구조도에서 보기');jump.type='button';jump.disabled=Boolean(overlayCompatibility(data));jump.addEventListener('click',()=>{stop();openTraceOverlay(data,entries[Number(select.value)].name,step.id.startsWith('RET')?'response':'request',step);});box.append(jump);}
+    function lane(key){const t=data.session_trace, l=t[key], s=data.scenario, forward=key==='request', container=el('section',undefined,'trace-lane');container.append(el('h3',`${forward?'요청 ↓':'응답 ↓'} · ${show(l.status)}`));if(l.conditional)container.append(el('p',`조건부 응답 검사 · 가상 판정 ${show(l.hypothetical_status)}`));const tuple=forward?s:l.tuple||{};const src=forward?s.source_resource:s.destination_resource, dst=forward?s.destination_resource:s.source_resource;container.append(el('div',`${show(src)} · ${show(tuple.source_ip)}:${show(tuple.source_port)}`,'trace-endpoint'));
+      for(const step of l.steps){container.append(el('div',step.evaluation_mode==='PREDICTED_PATH'?'↓':'┊ 조건부','trace-arrow'));const b=el('button',undefined,'trace-step');b.type='button';b.dataset.status=step.status;b.dataset.mode=step.evaluation_mode==='PREDICTED_PATH'?'PREDICTED_PATH':'CONDITIONAL';b.dataset.step=step.id;b.append(el('strong',`${step.id} · ${step.stage} · ${step.status}`),el('div',`${show(step.resource)} · ${step.evaluation_mode==='PREDICTED_PATH'?'예상 경로':'조건부 검사'}`,'trace-small'));if(step.id===data.first_blocker_step)b.append(el('div','최초 예상 차단','trace-small'));if(data.conditional_blockers.includes(step.finding_id))b.append(el('div','후속 조건부 차단','trace-small'));const explanation=explainTraceStep(data,step);b.append(el('div',`${explanation.policy} · ${explanation.direction}`,'trace-policy-label'),el('div',`정책: ${explanation.ownerText}`,'trace-rule-inline'));for(const applied of explanation.applied.slice(0,2))b.append(el('div',`적용: ${applied}`,'trace-rule-inline'));if(explanation.applied.length>2)b.append(el('div',`외 ${explanation.applied.length-2}개 · 단계 상세에서 확인`,'trace-small'));if(['BLOCKED','UNKNOWN','WARNING'].includes(step.status)){b.append(el('div',`${explanation.flow} · ${explanation.message}`,'trace-natural-inline'));for(const rule of explanation.checked.filter(x=>!x.endsWith(' · 일치')).slice(0,2))b.append(el('div',`검사: ${rule}`,'trace-rule-inline'));if(explanation.checked.filter(x=>!x.endsWith(' · 일치')).length>2)b.append(el('div','나머지 검사 규칙은 단계 상세에서 확인','trace-small'));}b.addEventListener('click',()=>{stop();inspect(step,b);});container.append(b);timeline.push({step,b,key});}
+      container.append(el('div',l.status==='PASS'?'↓':'┊ 미도달/미확정','trace-arrow'),el('div',`${show(dst)} · ${show(tuple.destination_ip)}:${show(tuple.destination_port)} · ${l.status==='PASS'?'모델상 허용':'도달/응답 미확정 또는 차단'}`,'trace-endpoint'));
+      const f=forward?data.forwarding:l.forwarding;const details=el('details');details.append(el('summary','전달 후보 (정책 제외)'),el('pre',JSON.stringify({status:f?.status,hops:f?.hops||[],path_kind:f?.path_kind},null,2),'trace-evidence'));container.append(details);return container;
+    }
+    function render(){clearOverlay();reset();timeline=[];const e=entries[Number(select.value)];data=e?.d||null;result.hidden=!data;controls.forEach(id=>$(id).disabled=!data);if(!data)return;const t=data.session_trace;const box=$('trace-overall');box.replaceChildren(el('h2',`종합 판정: ${data.predicted_connectivity}`),el('p',`최초 차단: ${data.first_blocker_step??'없음/미확정'} · 근거 ${data.first_blocker??'없음'} · 후속 조건부 장애: ${data.conditional_blockers.join(', ')||'없음'}`),el('p',`지원 범위: ${show(t.scope)} · 지원 여부: ${show(t.scope_supported)}`));$('trace-lanes').replaceChildren(lane('request'),lane('response'));$('trace-coverage').textContent=JSON.stringify({scenario:data.scenario,assumptions:t.assumptions,limitations:t.limitations,coverage:data.coverage},null,2);$('trace-message').textContent=`${e.name} · JSON 기반 표시 (재계산 없음)`;const why=overlayCompatibility(data);box.append(el('p',why||'입력 파일 지문 일치 · 구조도 연동 가능 (결과 진위 검증 아님)'));for(const key of ['request','response']){const b=el('button',`${key==='request'?'요청':'응답'} 전달 후보를 구조도에서 보기`);b.type='button';b.disabled=Boolean(why);b.addEventListener('click',()=>{stop();openTraceOverlay(data,e.name,key,null);});box.append(b);}}
+    function advance(){if(!data)return false;const next=timeline[cursor+1];if(!next||next.step.evaluation_mode!=='PREDICTED_PATH'){stop();$('trace-play-status').textContent='예상 경로 재생 종료 · 조건부/미확인 단계는 클릭하여 확인';return false;}cursor++;inspect(next.step,next.b);next.b.dataset.playing='true';$('trace-play-status').textContent=`${next.key==='request'?'요청':'응답'} · ${next.step.id} · ${next.step.status}`;if(next.step.status!=='PASS'){stop();$('trace-play-status').textContent+=' · 재생 중단';return false;}return true;}
+    $('trace-play').addEventListener('click',()=>{if(timer!==null){stop();return;}if(cursor>=0)reset();if(advance()){$('trace-play').textContent='정지';timer=setInterval(()=>{advance();},850);}});
+    $('trace-next').addEventListener('click',()=>{stop();advance();});$('trace-reset').addEventListener('click',reset);select.addEventListener('change',render);
+    $('trace-file').addEventListener('change',async e=>{let n=0;const errors=[];for(const f of e.target.files){try{if(f.size>5*1024*1024)throw Error('5 MiB 초과');add(f.name,JSON.parse(await f.text()));n++;}catch(err){errors.push(`${f.name}: ${err.message}`);}}if(n){select.value=String(entries.length-1);render();}if(errors.length)$('trace-message').textContent=errors.join(' | ');e.target.value='';});
+    // Phase 5-3: local API only; offline HTML retains original viewer behavior.
+    let liveContext=null, liveResult=null, liveCount=0;
+    const liveFlags=['complete_config','complete_nacl_config','complete_routing_config','assume_direct_private','assume_tracked_response','assume_unmodified_default_nacl'];
+    async function initLive(){
+      if(location.protocol!=='http:'||!['localhost','127.0.0.1'].includes(location.hostname)||location.pathname!=='/')return;
+      try{
+        const r=await fetch('/api/context',{cache:'no-store'});if(!r.ok)return;
+        const c=await r.json();if(c.input_identity!==GRAPHS.input_identity){$('upload-panel').hidden=false;$('upload-run').disabled=true;$('upload-status').textContent='다른 탭에서 입력이 변경됐습니다. 새로고침하세요.';return;}if(!Array.isArray(c.endpoints)||typeof c.token!=='string')return;
+        liveContext=c;$('live-analysis').hidden=false;$('upload-panel').hidden=false;
+        const snap=c.snapshot||{};
+        $('snapshot-info').textContent=`현재 입력: ${snap.files?.length||0}개 파일 · ${snap.resource_count??'미확인'}개 리소스 · ${c.endpoints.length}개 명시적 IPv4 엔드포인트`;
+        $('snapshot-files').replaceChildren(...(snap.files||[]).map(f=>el('li',`${f.name} · ${f.bytes} bytes`)));
+        $('snapshot-warnings').replaceChildren(...(snap.warnings||[]).map(w=>el('li',w)));
+        if(snap.input_type==='TERRAFORM_PLAN_JSON'){$('snapshot-info').append(el('p','Plan JSON · ID 기반 관계도 (코드 의존성 아님) · '+(snap.analysis_restricted?'통신 판정 제한':'제한된 직접 IPv4 통신 분석 지원')));const tab=document.querySelector('[data-mode=reference_graph]');if(tab)tab.textContent='Plan ID 관계';}
+        if(snap.input_type==='AWS_INVENTORY_JSON'){$('snapshot-info').append(el('p',`AWS Inventory · ${snap.region} · ${snap.vpc_id} · 수집 시각 ${snap.collected_at} · 구성 조회 전용 (통신 판정 미지원)`));const tab=document.querySelector('[data-mode=reference_graph]');if(tab)tab.textContent='AWS ID 관계';}
+        if(Array.isArray(snap.expression_reference_hints)&&snap.expression_reference_hints.length){$('snapshot-warnings').append(el('li','표현식 참조 후보 (실제 연결 아님): '+snap.expression_reference_hints.length+'개'));for(const h of snap.expression_reference_hints)$('snapshot-warnings').append(el('li',`${h.source}.${h.field} → ${h.target} · 참조 후보`));}
+        if(snap.analysis_restricted)$('snapshot-info').append(el('p','부분 구조도만 제공, 통신 분석 제한.'));
+        for(const id of ['live-source','live-destination'])c.endpoints.forEach((e,i)=>{const o=el('option',`${e.resource} · ${e.ip}`);o.value=String(i);$(id).append(o);});
+        if(c.endpoints.length>=2&&!snap.analysis_restricted){$('live-destination').selectedIndex=1;$('live-run').disabled=false;}
+        else $('live-status').textContent=snap.input_type==='AWS_INVENTORY_JSON'?'AWS 구성 수집 전용 단계입니다. 통신 판정은 후속 개발 예정입니다.':snap.analysis_restricted?'미지원 구성으로 종합 통신 분석이 제한됩니다.':'분석 가능한 명시적 IPv4 엔드포인트가 2개 이상 필요합니다.';
+      }catch(e){/* offline viewer */}
+    }
+    $('upload-form').addEventListener('submit',async e=>{
+      e.preventDefault();if(!liveContext||$('upload-run').disabled)return;
+      const files=Array.from($('upload-files').files), status=$('upload-status');
+      if(!files.length||files.length>50||files.some(f=>!f.name.endsWith('.tf')&&!f.name.endsWith('.json'))||(files.some(f=>f.name.endsWith('.json'))&&files.length!==1)||files.reduce((n,f)=>n+f.size,0)>5*1024*1024){status.textContent='1~50개 .tf 또는 Plan/AWS Inventory JSON 1개, 합계 5 MiB 이내로 선택하세요.';return;}
+      if(!confirm('현재 입력 구성과 화면에 남은 분석 결과를 교체합니다. 필요한 JSON은 먼저 저장하세요. 계속할까요?'))return;
+      $('upload-run').disabled=true;status.textContent='파일 읽기 및 구성 분석 중…';
+      try{
+        const encoded=[];
+        for(const f of files){const bytes=new Uint8Array(await f.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));encoded.push({name:f.name,content_base64:btoa(binary)});}
+        const r=await fetch('/api/upload',{method:'POST',headers:{'Content-Type':'application/json','X-CloudPath-Token':liveContext.token},body:JSON.stringify({input_identity:liveContext.input_identity,files:encoded})});
+        const d=await r.json();if(!r.ok)throw Error(d.error||'업로드 실패');
+        status.textContent='새 구성 적용 완료. 화면 갱신 중…';location.replace('/');
+      }catch(err){status.textContent=String(err.message||err)+' · 서버 응답을 확인하세요. 필요 시 새로고침하세요.';$('upload-run').disabled=false;}
+    });
+    $('live-form').addEventListener('submit',async e=>{
+      e.preventDefault();if(!liveContext||$('live-run').disabled)return;
+      const body={source:Number($('live-source').value),destination:Number($('live-destination').value),protocol:$('live-protocol').value,source_port:Number($('live-sport').value),destination_port:Number($('live-dport').value),input_identity:GRAPHS.input_identity};
+      for(const k of liveFlags)body[k]=$('live-'+k).checked;
+      $('live-run').disabled=true;$('live-save').disabled=true;liveResult=null;$('live-status').textContent='분석 중…';
+      try{
+        const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json','X-CloudPath-Token':liveContext.token},body:JSON.stringify(body)});
+        const d=await r.json();if(!r.ok)throw Error(d.error||'분석 실패');if(d.input_identity!==GRAPHS.input_identity)throw Error('입력 구성 불일치');
+        add(`웹 분석 ${++liveCount} · ${d.scenario.protocol.toUpperCase()} ${d.scenario.source_port} → ${d.scenario.destination_port}`,d);select.value=String(entries.length-1);render();liveResult=d;$('live-save').disabled=false;$('live-status').textContent='분석 완료 · '+d.predicted_connectivity;
+      }catch(err){$('live-status').textContent=String(err.message||err);}finally{$('live-run').disabled=false;}
+    });
+    $('live-save').addEventListener('click',()=>{if(!liveResult)return;const url=URL.createObjectURL(new Blob([JSON.stringify(liveResult,null,2)],{type:'application/json'}));const a=el('a');a.href=url;a.download='communication_web.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+    initLive();
+    for(const entry of (GRAPHS.packet_traces||[])){try{add(entry.name,entry.result);}catch(err){$('trace-message').textContent=err.message;}}
+    if(entries.length){select.value='0';render();}
+    $('packet-trace-tab').addEventListener('click',()=>{ $('graph-view').hidden=true;view.hidden=false;document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-pressed',String(b.id==='packet-trace-tab'))); });
+    document.querySelectorAll('.tab[data-mode]').forEach(b=>b.addEventListener('click',()=>{stop();}));
+  })();
+  </script>
+</body>
+</html>

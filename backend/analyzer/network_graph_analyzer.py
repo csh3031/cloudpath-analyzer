@@ -8,12 +8,13 @@
 from typing import Any, Sequence
 
 from backend.analyzer.routing_analyzer import find_route_table, get_reference
+from backend.analyzer.network_acl_analyzer import association as resolve_acl_association
 
 
 VISIBLE_TYPES = {
     "vpc", "subnet", "route_table", "default_route_table", "internet_gateway",
     "nat_gateway", "instance", "network_interface", "security_group",
-    "network_acl",
+    "network_acl", "default_network_acl",
 }
 
 # 자원 속성에서 부모가 되는 리소스를 식별할 수 있는 경우에만 연결한다.
@@ -27,6 +28,7 @@ PARENT_RELATIONS = {
     "network_interface": ("subnet_id", {"subnet"}, "contains", "structure"),
     "security_group": ("vpc_id", {"vpc"}, "contains", "structure"),
     "network_acl": ("vpc_id", {"vpc"}, "contains", "structure"),
+    "default_network_acl": ("default_network_acl_id", {"vpc"}, "contains", "structure"),
 }
 
 TARGET_KEYS = (
@@ -57,7 +59,7 @@ def analyze_network_graph(resources: Sequence[Any]) -> dict:
             continue
         nodes[res.id] = {
             "id": res.id,
-            "resource_type": "route_table" if res.resource_type == "default_route_table" else res.resource_type,
+            "resource_type": {"default_route_table": "route_table", "default_network_acl": "network_acl"}.get(res.resource_type, res.resource_type),
             "original_resource_type": res.resource_type,
             "name": res.name,
             "provider": res.provider,
@@ -191,6 +193,25 @@ def analyze_network_graph(resources: Sequence[Any]) -> dict:
                         resource=res.id, attribute=field,
                     ))
 
+    # Explicit/managed ACL assignments use the same conservative selector as
+    # the static policy engine. Never synthesize an unobserved default ACL.
+    for subnet in sorted((r for r in index.values() if r.resource_type == "subnet"), key=lambda r: r.id):
+        vpc = index.get(get_reference(subnet.attributes.get("vpc_id")))
+        if not vpc or vpc.resource_type != "vpc":
+            continue
+        acl, reason = resolve_acl_association(resources, subnet, vpc)
+        if acl is not None:
+            add_edge(acl.id, subnet.id, "applies_to", "policy_attachment", policy_scope="subnet_boundary")
+        elif reason != "implicit_default":
+            issues.append(_issue("UNRESOLVED_NACL_ASSOCIATION", "Subnet의 NACL 적용 관계를 확정하지 못했습니다.", subnet=subnet.id, detail=reason))
+
+    # ENI attachment metadata is not a forwarding edge. Keep instance-level
+    # SG references as evidence; the renderer prefers a matching attached ENI.
+    for eni in (r for r in index.values() if r.resource_type == "network_interface"):
+        instance = index.get(get_reference(eni.attributes.get("instance_id")))
+        if instance and instance.resource_type == "instance":
+            add_edge(eni.id, instance.id, "attached_to", "attachment")
+
     # 4. 라우팅 규칙은 별도 데이터로 보존한다. Route Table -> Gateway 연결선을
     #    실제 패킷 이동선으로 만들지 않는다.
     def record_route(table_id: str, source: str, route: dict):
@@ -220,6 +241,7 @@ def analyze_network_graph(resources: Sequence[Any]) -> dict:
             "target_kind": target_kind,
             "status": status,
             "packet_traversable": False,
+            **({"observed_state": route["observed_state"]} if route.get("observed_state") in ("active", "blackhole") else {}),
         }
         route_rules.append(record)
         if status == "UNKNOWN":
