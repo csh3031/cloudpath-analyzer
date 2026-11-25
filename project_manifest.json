@@ -2,19 +2,22 @@
   "project": {
     "name": "CloudPath Analyzer",
     "version": "0.1.0-dev",
-    "vision_revision": "1.2",
-    "status": "early_development",
-    "type": "predeployment_infrastructure_simulation",
+    "vision_revision": "1.3",
+    "status": "aws_v1_development",
+    "type": "predeployment_and_aws_inventory_infrastructure_analysis",
     "primary_document": "PROJECT_VISION.md",
-    "vision_updated_on": "2026-11-17"
+    "vision_updated_on": "2026-11-25",
+    "target_release": "1.0.0"
   },
   "mission": {
-    "primary": "Validate virtual infrastructure and communication paths before cloud deployment.",
+    "primary": "Validate infrastructure and communication paths before deployment and diagnose deployed AWS configurations through a reliable web service.",
     "primary_objectives": [
       "reduce_cloud_validation_cost",
       "reduce_troubleshooting_time",
       "detect_predeployment_configuration_errors",
-      "reduce_repeated_debugging_cycles_through_multi_issue_diagnostics"
+      "reduce_repeated_debugging_cycles_through_multi_issue_diagnostics",
+      "diagnose_deployed_aws_configurations",
+      "deliver_reliable_web_analysis"
     ],
     "deployment_free_validation": true,
     "virtual_infrastructure_simulation": true,
@@ -22,14 +25,17 @@
     "multi_issue_diagnostics_required": true
   },
   "product_identity": {
-    "primary": "virtual_infrastructure_simulation_platform",
+    "primary": "predeployment_and_deployed_infrastructure_analysis_platform",
     "core_capabilities": [
       "virtual_infrastructure_modeling",
       "infrastructure_topology_visualization",
       "virtual_packet_path_simulation",
       "communication_anomaly_diagnostics",
       "cloud_specific_policy_analysis",
-      "non_stop_multi_issue_diagnostics"
+      "non_stop_multi_issue_diagnostics",
+      "read_only_aws_inventory_analysis",
+      "interactive_topology_editing",
+      "stable_web_analysis"
     ],
     "long_term_goal": "hybrid_multicloud_infrastructure_analysis"
   },
@@ -43,7 +49,10 @@
     "communication_diagnostics",
     "cloud_policy_analysis",
     "explainable_results",
-    "hybrid_cloud_extensibility"
+    "hybrid_cloud_extensibility",
+    "actual_aws_configuration_analysis",
+    "interactive_topology_editing",
+    "web_service_reliability"
   ],
   "quality_principles": {
     "analysis_correctness_required": true,
@@ -59,7 +68,12 @@
     "must_report_unexamined_coverage": true,
     "must_preserve_existing_tests": true,
     "configuration_edges_are_not_packet_hops": true,
-    "must_support_non_color_status_cues": true
+    "must_support_non_color_status_cues": true,
+    "visual_edits_must_not_change_analysis": true,
+    "must_distinguish_input_provenance_and_observations": true,
+    "read_only_aws_collection_required": true,
+    "must_protect_sensitive_input": true,
+    "release_requires_full_acceptance_evidence": true
   },
   "mandatory_requirements": [
     {
@@ -67,7 +81,7 @@
       "name": "non_stop_multi_issue_diagnostics",
       "classification": "must_have_architecture_requirement",
       "description": "Continue independently or conditionally evaluable checks after the first predicted blocker; aggregate multiple findings without inventing downstream packet paths.",
-      "implementation_status": "foundation_implemented_phase_2_4",
+      "implementation_status": "bounded_session_diagnostics_implemented",
       "required_in": [
         "analysis_orchestration",
         "diagnostic_data_model",
@@ -80,7 +94,7 @@
       "name": "separate_topology_and_packet_trace_views",
       "classification": "must_have_architecture_requirement",
       "decision_status": "approved",
-      "implementation_status": "partially_implemented_topology_only",
+      "implementation_status": "basic_three_views_implemented",
       "description": "Provide independently selectable Topology View and Packet Trace View, both consuming shared infrastructure identifiers and relevant diagnostic data. Do not present configuration edges as packet hops.",
       "required_in": [
         "visualization_architecture",
@@ -94,12 +108,65 @@
       "name": "distinguish_predicted_path_and_conditional_checks",
       "classification": "must_have_visualization_requirement",
       "decision_status": "approved",
-      "implementation_status": "data_model_supported_visual_trace_pending",
+      "implementation_status": "basic_visual_trace_and_overlays_implemented",
       "description": "Render predicted packet movement, first blocker, conditional downstream checks and unexamined segments with unambiguous labels and non-color-only cues.",
       "required_in": [
         "packet_trace_view",
         "diagnostic_overlays",
         "accessibility_tests"
+      ]
+    },
+    {
+      "id": "REQ-UI-EDIT-003",
+      "name": "interactive_topology_editing",
+      "classification": "must_have_v1_release_requirement",
+      "decision_status": "approved",
+      "implementation_status": "planned",
+      "description": "V1 requires resource drag, edge recalculation, containment constraints, VPC/subnet collapse/expand with hidden diagnostic summaries, and layout save/restore/reset keyed by input fingerprint and graph mode. Layout edits never change the infrastructure or verdict.",
+      "required_in": [
+        "visualization",
+        "layout_state",
+        "browser_e2e"
+      ]
+    },
+    {
+      "id": "REQ-AWS-001",
+      "name": "aws_inventory_analysis",
+      "classification": "must_have_v1_release_requirement",
+      "decision_status": "approved",
+      "implementation_status": "inventory_and_visualization_implemented_analysis_pending",
+      "description": "Read-only AWS configuration collection and bounded static analysis with provenance, scope and unknown coverage; compare Reachability Analyzer and Flow Logs evidence separately.",
+      "required_in": [
+        "input_adapters",
+        "analysis_orchestration",
+        "integration_tests"
+      ]
+    },
+    {
+      "id": "REQ-WEB-001",
+      "name": "stable_web_analysis_service",
+      "classification": "must_have_v1_release_requirement",
+      "decision_status": "approved",
+      "implementation_status": "local_web_foundation_implemented_release_hardening_pending",
+      "description": "V1 requires validated inputs, bounded requests, error recovery, prior snapshot retention, stale input and concurrency handling, sensitive data protection, deployment and operating documentation, and security/performance acceptance.",
+      "required_in": [
+        "web_service",
+        "security",
+        "performance",
+        "browser_e2e"
+      ]
+    },
+    {
+      "id": "REQ-V1-001",
+      "name": "release_acceptance",
+      "classification": "must_have_v1_release_requirement",
+      "decision_status": "approved",
+      "implementation_status": "planned",
+      "description": "V1 is complete only after the mandatory scope and acceptance gates are verified, not by test count or document revision alone.",
+      "required_in": [
+        "release_qa",
+        "documentation",
+        "support_matrix"
       ]
     }
   ],
@@ -121,23 +188,38 @@
       "ec2_instance",
       "network_interface",
       "security_group",
-      "network_acl"
+      "network_acl",
+      "vpc_peering",
+      "transit_gateway",
+      "vpc_endpoint",
+      "alb",
+      "nlb",
+      "listener",
+      "target_group",
+      "ecs_fargate",
+      "eks_vpc_node_eni",
+      "rds",
+      "s3_access_path"
     ],
-    "note": "Planned MVP support; not all listed functions are implemented."
+    "note": "V1 target scope, not an implemented support claim. See v1_release_scope and PROJECT_VISION.md sections 6 and 12."
   },
   "input_sources": {
     "initial": [
       "terraform_hcl",
       "terraform_plan_json",
-      "user_simulation_request"
+      "user_simulation_request",
+      "aws_inventory_json_read_only",
+      "reachability_analyzer_results",
+      "vpc_flow_logs_evidence"
     ],
     "future": [
       "manual_infrastructure_configuration",
-      "aws_api",
       "on_premises_configuration",
       "azure_adapter",
       "gcp_adapter"
-    ]
+    ],
+    "aws_collection": "read_only_cli_inventory",
+    "observation_sources_are_not_packet_simulation": true
   },
   "virtual_infrastructure": {
     "enabled_as_product_goal": true,
@@ -157,7 +239,8 @@
     "views": [
       "infrastructure_topology",
       "communication_path",
-      "diagnostic_results"
+      "diagnostic_results",
+      "terraform_references"
     ],
     "features": [
       "resource_topology",
@@ -170,14 +253,24 @@
       "diagnostic_evidence",
       "multiple_findings",
       "conditional_path_distinction",
-      "unknown_or_unevaluated_segments"
+      "unknown_or_unevaluated_segments",
+      "natural_language_rule_evidence",
+      "policy_overlay_toggles",
+      "adaptive_layout",
+      "resource_hover",
+      "diagnostic_hover",
+      "drag_edit",
+      "vpc_subnet_collapse_expand",
+      "edge_recalculation",
+      "layout_save_restore_reset"
     ],
     "shared_model_with_analysis_engine": true,
     "render_conditional_check_as_actual_packet_travel": false,
     "show_first_blocker_and_additional_findings": true,
     "separate_topology_and_packet_trace_views_required": true,
     "view_switching_required": true,
-    "theme_decided": false
+    "theme_decided": false,
+    "editing_required_for_v1": true
   },
   "simulation": {
     "primary": "virtual_network_path_analysis",
@@ -224,7 +317,7 @@
   "multi_issue_diagnostics": {
     "name": "Non-Stop Multi-Issue Diagnostics",
     "required": true,
-    "implementation_status": "foundation_implemented_phase_2_4",
+    "implementation_status": "bounded_session_diagnostics_implemented",
     "stop_predicted_packet_at_blocker": true,
     "stop_entire_diagnostic_on_first_blocker": false,
     "continue_independent_checks": true,
@@ -308,7 +401,7 @@
     ],
     "not_evaluated_is_check_level_only": true,
     "integrated_result_schema": {
-      "implementation_status": "foundation_implemented_phase_2_4",
+      "implementation_status": "foundation_and_bounded_session_trace_implemented",
       "top_level_fields": [
         "scenario",
         "predicted_connectivity",
@@ -342,7 +435,9 @@
       "application_policy_analyzer",
       "communication_scenario_orchestrator",
       "multi_issue_diagnostic_aggregator",
-      "visualization_and_reporting"
+      "visualization_and_reporting",
+      "web_service_snapshot_lifecycle",
+      "presentation_layout_state"
     ],
     "separate_dependency_and_network_graphs": true,
     "separate_iam_analysis": true,
@@ -360,7 +455,8 @@
       "backend/output/topology_html.py",
       "frontend/static/topology_viewer.html",
       "scripts/export_topology.py"
-    ]
+    ],
+    "layout_state_separate_from_analysis": true
   },
   "implementation": {
     "completed": [
@@ -376,22 +472,53 @@
       "reference_graph_and_network_graph_separation",
       "offline_html_topology_viewer_initial",
       "offline_html_terraform_reference_viewer_initial",
-      "resource_detail_panel_initial"
+      "resource_detail_panel_initial",
+      "basic_sg_evaluation",
+      "basic_nacl_evaluation",
+      "bounded_ipv4_forwarding",
+      "bounded_bidirectional_session_analysis",
+      "packet_trace_view",
+      "trace_structure_overlay",
+      "local_web_analysis",
+      "multiple_hcl_upload",
+      "terraform_plan_adapter",
+      "bounded_plan_policy_analysis",
+      "natural_language_diagnostics",
+      "aws_inventory_collector_and_visualization",
+      "resource_hover",
+      "subnet_containment",
+      "policy_overlays"
     ],
-    "verified_tests": 57,
-    "verification_basis": "user_reported_pytest_output_on_2026_11_17",
+    "verified_tests": 277,
+    "verification_basis": "user_reported_full_pytest_on_2026_11_25_before_phase_6_1_3",
     "next": [
-      "phase_3_2_visualization_usability_and_layout_research",
-      "separate_topology_and_packet_trace_view_navigation_contract",
-      "plan_and_implement_real_forwarding_path_simulation",
-      "implement_security_group_and_nacl_policy_evaluators",
-      "research_color_theme_anomaly_and_layout_options_before_commitment"
+      "synchronize_current_source_tests_dependencies_and_git",
+      "phase_6_2_aws_configuration_communication_analysis",
+      "phase_6_2_1_collapse_expand",
+      "phase_6_2_2_drag_and_edge_recalculation",
+      "phase_6_2_3_layout_persistence",
+      "phase_6_3_aws_evidence_integration",
+      "phase_7_complex_aws_analysis",
+      "phase_8_web_hardening_release_qa"
     ],
     "not_yet_implemented": [
-      "end_to_end_packet_path_simulation",
-      "packet_trace_view",
-      "full_sg_nacl_iam_cors_policy_analysis",
-      "verified_default_ui_theme_and_visual_status_color_scheme"
+      "full_end_to_end_complex_aws_packet_path_analysis",
+      "actual_aws_inventory_based_integrated_communication_analysis",
+      "unresolved_plan_id_and_complex_module_relationship_resolution",
+      "full_iam_cors_policy_analysis",
+      "topology_drag_collapse_and_layout_persistence",
+      "reachability_analyzer_and_flow_logs_integration",
+      "v1_web_security_performance_and_release_acceptance",
+      "verified_final_ui_theme"
+    ],
+    "verified_phase": "6-1-2",
+    "latest_script_provided_phase": "6-1-4",
+    "latest_full_test_target": 288,
+    "latest_full_test_target_verified": false,
+    "verification_notes": [
+      "Phase 6-1-3 initial and first fix rolled back after 283 PASS / 1 FAIL; fix2 visual output reported by user, full PASS log not supplied.",
+      "Phase 6-1-4 script provided; application and full regression not confirmed.",
+      "AWS inventory mock/sample inspection reported normal; live AWS query not verified."
     ]
   },
   "roadmap": [
@@ -436,52 +563,178 @@
     {
       "phase": 3,
       "name": "basic_topology_visualization",
-      "status": "in_progress",
+      "status": "basic_implemented",
       "subphases": [
         {
           "id": "3-1",
           "name": "offline_topology_and_reference_viewer",
-          "status": "completed_initial_scope"
+          "status": "basic_implemented"
         },
         {
           "id": "3-2",
-          "name": "visualization_navigation_usability_and_layout",
-          "status": "next",
-          "design_research_required": true
+          "name": "navigation_usability_layout",
+          "status": "basic_implemented"
         },
         {
-          "id": "3-trace",
-          "name": "independent_packet_trace_view",
-          "status": "planned",
-          "depends_on": [
-            "path_simulation",
-            "diagnostic_visualization"
-          ]
+          "id": "3-3",
+          "name": "topology_semantic_layout",
+          "status": "basic_implemented"
+        },
+        {
+          "id": "3-4",
+          "name": "obstacle_avoiding_edge_routing",
+          "status": "basic_implemented"
         }
       ]
     },
     {
       "phase": 4,
-      "name": "terraform_input_expansion",
-      "status": "planned"
+      "name": "communication_analysis_engine",
+      "status": "bounded_implementation",
+      "subphases": [
+        {
+          "id": "4-1",
+          "name": "security_group",
+          "status": "basic_implemented"
+        },
+        {
+          "id": "4-2",
+          "name": "network_acl",
+          "status": "basic_implemented"
+        },
+        {
+          "id": "4-3",
+          "name": "forwarding",
+          "status": "basic_implemented"
+        },
+        {
+          "id": "4-4",
+          "name": "bidirectional_session",
+          "status": "basic_implemented"
+        }
+      ]
     },
     {
       "phase": 5,
-      "name": "virtual_packet_simulation",
-      "status": "planned"
+      "name": "web_analysis_and_terraform_input",
+      "status": "basic_implemented",
+      "subphases": [
+        {
+          "id": "5-1",
+          "name": "packet_trace",
+          "status": "basic_implemented"
+        },
+        {
+          "id": "5-2",
+          "name": "trace_overlay",
+          "status": "basic_implemented"
+        },
+        {
+          "id": "5-3",
+          "name": "web_analysis",
+          "status": "basic_implemented"
+        },
+        {
+          "id": "5-4",
+          "name": "multi_hcl_upload",
+          "status": "basic_implemented"
+        },
+        {
+          "id": "5-5",
+          "name": "plan_adapter",
+          "status": "bounded_implementation"
+        },
+        {
+          "id": "5-6",
+          "name": "plan_policy_analysis",
+          "status": "bounded_implementation"
+        },
+        {
+          "id": "5-7",
+          "name": "natural_language_diagnostics",
+          "status": "basic_implemented"
+        },
+        {
+          "id": "5-7-1",
+          "name": "rule_evidence_and_diagnostic_hover",
+          "status": "basic_implemented"
+        }
+      ]
     },
     {
       "phase": 6,
-      "name": "cloud_policy_analysis",
-      "status": "planned"
+      "name": "aws_analysis_and_topology_editing",
+      "status": "in_progress",
+      "subphases": [
+        {
+          "id": "6-1",
+          "name": "aws_inventory_collection",
+          "status": "basic_implemented"
+        },
+        {
+          "id": "6-1-1",
+          "name": "resource_hover",
+          "status": "basic_implemented"
+        },
+        {
+          "id": "6-1-2",
+          "name": "subnet_containment",
+          "status": "verified_277_pass"
+        },
+        {
+          "id": "6-1-3",
+          "name": "policy_overlays",
+          "status": "user_reported_visual_confirmation"
+        },
+        {
+          "id": "6-1-4",
+          "name": "adaptive_layout",
+          "status": "script_provided_verification_pending"
+        },
+        {
+          "id": "baseline-sync",
+          "name": "source_test_dependency_git_sync",
+          "status": "next"
+        },
+        {
+          "id": "6-2",
+          "name": "aws_configuration_communication_analysis",
+          "status": "planned"
+        },
+        {
+          "id": "6-2-1",
+          "name": "vpc_subnet_collapse_expand",
+          "status": "planned"
+        },
+        {
+          "id": "6-2-2",
+          "name": "drag_and_edge_recalculation",
+          "status": "planned"
+        },
+        {
+          "id": "6-2-3",
+          "name": "layout_save_restore_reset",
+          "status": "planned"
+        },
+        {
+          "id": "6-3",
+          "name": "reachability_analyzer_flow_logs",
+          "status": "planned"
+        }
+      ]
     },
     {
       "phase": 7,
-      "name": "integrated_multi_issue_diagnostic_visualization",
+      "name": "complex_aws_infrastructure_and_policy_analysis",
       "status": "planned"
     },
     {
       "phase": 8,
+      "name": "web_hardening_and_v1_release_qa",
+      "status": "planned"
+    },
+    {
+      "phase": "post_v1",
       "name": "hybrid_multicloud_expansion",
       "status": "future"
     }
@@ -497,7 +750,6 @@
     "scope_note": "Configuration-related blocking and reachability are distinct from throughput, latency and resource performance bottlenecks."
   },
   "future_expansion": [
-    "aws_live_state_analysis",
     "terraform_drift_comparison",
     "on_premises_networks",
     "hybrid_vpn",
@@ -513,7 +765,7 @@
     "architecture": "docs/ARCHITECTURE.md",
     "decisions": "docs/DECISIONS.md",
     "roadmap": "docs/ROADMAP.md",
-    "note": "UI research document is planned, not verified on disk. Vision is updated through 2026-11-17 from user-reported 57 PASS.",
+    "note": "Vision revision 1.3 (2026-11-25); source/test baseline sync pending. UI research document existence not verified.",
     "ui_research_proposed": "docs/UI_VISUALIZATION_RESEARCH.md"
   },
   "visualization_architecture": {
@@ -521,24 +773,24 @@
     "shared_normalized_infrastructure_model": true,
     "shared_resource_identifiers": true,
     "independent_view_navigation_required": true,
-    "navigation_control": "undecided",
+    "navigation_control": "tabs_basic_implemented",
     "views": {
       "topology": {
         "required": true,
         "purpose": "infrastructure_configuration_and_resource_relationships",
-        "implementation_status": "initial_html_view_implemented_phase_3_1",
+        "implementation_status": "basic_implemented",
         "packet_forwarding_claims_allowed": false
       },
       "packet_trace": {
         "required": true,
         "purpose": "predicted_packet_flow_and_diagnostic_findings",
-        "implementation_status": "planned_not_implemented",
+        "implementation_status": "basic_implemented",
         "must_distinguish_predicted_conditional_and_independent_results": true
       },
       "terraform_references": {
-        "required_as_core_product_goal": false,
+        "required_as_core_product_goal": true,
         "purpose": "terraform_resource_reference_and_dependency_graph",
-        "implementation_status": "initial_html_view_implemented_phase_3_1",
+        "implementation_status": "basic_implemented",
         "packet_forwarding_claims_allowed": false
       }
     },
@@ -547,10 +799,28 @@
       "conditional_checks_are_not_actual_packet_hops": true,
       "visualization_must_preserve_evidence_coverage_and_assumptions": true,
       "non_color_cues_required_for_diagnostic_status": true
+    },
+    "editing": {
+      "required_for_v1": true,
+      "status": "planned",
+      "drag": true,
+      "edge_recalculation": true,
+      "collapse_expand": [
+        "vpc",
+        "subnet"
+      ],
+      "collapsed_diagnostic_summary": true,
+      "save_restore_reset": true,
+      "storage_key": [
+        "input_fingerprint",
+        "graph_mode"
+      ],
+      "visual_only": true,
+      "containment_constraints": true
     }
   },
   "ui_design_research": {
-    "decision_status": "under_evaluation",
+    "decision_status": "required_interactions_approved_final_style_under_evaluation",
     "do_not_lock_style_before_evidence": true,
     "default_theme": "undecided",
     "theme_candidates": [
@@ -569,9 +839,116 @@
       "first_blocker_identification_accuracy",
       "predicted_vs_conditional_path_confusion",
       "scalability_to_large_topologies",
-      "zoom_pan_fit_view_and_resource_focus"
+      "zoom_pan_fit_view_and_resource_focus",
+      "editing_invariance",
+      "collapsed_diagnostic_visibility",
+      "large_topology_rendering"
     ],
     "proposed_research_document": "docs/UI_VISUALIZATION_RESEARCH.md",
-    "research_document_created": false
+    "research_document_created": false,
+    "current_theme": "light"
+  },
+  "v1_release_scope": {
+    "target": "1.0.0",
+    "status": "planned_not_released",
+    "primary_goal": "comprehensive_aws_infrastructure_analysis_and_reliable_web_service",
+    "scope_definition": "Network-centered AWS end-to-end analysis for a declared support matrix, not all AWS services and features.",
+    "required_inputs": [
+      "terraform_hcl",
+      "terraform_plan_json",
+      "aws_inventory_json_read_only"
+    ],
+    "required_resource_domains": [
+      "vpc",
+      "subnet",
+      "route_table",
+      "internet_gateway",
+      "nat_gateway",
+      "ec2_instance",
+      "network_interface",
+      "security_group",
+      "network_acl",
+      "vpc_peering",
+      "transit_gateway",
+      "vpc_endpoint",
+      "alb",
+      "nlb",
+      "listener",
+      "target_group",
+      "ecs_fargate",
+      "eks_vpc_node_eni",
+      "rds",
+      "s3_access_path"
+    ],
+    "required_policy_layers": [
+      "network",
+      "iam_resource_api_authorization",
+      "application_policy_including_cors_where_supported"
+    ],
+    "required_evidence_sources": [
+      "reachability_analyzer_static",
+      "flow_logs_observed"
+    ],
+    "required_visualization": [
+      "topology",
+      "terraform_references",
+      "packet_trace",
+      "policy_overlays",
+      "natural_language_rule_evidence",
+      "resource_and_diagnostic_hover",
+      "drag_and_edge_recalculation",
+      "vpc_subnet_collapse_expand",
+      "layout_save_restore_reset"
+    ],
+    "required_complex_cases": [
+      "same_vpc",
+      "nat_translation",
+      "alb_nlb_to_service",
+      "service_to_database",
+      "multi_vpc",
+      "vpc_endpoint",
+      "allow",
+      "request_blocked",
+      "response_blocked",
+      "unknown"
+    ],
+    "required_acceptance": [
+      "지원 서비스/속성/경로 매트릭스 작성 및 필수 범위 구현·검수. 미지원 범위는 명시.",
+      "동일한 대표 인프라를 HCL·Plan·실제 AWS Inventory로 분석하고 의미상 비교 가능한 관계와 판정이 일치하거나 차이 사유가 설명됨.",
+      "동일 VPC, NAT, ALB/NLB→서비스, 서비스→DB, 다중 VPC, Endpoint, 정상/요청 차단/응답 차단/미확정 등 필수 시나리오의 기대 결과 검증.",
+      "실제 조회 권한이 있는 AWS 테스트 환경에서 읽기 전용 수집 및 결과 검증. 관측 증거와 정적 분석 차이 확인.",
+      "구조도 이동·접기·저장·복원·초기화, 정책 토글, 팝업 및 Packet Trace를 브라우저에서 통합 검수. 시각 변경 전후 분석 결과 동일.",
+      "업로드 실패·불완전 수집·동시 요청·타임아웃·재기동 및 구성 교체에 대한 오류 처리 검증.",
+      "전체 회귀 테스트 통과 및 브라우저 E2E, 실제 입력 통합 검증. 건너뛴 테스트 및 검증 한계를 명시하고 필수 검증을 미수행한 상태에서 출시 완료로 판정하지 않음.",
+      "대표 소규모/복합/대형 샘플의 성능 측정과 합의된 목표 충족. 목표 및 측정 환경을 별도 기록.",
+      "운영 형태에 맞는 보안 검수, 민감정보 유출 방지 및 읽기 전용 보장.",
+      "설치/운영/지원 범위/알려진 한계/검증 기록 문서화, Git 기준선 및 출시 버전 태그 지정."
+    ],
+    "operating_model": {
+      "status": "undecided",
+      "proposed": "local_or_trusted_single_user",
+      "external_multi_user_requires": [
+        "authentication_authorization",
+        "tls",
+        "session_tenant_isolation",
+        "secret_management",
+        "monitoring",
+        "retention_deletion_policy"
+      ]
+    },
+    "open_decisions": [
+      "deployment_model",
+      "performance_targets_and_test_scale",
+      "detailed_service_support_matrix",
+      "ipv6_support",
+      "multi_account_region_scope",
+      "iam_policy_coverage"
+    ],
+    "release_deadline": null,
+    "post_v1": [
+      "on_premises",
+      "other_clouds",
+      "hybrid_multicloud"
+    ]
   }
 }
