@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from backend.analyzer.forwarding_analyzer import _endpoint, _ip
 from backend.analyzer.session_analyzer import analyze_session
-from backend.iac.upload_snapshot import load_snapshot, MAX_BODY, MAX_BYTES, MAX_FILES
+from backend.iac.upload_snapshot import validate_files, load_snapshot, MAX_BODY, MAX_BYTES, MAX_FILES
 from backend.models.diagnostics import CommunicationScenario
 from backend.analyzer.graph_analyzer import analyze_graphs
 from backend.output.topology_html import build_resource_display, render_topology_html
@@ -23,10 +23,16 @@ FLAGS = ('complete_config', 'complete_nacl_config', 'complete_routing_config',
 FIELDS = {'source', 'destination', 'protocol', 'source_port', 'destination_port', 'input_identity', *FLAGS}
 
 class AnalysisApp:
-    def __init__(self, resources, identity, snapshot=None):
+    def __init__(self, resources, identity, snapshot=None, *, aws_raw=None):
         self.resources = resources
         self.identity = identity
         self.snapshot = snapshot or {"files":[], "resource_count":len(resources), "analysis_restricted":False, "warnings":[]}
+        self._aws_raw = None
+        if aws_raw is not None:
+            from backend.aws.snapshot import load_aws_snapshot
+            if self.snapshot.get('input_type') != 'AWS_INVENTORY_JSON' or not isinstance(aws_raw, bytes) or load_aws_snapshot(aws_raw)[1] != identity:
+                raise ValueError('AWS inventory identity mismatch')
+            self._aws_raw = aws_raw
         self.token = secrets.token_urlsafe(32)
         index = {r.id:r for r in resources}
         if len(index) != len(resources):
@@ -47,6 +53,9 @@ class AnalysisApp:
                     if item not in self.endpoints:
                         self.endpoints.append(item)
         self.endpoints.sort(key=lambda x:(x['resource'], x['ip']))
+        if self._aws_raw is not None:
+            self.endpoints = [e for e in self.endpoints if e['resource'].startswith('aws_instance.')]
+            self.snapshot = {**self.snapshot, 'aws_static_session_available': True}
         with tempfile.TemporaryDirectory() as tmp:
             graphs = analyze_graphs(resources)
             if self.snapshot.get('input_type') in ('TERRAFORM_PLAN_JSON','AWS_INVENTORY_JSON'):
@@ -107,6 +116,60 @@ class AnalysisApp:
             result['session_trace']['limitations'].append('Plan prediction only; known planned values and explicit completeness assumptions, not deployed AWS state.')
         return result
 
+    def analyze_aws(self, data):
+        if self._aws_raw is None:
+            raise ValueError('AWS snapshot required')
+        if not isinstance(data, dict) or set(data) != {'source','destination','protocol','source_port','destination_port','input_identity'}:
+            raise ValueError('Invalid AWS analysis fields')
+        if data['input_identity'] != self.identity or data['protocol'] != 'tcp':
+            raise ValueError('AWS identity mismatch or unsupported protocol')
+        for k in ('source','destination'):
+            if type(data[k]) is not int or not 0 <= data[k] < len(self.endpoints):
+                raise ValueError('Invalid endpoint selection')
+        a,b = (self.endpoints[data[k]] for k in ('source','destination'))
+        if a['resource'] == b['resource'] or a['ip'] == b['ip']:
+            raise ValueError('Select distinct endpoints')
+        for k in ('source_port','destination_port'):
+            if type(data[k]) is not int or not 1 <= data[k] <= 65535:
+                raise ValueError('Invalid TCP port')
+        from backend.aws.session_evidence import analyze_observed_session
+        result = analyze_observed_session(self._aws_raw,a['ip'],b['ip'],data['source_port'],data['destination_port'])
+        if result['input_identity'] != self.identity:
+            raise ValueError('Result identity mismatch')
+        # Resource inspection, not synthetic packet edges. Only known graph IDs.
+        known = {r.id for r in self.resources}
+        endpoints = result['evidence']['forwarding']['endpoints']
+        for f in result['findings']:
+            e = f['evidence']; stage = f['stage']; ids = []
+            src,dst = ('source','destination') if f['direction']=='request' else ('destination','source')
+            def add_endpoint(key, fields):
+                ep = endpoints[key]
+                for field, prefix in fields:
+                    if ep.get(field): ids.append(prefix+ep[field])
+            if stage == 'ENDPOINT_SCOPE':
+                for key in (src,dst):
+                    add_endpoint(key, [('instance_id','aws_instance.'), ('eni_id','aws_network_interface.'), ('subnet_id','aws_subnet.')])
+            elif stage == 'ROUTE_LOOKUP':
+                rid = (e.get('route_lookup') or {}).get('route_table_id')
+                if rid: ids.append('aws_route_table.'+rid)
+                add_endpoint(src, [('subnet_id','aws_subnet.')])
+            elif '_SG_' in stage:
+                key = src if stage.startswith('SOURCE') else dst
+                ep = endpoints[key]
+                ids += ['aws_security_group.'+g for g in ep.get('security_group_ids', [])]
+                add_endpoint(key, [('eni_id','aws_network_interface.'), ('instance_id','aws_instance.')])
+            elif e.get('acl_id'):
+                ids.append('aws_network_acl.'+e['acl_id'])
+                add_endpoint(src if stage.startswith('SOURCE') else dst, [('subnet_id','aws_subnet.')])
+            f['web_resource_ids'] = sorted(set(ids) & known)
+        return result
+
+
+def load_web_app(files):
+    resources, identity, snapshot = load_snapshot(files)
+    raw = validate_files(files, allow_plan=True)[0][1] if snapshot.get('input_type') == 'AWS_INVENTORY_JSON' else None
+    return AnalysisApp(resources, identity, snapshot, aws_raw=raw)
+
 
 def create_server(app, port=8001):
     class Handler(BaseHTTPRequestHandler):
@@ -141,7 +204,7 @@ def create_server(app, port=8001):
             if not self.host_ok() or self.headers.get('Origin') != 'http://' + self.headers.get('Host','') or not secrets.compare_digest(self.headers.get('X-CloudPath-Token',''),app.token):
                 return self.reply(403, {'error':'Local origin/token required'})
             path = urlsplit(self.path).path
-            if path not in ('/api/analyze', '/api/upload'):
+            if path not in ('/api/analyze', '/api/aws-analyze', '/api/upload'):
                 return self.reply(404, {'error':'Not found'})
             try:
                 length = int(self.headers.get('Content-Length','0'))
@@ -152,11 +215,12 @@ def create_server(app, port=8001):
                 if path == '/api/upload':
                     if not isinstance(body, dict) or set(body) != {'input_identity','files'} or body['input_identity'] != app.identity:
                         raise ValueError('Stale input; reload the page')
-                    resources, identity, snapshot = load_snapshot(body['files'])
                     # Commit only after successful parsing, indexing and rendering.
-                    candidate = AnalysisApp(resources, identity, snapshot)
+                    candidate = load_web_app(body['files'])
                     app = candidate
                     result = app.context()
+                elif path == '/api/aws-analyze':
+                    result = app.analyze_aws(body)
                 else:
                     result = app.analyze(body)
             except (ValueError, TypeError, UnicodeError, TimeoutError) as exc:
@@ -178,8 +242,7 @@ def main():
     if len(paths)>MAX_FILES or any(p.suffix not in ('.tf','.json') or not p.is_file() for p in paths) or sum(p.stat().st_size for p in paths)>MAX_BYTES:
         parser.error('Select 1..50 .tf files or one Plan or AWS inventory .json, total <=5 MiB')
     try:
-        resources, identity, snapshot = load_snapshot([{'name':p.name,'content_base64':base64.b64encode(p.read_bytes()).decode('ascii')} for p in paths])
-        app = AnalysisApp(resources, identity, snapshot)
+        app = load_web_app([{'name':p.name,'content_base64':base64.b64encode(p.read_bytes()).decode('ascii')} for p in paths])
     except ValueError as exc:
         parser.error(str(exc))
     with create_server(app,args.port) as server:

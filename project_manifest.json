@@ -487,12 +487,14 @@
       "aws_inventory_collector_and_visualization",
       "resource_hover",
       "subnet_containment",
-      "policy_overlays"
+      "policy_overlays",
+      "adaptive_layout",
+      "bounded_aws_inventory_static_tcp_session",
+      "aws_static_session_web_api_and_result_contract"
     ],
-    "verified_tests": 277,
-    "verification_basis": "user_reported_full_pytest_on_2026_11_25_before_phase_6_1_3",
+    "verified_tests": 435,
+    "verification_basis": "user_environment_full_pytest_2026_11_26_phase_6_2_g_followup",
     "next": [
-      "synchronize_current_source_tests_dependencies_and_git",
       "phase_6_2_aws_configuration_communication_analysis",
       "phase_6_2_1_collapse_expand",
       "phase_6_2_2_drag_and_edge_recalculation",
@@ -503,23 +505,42 @@
     ],
     "not_yet_implemented": [
       "full_end_to_end_complex_aws_packet_path_analysis",
-      "actual_aws_inventory_based_integrated_communication_analysis",
       "unresolved_plan_id_and_complex_module_relationship_resolution",
       "full_iam_cors_policy_analysis",
       "topology_drag_collapse_and_layout_persistence",
       "reachability_analyzer_and_flow_logs_integration",
       "v1_web_security_performance_and_release_acceptance",
-      "verified_final_ui_theme"
+      "verified_final_ui_theme",
+      "broader_aws_inventory_integrated_analysis_and_live_validation"
     ],
-    "verified_phase": "6-1-2",
-    "latest_script_provided_phase": "6-1-4",
-    "latest_full_test_target": 288,
+    "verified_phase": "6-2_G_followup_automated_regression",
+    "latest_script_provided_phase": "6-2_H_acceptance_preparation",
+    "latest_full_test_target": 443,
     "latest_full_test_target_verified": false,
     "verification_notes": [
-      "Phase 6-1-3 initial and first fix rolled back after 283 PASS / 1 FAIL; fix2 visual output reported by user, full PASS log not supplied.",
-      "Phase 6-1-4 script provided; application and full regression not confirmed.",
-      "AWS inventory mock/sample inspection reported normal; live AWS query not verified."
-    ]
+      "Historical: Phase 6-1-3 initial and first fix rolled back after 283 PASS / 1 FAIL; later visual output reported.",
+      "Phase 6-1-4 baseline: user environment 288 passed in 2.12s; archive commit 09f1184118232c44b7cb469439f08f379b8a55be matches environment log.",
+      "Independent full regression remains unverified because python-hcl2 is absent; GitHub remote and live AWS/browser E2E unverified.",
+      "User G follow-up: 435 passed in 2.61s; H target 443; browser E2E and live AWS remain pending."
+    ],
+    "baseline_commit": "09f1184118232c44b7cb469439f08f379b8a55be",
+    "baseline_archive_sha256": "83eba76197df0525df524bf72b8239e5af3cebd2192920924f0a3aea3c639644",
+    "phase_6_2_initial_unit": {
+      "status": "route_lookup_user_verified",
+      "module": "backend/aws/route_evidence.py",
+      "web_integration": true,
+      "full_regression_verified": true,
+      "design": "docs/PHASE_6_2_DESIGN.md"
+    },
+    "phase_6_2_acceptance": {
+      "status": "H_in_progress",
+      "user_verified_tests": 435,
+      "target_tests": 443,
+      "browser_e2e_verified": false,
+      "live_aws_verified": false,
+      "legacy_iac_aws_restriction_preserved": true,
+      "guide": "docs/PHASE_6_2_ACCEPTANCE.md"
+    }
   },
   "roadmap": [
     {
@@ -689,17 +710,17 @@
         {
           "id": "6-1-4",
           "name": "adaptive_layout",
-          "status": "script_provided_verification_pending"
+          "status": "verified_user_288_pass"
         },
         {
           "id": "baseline-sync",
           "name": "source_test_dependency_git_sync",
-          "status": "next"
+          "status": "archive_and_environment_evidence_verified_remote_unverified"
         },
         {
           "id": "6-2",
           "name": "aws_configuration_communication_analysis",
-          "status": "planned"
+          "status": "A_G_user_435_pass_H_acceptance_pending"
         },
         {
           "id": "6-2-1",

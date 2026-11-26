@@ -31,6 +31,7 @@ crash.log
 # Temporary files and backups
 *.bak
 *.bak.*
+*.bak_*
 *.zip
 *.log
 

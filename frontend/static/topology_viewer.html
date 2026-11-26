@@ -110,6 +110,7 @@
     .routing-status ul { margin:6px 0; max-height:150px; overflow:auto; overflow-wrap:anywhere; }
     .routing-status summary { cursor:pointer; }
 
+    .region.aws-evidence-region { outline:3px solid #2563eb; outline-offset:2px; }
     .node.trace-related { outline:2px solid #2563eb; outline-offset:2px; }
     .node.trace-first { outline:4px solid #b91c1c; outline-offset:3px; }
     .node.trace-conditional { outline:4px dashed #b91c1c; outline-offset:3px; }
@@ -157,12 +158,22 @@
     .trace-node-reason { font-weight:600; margin:5px 0; }
 
     @media(max-width:760px) { .trace-grid { grid-template-columns:1fr; } .tabs { flex-wrap:wrap; } }
+    /* Failed configuration input must never look like a successful replacement. */
+    #upload-status[data-state="error"] { color:#991b1b; background:#fff1f2; border:2px solid #b91c1c; border-radius:8px; padding:12px; font-weight:700; overflow-wrap:anywhere; }
+    #upload-error-view { padding:22px; }
+    #upload-error-view .panel { padding:24px; border:2px solid #b91c1c; background:#fff7f7; color:#7f1d1d; }
+    #upload-error-view h2, #upload-error-dialog h2 { margin-top:0; color:#991b1b; }
+    #upload-error-dialog { border:2px solid #b91c1c; border-radius:12px; padding:24px; width:min(520px,calc(100% - 32px)); color:#7f1d1d; background:#fff7f7; overflow-wrap:anywhere; }
+    #upload-error-dialog::backdrop { background:#10274488; }
+    body[data-config-error="true"] #graph-view, body[data-config-error="true"] #packet-trace-view { display:none !important; }
+    body[data-config-error="true"] #snapshot-info { opacity:.7; }
+    #upload-error-view[hidden], #upload-error-dialog:not([open]) { display:none; }
   </style>
 </head>
 <body>
   <script type="application/json" id="graph-data">__CLOUDPATH_GRAPH_DATA__</script>
   <header class="header">
-    <div><div class="brand">CloudPath <span>Analyzer</span></div><div class="subtitle">Phase 6-1 · HCL / Plan / AWS Inventory / Packet Trace</div></div>
+    <div><div class="brand">CloudPath <span>Analyzer</span></div><div class="subtitle">Phase 6-2 · HCL / Plan / AWS Inventory / Packet Trace</div></div>
     <nav id="graph-mode" class="tabs" aria-label="그래프 종류">
       <button class="tab" data-mode="network_graph" aria-pressed="true">Network Topology</button>
       <button class="tab" data-mode="reference_graph" aria-pressed="false">IaC 참조 관계</button>
@@ -171,14 +182,27 @@
   </header>
   <section class="shell" id="upload-panel" hidden style="padding-bottom:0">
     <div class="panel" style="padding:16px">
-      <h3 style="margin-top:0">Terraform 구성 입력</h3>
-      <p>같은 루트 모듈의 .tf 파일(최대 50개) 또는 Terraform Plan JSON 또는 AWS Inventory JSON 한 개를 선택하세요 (합계 5 MiB). 성공 시 기존 입력 전체를 교체합니다. 배포하지 않으며 파일은 영구 저장하지 않습니다.</p>
+      <h3 style="margin-top:0">인프라 구성 입력 · 구조도 교체</h3>
+      <p>같은 루트 모듈의 .tf 파일(최대 50개) 또는 Terraform Plan JSON 또는 AWS Inventory JSON 한 개를 선택하세요 (합계 5 MiB). 성공 시 기존 입력 전체를 교체합니다. Packet Trace의 결과 JSON 추가와는 다른 기능입니다. 배포하지 않으며 파일은 영구 저장하지 않습니다.</p>
       <div id="snapshot-info" role="status"></div>
       <details><summary>현재 입력 파일 및 지원 제한</summary><ul id="snapshot-files"></ul><ul id="snapshot-warnings"></ul><p>HCL의 Module 확장, 변수/함수 평가, tfvars, state, override는 미지원. Plan JSON은 확정 ID 관계를 표시하며 제한된 직접 IPv4 구성만 통신 판정을 지원합니다. 표현식 참조 후보는 실제 연결을 의미하지 않습니다. Plan에는 비밀값이 평문으로 포함될 수 있으므로 로컬에서만 취급하세요.</p></details>
-      <form id="upload-form" style="margin-top:12px"><label for="upload-files">분석 입력 파일</label> <input id="upload-files" type="file" accept=".tf,.json" multiple required> <button id="upload-run" type="submit">구성 분석 및 교체</button></form>
-      <p id="upload-status" role="status"></p>
+      <form id="upload-form" novalidate style="margin-top:12px"><label for="upload-files">구성 입력 파일 (.tf / Plan / Inventory)</label> <input id="upload-files" type="file" accept=".tf,.json" multiple required> <button id="upload-run" type="submit">구성 분석 및 교체</button></form>
+      <p id="upload-status" role="status" aria-live="polite"></p><button id="upload-reload" type="button" hidden>현재 서버 구성 다시 불러오기</button>
     </div>
   </section>
+  <section class="shell" id="upload-error-view" hidden aria-labelledby="upload-error-title">
+    <div class="panel">
+      <h2 id="upload-error-title" tabindex="-1">구성 입력 실패 · 분석 화면 초기화</h2>
+      <p>선택한 파일은 적용되지 않았거나 적용 여부를 확인하지 못했습니다. 이전 구조도와 Packet Trace를 숨겼습니다.</p>
+      <p>위에서 올바른 구성 파일을 다시 선택하세요. 이전 서버 구성을 확인하려면 ‘현재 서버 구성 다시 불러오기’를 누르세요. 다시 불러오면 저장하지 않은 화면 분석 결과는 사라질 수 있습니다.</p>
+    </div>
+  </section>
+  <dialog id="upload-error-dialog" aria-labelledby="upload-dialog-title" aria-describedby="upload-dialog-message">
+    <h2 id="upload-dialog-title">구성 파일 처리 실패</h2>
+    <p id="upload-dialog-message"></p>
+    <p>기존 분석 화면은 숨겨졌습니다. 확인 후 올바른 파일을 다시 선택하세요.</p>
+    <form method="dialog"><button type="submit" autofocus>확인</button></form>
+  </dialog>
   <main class="shell" id="graph-view">
     <div class="notice" id="mode-notice"><strong>구성 관계도</strong> · 라우팅 대상과 정책 연결을 나타냅니다. <strong>실제 패킷 이동 경로가 아닙니다.</strong> 서브넷 분류는 확인 가능한 경로 설정에 근거하며, 인터넷 접속 성공을 보장하지 않습니다.</div>
     <div class="metrics"><div class="metric"><b id="node-count">—</b><span>Resources / Nodes</span></div><div class="metric"><b id="edge-count">—</b><span>Configuration Links</span></div><div class="metric"><b id="route-count">—</b><span>Route Rules</span></div><div class="metric"><b id="issue-count">—</b><span>Graph Issues</span></div></div>
@@ -218,12 +242,12 @@
     <div class="foot">CloudPath Analyzer · Terraform 구성 파일로 생성한 논리 그래프입니다. 실제 AWS 리소스를 생성하거나 조회하지 않았습니다. 구성 정보가 불완전하면 연결을 임의로 보완하지 않습니다.</div>
   </main>
   <main class="shell" id="packet-trace-view" hidden>
-    <div class="notice"><strong>Packet Trace · 정적 IaC 예측</strong> — 실제 패킷 캡처가 아닙니다. 구조도 강조는 입력 파일 지문이 일치하는 경우에만 허용합니다. 결과 자체의 진위는 검증하지 않습니다. PASS는 실제 서비스 응답을 보장하지 않습니다.</div>
+    <div class="notice"><strong>Packet Trace · 정적 구성 예측</strong> — 실제 패킷 캡처가 아닙니다. 구조도 강조는 입력 파일 지문이 일치하는 경우에만 허용합니다. 결과 자체의 진위는 검증하지 않습니다. PASS는 실제 서비스 응답을 보장하지 않습니다.</div>
     <section class="panel" aria-label="패킷 흐름 분석">
-      <div class="panel-head"><div><div class="panel-title">요청 및 응답 흐름</div><div class="panel-sub">웹 분석 또는 Phase 4-4 결과 JSON을 선택하세요.</div></div></div>
-      <div class="trace-tools"><label for="trace-select">분석 결과</label><select id="trace-select" aria-label="분석 결과"></select><label for="trace-file">JSON 추가</label><input id="trace-file" type="file" accept=".json,application/json" multiple><button id="trace-play" type="button" disabled>재생</button><button id="trace-next" type="button" disabled>다음 단계</button><button id="trace-reset" type="button" disabled>초기화</button></div>
+      <div class="panel-head"><div><div class="panel-title">요청 및 응답 흐름</div><div class="panel-sub">새 통신 분석 또는 저장된 분석 결과를 선택하세요. 구성 파일 교체는 위 인프라 구성 입력에서 수행합니다.</div></div></div>
+      <div class="trace-tools"><label for="trace-select">분석 결과</label><select id="trace-select" aria-label="분석 결과"></select><label for="trace-file">저장된 분석 결과 JSON 추가 (재분석 없음)</label><input id="trace-file" type="file" accept=".json,application/json" multiple><button id="trace-play" type="button" disabled>재생</button><button id="trace-next" type="button" disabled>다음 단계</button><button id="trace-reset" type="button" disabled>초기화</button></div>
       <div class="trace-summary" id="live-analysis" hidden>
-        <h3>새 통신 시나리오 분석</h3><p>현재 Terraform 입력 구성의 명시적 IPv4 주소만 선택 가능합니다. 실제 패킷을 보내지 않습니다.</p>
+        <h3>새 통신 시나리오 분석</h3><p id="live-description">현재 Terraform 입력 구성의 명시적 IPv4 주소만 선택 가능합니다. 실제 패킷을 보내지 않습니다.</p>
         <form id="live-form">
           <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end">
             <label>출발지 <select id="live-source" required></select></label>
@@ -232,7 +256,7 @@
             <label>출발지 포트 <input id="live-sport" type="number" min="1" max="65535" step="1" value="49152" required></label>
             <label>목적지 포트 <input id="live-dport" type="number" min="1" max="65535" step="1" value="443" required></label>
           </div>
-          <fieldset style="margin:12px 0"><legend>분석 가정 (확실한 경우에만 선택)</legend>
+          <fieldset id="live-assumptions" style="margin:12px 0"><legend>분석 가정 (확실한 경우에만 선택)</legend>
             <label><input type="checkbox" id="live-complete_config"> SG 구성 완전</label>
             <label><input type="checkbox" id="live-complete_nacl_config"> NACL 구성 완전</label>
             <label><input type="checkbox" id="live-complete_routing_config"> 라우팅 구성 완전</label>
@@ -241,10 +265,11 @@
             <label><input type="checkbox" id="live-assume_unmodified_default_nacl"> 미관리 기본 NACL 변경 없음 가정</label>
           </fieldset>
           <button id="live-run" type="submit" disabled>분석 실행</button> <button id="live-save" type="button" disabled>결과 JSON 저장</button>
-          <span id="live-status" role="status"></span>
+          <span id="live-status" role="status"></span><p id="live-result-notice" role="status">새 분석을 실행하면 현재 입력값의 결과가 표시됩니다.</p>
         </form>
       </div>
       <div class="trace-summary" id="trace-message" role="status">분석 JSON을 선택하세요.</div>
+      <div id="aws-static-result" hidden></div>
       <div id="trace-result" hidden>
         <div class="trace-summary" id="trace-overall"></div>
         <div class="trace-grid" id="trace-lanes"></div>
@@ -450,6 +475,7 @@ function updateFocus() {
     element.classList.toggle('focused', Boolean(active) && connected);
   });
   applyOverlayFocus();
+  applyAwsFocus();
 }
 function routeEvidenceForSubnet(graph, subnetId, tableId, vpcId, index) {
   // Never determine public/private status from a subnet name or UI position.
@@ -848,6 +874,102 @@ function traceEvidenceLabel(data,step){
 
 // Phase 5-2: candidate overlay, not observed traffic or configuration edges.
 let traceOverlay=null;
+let awsFocus=null;
+// AWS_RESULT_CONTRACT_BEGIN
+function classifyInputJson(d){
+  if(!d||typeof d!=='object'||Array.isArray(d))return 'UNKNOWN';
+  if(typeof d.analysis_type==='string'&&d.analysis_type.startsWith('STATIC_')){
+    if(d.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION')return 'AWS_RESULT';
+    if(d.analysis_type==='STATIC_IAC_PREDICTION')return d.session_trace?.schema_version==='1.0'?'IAC_SESSION_RESULT':'LEGACY_RESULT';
+    return 'OTHER_RESULT';
+  }
+  if(d.format==='cloudpath-aws-inventory-v1')return 'AWS_CONFIG';
+  if('planned_values' in d&&'resource_changes' in d)return 'PLAN_CONFIG';
+  return 'UNKNOWN';
+}
+function configJsonError(d){
+  const kind=classifyInputJson(d);
+  if(kind.endsWith('_RESULT'))return '저장된 분석 결과 JSON입니다. Packet Trace의 결과 JSON 추가에서 사용하세요. 현재 구성 및 구조도는 교체되지 않습니다.';
+  if(kind!=='AWS_CONFIG'&&kind!=='PLAN_CONFIG')return '지원되는 Terraform Plan 또는 AWS Inventory 구성 JSON이 아닙니다. 현재 구성은 유지됩니다.';
+  return '';
+}
+function traceJsonError(d){
+  const kind=classifyInputJson(d);
+  if(kind==='AWS_CONFIG'||kind==='PLAN_CONFIG')return '인프라 구성 JSON입니다. 상단 구성 분석 및 교체에서 사용하세요.';
+  if(kind==='LEGACY_RESULT')return '구형 분석 결과 JSON: session_trace 1.0이 없어 요청·응답 재생을 지원하지 않습니다. 원본 구성에서 새 통신 분석을 실행하세요.';
+  return '';
+}
+function validateAwsResult(d) {
+  const obj=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
+  const str=x=>typeof x==='string';
+  const arr=x=>Array.isArray(x);
+  const fail=()=>{throw Error('AWS 정적 세션 JSON 형식 또는 검사 순서 오류');};
+  const stages=['ENDPOINT_SCOPE','SOURCE_SG_EGRESS','SOURCE_NACL_EGRESS','ROUTE_LOOKUP','DESTINATION_NACL_INGRESS','DESTINATION_SG_INGRESS'];
+  const verdicts=['REACHABLE','BLOCKED','UNKNOWN','NOT_EVALUATED'];
+  const states=['PASS','BLOCKED','UNKNOWN','NOT_EVALUATED','CONDITIONAL'];
+  const port=x=>Number.isInteger(x)&&x>=1&&x<=65535;
+  if(!obj(d)||d.analysis_type!=='STATIC_AWS_INVENTORY_PREDICTION'||d.live_observation!==false||!/^sha256-aws-v1:[0-9a-f]{64}$/.test(d.input_identity)||!str(d.collected_at)||!obj(d.scenario)||d.scenario.protocol!=='tcp'||!str(d.scenario.source_ip)||!str(d.scenario.destination_ip)||!port(d.scenario.source_port)||!port(d.scenario.destination_port)||!arr(d.findings)||d.findings.length!==12)fail();
+  const map=new Map();
+  for(const f of d.findings){
+    if(!obj(f)||!['request','response'].includes(f.direction)||!stages.includes(f.stage)||f.id!==f.direction+':'+f.stage||map.has(f.id)||!states.includes(f.status)||!str(f.reason)||!obj(f.evidence)||!arr(f.assumptions)||!arr(f.dependencies)||!arr(f.web_resource_ids)||f.web_resource_ids.length>1000||!f.web_resource_ids.every(str)||!['PREDICTED_PATH','CONDITIONAL_CHECK','INDEPENDENT_CHECK'].includes(f.evaluation_mode))fail();
+    map.set(f.id,f);
+  }
+  for(const key of ['request','response']){
+    const lane=d[key], reply=key==='response', enabled=!reply||d.request.status==='REACHABLE';
+    if(!obj(lane)||!arr(lane.trace)||!verdicts.includes(lane.status))fail();
+    const trace=[];let active=enabled,stopped=null,blocker=null;
+    for(const stage of stages){
+      const id=key+':'+stage,f=map.get(id);if(!f)fail();
+      if(f.evaluation_mode!==(active?(reply?'CONDITIONAL_CHECK':'PREDICTED_PATH'):'INDEPENDENT_CHECK'))fail();
+      if(active){trace.push(id);if(f.status!=='PASS'&&!(reply&&f.status==='CONDITIONAL')){active=false;stopped=id;if(f.status==='BLOCKED')blocker=id;}}
+    }
+    const status=!enabled?'NOT_EVALUATED':blocker?'BLOCKED':stopped?'UNKNOWN':'REACHABLE';
+    if(JSON.stringify(lane.trace)!==JSON.stringify(trace)||lane.status!==status||lane.path_complete!==(status==='REACHABLE')||lane.stopped_at!==stopped||lane.first_blocker!==blocker)fail();
+  }
+  if(d.predicted_connectivity!==(d.request.status==='BLOCKED'?'BLOCKED':'UNKNOWN')||d.conditional_connectivity!==(d.request.status==='REACHABLE'?d.response.status:'NOT_EVALUATED')||d.first_blocker!==d.request.first_blocker||d.conditional_first_blocker!==d.response.first_blocker)fail();
+  return d;
+}
+function awsRequestReplay(d){return d.request.trace.map(id=>d.findings.find(f=>f.id===id));}
+function awsEvidenceIds(d,f,identity,known){
+  if(d.input_identity!==identity||!String(identity).startsWith('sha256-aws-v1:'))return [];
+  return [...new Set(f.web_resource_ids.filter(id=>known.has(id)))];
+}
+function explainAwsFinding(d,f){
+  const e=f.evidence||{}, r=e.rule||{}, s=d.scenario, reply=f.direction==='response';
+  const peer=f.stage.startsWith('SOURCE_')?(reply?s.source_ip:s.destination_ip):(reply?s.destination_ip:s.source_ip);
+  const port=reply?s.source_port:s.destination_port;
+  const ingress=f.stage.endsWith('INGRESS'), dir=ingress?'수신(Ingress)':'송신(Egress)';
+  const flow=`${reply?s.destination_ip:s.source_ip}:${reply?s.destination_port:s.source_port} → ${reply?s.source_ip:s.destination_ip}:${port} (TCP)`;
+  const sg=f.stage.includes('_SG_'), acl=f.stage.includes('_NACL_');
+  const policy=sg?'보안그룹(SG)':acl?'네트워크 ACL(NACL)':f.stage==='ROUTE_LOOKUP'?'라우팅':'엔드포인트 및 지원 범위';
+  const owner=sg?(e.group_id||((Array.isArray(e.group_ids)?e.group_ids:[]).join(', '))||'ID 미확인'):acl?(e.acl_id||'ID 미확인'):f.stage==='ROUTE_LOOKUP'?(e.route_lookup?.route_table_id||'ID 미확인'):'';
+  let message;
+  if(f.reason==='MATCHING_IPV4_SG_RULE'&&f.status==='PASS')message=`${policy} ${dir} 허용 후보: 상대 IP ${peer}, TCP 목적지 포트 ${port}에 일치하는 허용 규칙이 있습니다.`;
+  else if(f.reason==='NO_MATCHING_SG_ALLOW'&&f.status==='BLOCKED')message=`${policy} ${dir} 차단: 상대 IP ${peer}, TCP 목적지 포트 ${port}에 일치하는 허용 규칙이 수집된 보안그룹에 없습니다.`;
+  else if(f.reason==='MATCHING_ACL_RULE'&&['PASS','BLOCKED'].includes(f.status))message=`${policy} ${dir} ${f.status==='PASS'?'허용 후보':'차단'}: 규칙 번호 ${e.rule_number??'미확인'}이 상대 IP ${peer}, TCP 목적지 포트 ${port}에 첫 번째로 일치합니다.`;
+  else if(f.reason==='REQUIRES_ESTABLISHED_TRACKED_REQUEST'&&f.status==='CONDITIONAL')message=`${policy} ${dir} 조건부 허용: 요청 전달과 유효한 연결 추적이 필요하며 실제 상태는 확인하지 않았습니다.`;
+  else if(f.stage==='ROUTE_LOOKUP'&&f.status==='PASS')message='라우팅 전달 후보: 수집된 활성 Local Route가 목적지 주소에 일치합니다.';
+  else if(f.stage==='ROUTE_LOOKUP'&&f.status==='BLOCKED')message='라우팅 차단: 선택된 경로가 Blackhole 상태입니다.';
+  else if(f.stage==='ENDPOINT_SCOPE'&&f.status==='PASS')message='엔드포인트 검증 통과: 지원 범위의 EC2 및 ENI 구성으로 확인됐습니다.';
+  else if(f.status==='NOT_EVALUATED')message=`${policy} 미평가: 분석 전제조건이 충족되지 않았습니다.`;
+  else if(f.status==='UNKNOWN')message=`${policy} 미확정: 수집 정보 또는 지원 범위의 제약으로 판단할 수 없습니다. (${f.reason})`;
+  else message=`${policy} 판정 ${f.status}: ${f.reason}`;
+  const facts=[];
+  if(owner)facts.push(`정책/경로 ID: ${owner}`);
+  if(sg&&f.reason==='MATCHING_IPV4_SG_RULE'){
+    if(Array.isArray(r.IpRanges))facts.push('IPv4 CIDR: '+r.IpRanges.map(x=>x.CidrIp).filter(Boolean).join(', '));
+    facts.push('규칙 포트: '+(String(r.IpProtocol)==='-1'?'모든 프로토콜/포트':`${r.FromPort??'미확인'}–${r.ToPort??'미확인'}`));
+  }
+  if(acl&&f.reason==='MATCHING_ACL_RULE')facts.push(`규칙: ${r.RuleAction??'미확인'} · ${r.CidrBlock??'CIDR 미확인'} · ${String(r.Protocol)==='-1'?'모든 프로토콜/포트':`${r.PortRange?.From??'미확인'}–${r.PortRange?.To??'미확인'}`}`);
+  if(f.evaluation_mode==='INDEPENDENT_CHECK')facts.push('독립 검사: 해당 지점까지 패킷이 도달했다는 의미가 아닙니다.');
+  if(f.evaluation_mode==='CONDITIONAL_CHECK')facts.push('조건부 검사: 요청이 전달됐다고 가정합니다.');
+  return {message,flow,facts};
+}
+function sameLiveScenario(d,body,c){
+  const s=d.scenario||{}, a=c.endpoints[body.source], b=c.endpoints[body.destination];
+  return d.input_identity===body.input_identity&&!!a&&!!b&&s.source_ip===a.ip&&s.destination_ip===b.ip&&s.protocol===body.protocol&&s.source_port===body.source_port&&s.destination_port===body.destination_port;
+}
+// AWS_RESULT_CONTRACT_END
 const overlayBar=document.getElementById('trace-overlay-bar');
 const overlayDirection=document.getElementById('overlay-direction');
 const overlayStatus=document.getElementById('overlay-status');
@@ -945,7 +1067,7 @@ function overlayCompatibility(d) {
 }
 function clearOverlay() {
   hideTraceTooltip();
-  traceOverlay=null;
+  traceOverlay=null;awsFocus=null;
   if(mode==='network_graph'&&!document.getElementById('graph-view').hidden) render();
 }
 function applyOverlayFocus() {
@@ -974,8 +1096,34 @@ function applyOverlayFocus() {
   }
   linkLayer.querySelectorAll('.link-path').forEach(el=>{const relevant=related.has(el.dataset.source)&&related.has(el.dataset.target)&&['sg','acl','association'].includes(el.dataset.layer);el.classList.toggle('dimmed',!relevant);el.classList.toggle('focused',relevant);});
 }
+function applyAwsFocus(){
+  if(!awsFocus||mode!=='network_graph')return;
+  const ids=new Set(awsFocus.ids),f=awsFocus.finding;
+  for(const el of nodeLayer.querySelectorAll('.node')){
+    const related=ids.has(el.dataset.id);el.classList.toggle('dimmed',!related);el.classList.remove('connected');
+    el.classList.toggle('trace-related',related);el.classList.toggle('trace-first',related&&f.status==='BLOCKED'&&f.evaluation_mode==='PREDICTED_PATH');
+    el.classList.toggle('trace-conditional',related&&f.status==='BLOCKED'&&f.evaluation_mode!=='PREDICTED_PATH');
+  }
+  for(const el of regionLayer.querySelectorAll('[data-subnet-id]'))el.classList.toggle('aws-evidence-region',ids.has(el.dataset.subnetId));
+  for(const el of linkLayer.querySelectorAll('.link-path')){
+    const relevant=ids.has(el.dataset.source)&&ids.has(el.dataset.target)&&el.dataset.layer!=='next';
+    el.classList.toggle('dimmed',!relevant);el.classList.toggle('focused',relevant);
+  }
+}
+function openAwsFocus(d,f){
+  const ids=awsEvidenceIds(d,f,GRAPHS.input_identity,new Set(GRAPHS.network_graph.nodes.map(n=>n.id)));if(!ids.length)return;
+  traceOverlay=null;awsFocus={ids,finding:f};overlayDirection.value=f.direction;
+  document.getElementById('packet-trace-view').hidden=true;document.getElementById('graph-view').hidden=false;
+  mode='network_graph';selectedId=ids.find(id=>!id.startsWith('aws_subnet.'))||ids[0];focusActive=false;render();
+}
 function renderOverlay(){
   overlayBar.hidden=mode!=='network_graph';
+  if(mode==='network_graph'&&awsFocus){
+    overlayDirection.disabled=true;document.getElementById('overlay-clear').disabled=false;
+    applyAwsFocus();const f=awsFocus.finding;
+    overlayStatus.textContent=`AWS 검사 근거 · ${f.stage} · ${f.status} · ${f.evaluation_mode} · 기존 구성 관계만 강조 (패킷 홉 아님) · 지문 일치 ≠ 결과 진위 검증`;
+    return;
+  }
   const active=mode==='network_graph'&&traceOverlay;
   overlayDirection.disabled=!active;
   document.getElementById('overlay-clear').disabled=!active;
@@ -1001,9 +1149,10 @@ function renderOverlay(){
   applyOverlayFocus();
   overlayStatus.textContent=`${traceOverlay.name} · ${key==='request'?'요청':'응답'} ${lane.status} · 전체 ${d.predicted_connectivity} · 전달 후보 선 ${shown}, 미표시 ${missed} · 파란 점선: 정책 제외 후보 / 빨간 실선 테두리: 최초 차단 / 붉은 점선 테두리: 후속 조건부 차단 · 파일 지문 일치(결과 진위 검증 아님)`;
 }
+function renderGraphForAws(){render();}
 function openTraceOverlay(data,name,key,step){
   const why=overlayCompatibility(data);if(why)return why;
-  traceOverlay={data,name,stepId:step?.id||null};overlayDirection.value=key;
+  awsFocus=null;traceOverlay={data,name,stepId:step?.id||null};overlayDirection.value=key;
   document.getElementById('packet-trace-view').hidden=true;document.getElementById('graph-view').hidden=false;
   mode='network_graph';selectedId=step?.resource||data.scenario[key==='request'?'source_resource':'destination_resource'];focusActive=false;render();
   return '';
@@ -1031,7 +1180,7 @@ function render() {
   }
   if(String(GRAPHS.input_identity||'').startsWith('sha256-aws-v1:')) {
     document.getElementById('view-title').textContent=mode==='network_graph'?'AWS 수집 구성도 (스냅샷)':'AWS ID 관계도 (코드 의존성 아님)';
-    document.getElementById('mode-notice').textContent='수집 파일에 기록된 구성 관계입니다. 현재 실시간 상태나 실제 패킷 관측이 아니며 통신 판정은 아직 지원하지 않습니다.';
+    document.getElementById('mode-notice').textContent='수집 파일에 기록된 구성 관계입니다. 현재 실시간 상태나 실제 패킷 관측이 아니며 제한된 IPv4 TCP 정적 분석은 Packet Trace에서 실행할 수 있습니다.';
     document.getElementById('graph-legend').textContent='AWS 구성 관계 · 확인된 연결만 표시 (패킷 홉 아님)';
   }
   document.getElementById('node-count').textContent=graph.nodes.length;
@@ -1149,7 +1298,7 @@ render();
     'use strict';
     const $=id=>document.getElementById(id), view=$('packet-trace-view'), select=$('trace-select'), result=$('trace-result');
     const entries=[], controls=['trace-play','trace-next','trace-reset'];
-    let data=null, timeline=[], cursor=-1, timer=null, active=null;
+    let data=null, timeline=[], cursor=-1, timer=null, active=null, awsData=null;
     const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e;};
     const show=(v)=>v===null||v===undefined?'미확인':String(v);
     const obj=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
@@ -1164,68 +1313,141 @@ render();
       if(!Array.isArray(d.conditional_blockers)||d.conditional_blockers.some(x=>!findingIds.has(x)))throw Error('조건부 차단 근거 참조 오류');
       return d;
     }
-    function add(name,d){validate(d);const index=entries.length;entries.push({name,d});const opt=el('option',name);opt.value=String(index);select.append(opt);}
+    function add(name,d){const why=traceJsonError(d);if(why)throw Error(why);if(d?.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION')validateAwsResult(d);else validate(d);const index=entries.length;entries.push({name,d});const opt=el('option',name);opt.value=String(index);select.append(opt);}
     function stop(){if(timer!==null){clearInterval(timer);timer=null;}$('trace-play').textContent='재생';if(active)active.removeAttribute('data-playing');}
-    function reset(){stop();cursor=-1;active=null;for(const e of view.querySelectorAll('[aria-current]'))e.removeAttribute('aria-current');$('trace-play-status').textContent='재생 전 · 논리적 예상 검사 단계 (실제 패킷 이동 아님)';$('trace-detail').textContent='단계를 선택하세요.';}
+    function reset(){stop();cursor=-1;active=null;for(const e of view.querySelectorAll('[aria-current]'))e.removeAttribute('aria-current');$('trace-play-status').textContent='재생 전 · 논리적 예상 검사 단계 (실제 패킷 이동 아님)';$('trace-detail').textContent='단계를 선택하세요.';if(awsData&&$('aws-replay-status'))$('aws-replay-status').textContent='요청 예상 검사 재생 전 · 실제 관측 아님';}
     function inspect(step,button){if(active){active.removeAttribute('aria-current');active.removeAttribute('data-playing');}active=button;active.setAttribute('aria-current','step');const f=data.findings.find(x=>x.id===step.finding_id), box=$('trace-detail');box.replaceChildren(el('strong',`${step.id} · ${step.stage} · ${step.status}`),el('p',`${show(step.resource)} | ${show(step.evaluation_mode)} | ${show(step.finding_id)}`),el('p',show(step.reason)));const explanation=explainTraceStep(data,step);const summary=el('div',undefined,'trace-natural');summary.append(el('strong',explanation.message),el('p',`${explanation.flow} · ${explanation.direction}`));if(explanation.conditional)summary.append(el('p','조건부 검사: 선행 경로가 성립한다고 가정한 판정입니다.'));for(const fact of explanation.facts)summary.append(el('div',fact,'trace-small'));const raw=el('details');raw.append(el('summary','원본 JSON 판정 근거 펼치기'),el('pre',JSON.stringify(f||{},null,2),'trace-evidence'));box.append(summary,raw);const jump=el('button','이 단계의 리소스를 구조도에서 보기');jump.type='button';jump.disabled=Boolean(overlayCompatibility(data));jump.addEventListener('click',()=>{stop();openTraceOverlay(data,entries[Number(select.value)].name,step.id.startsWith('RET')?'response':'request',step);});box.append(jump);}
     function lane(key){const t=data.session_trace, l=t[key], s=data.scenario, forward=key==='request', container=el('section',undefined,'trace-lane');container.append(el('h3',`${forward?'요청 ↓':'응답 ↓'} · ${show(l.status)}`));if(l.conditional)container.append(el('p',`조건부 응답 검사 · 가상 판정 ${show(l.hypothetical_status)}`));const tuple=forward?s:l.tuple||{};const src=forward?s.source_resource:s.destination_resource, dst=forward?s.destination_resource:s.source_resource;container.append(el('div',`${show(src)} · ${show(tuple.source_ip)}:${show(tuple.source_port)}`,'trace-endpoint'));
       for(const step of l.steps){container.append(el('div',step.evaluation_mode==='PREDICTED_PATH'?'↓':'┊ 조건부','trace-arrow'));const b=el('button',undefined,'trace-step');b.type='button';b.dataset.status=step.status;b.dataset.mode=step.evaluation_mode==='PREDICTED_PATH'?'PREDICTED_PATH':'CONDITIONAL';b.dataset.step=step.id;b.append(el('strong',`${step.id} · ${step.stage} · ${step.status}`),el('div',`${show(step.resource)} · ${step.evaluation_mode==='PREDICTED_PATH'?'예상 경로':'조건부 검사'}`,'trace-small'));if(step.id===data.first_blocker_step)b.append(el('div','최초 예상 차단','trace-small'));if(data.conditional_blockers.includes(step.finding_id))b.append(el('div','후속 조건부 차단','trace-small'));const explanation=explainTraceStep(data,step);b.append(el('div',`${explanation.policy} · ${explanation.direction}`,'trace-policy-label'),el('div',`정책: ${explanation.ownerText}`,'trace-rule-inline'));for(const applied of explanation.applied.slice(0,2))b.append(el('div',`적용: ${applied}`,'trace-rule-inline'));if(explanation.applied.length>2)b.append(el('div',`외 ${explanation.applied.length-2}개 · 단계 상세에서 확인`,'trace-small'));if(['BLOCKED','UNKNOWN','WARNING'].includes(step.status)){b.append(el('div',`${explanation.flow} · ${explanation.message}`,'trace-natural-inline'));for(const rule of explanation.checked.filter(x=>!x.endsWith(' · 일치')).slice(0,2))b.append(el('div',`검사: ${rule}`,'trace-rule-inline'));if(explanation.checked.filter(x=>!x.endsWith(' · 일치')).length>2)b.append(el('div','나머지 검사 규칙은 단계 상세에서 확인','trace-small'));}b.addEventListener('click',()=>{stop();inspect(step,b);});container.append(b);timeline.push({step,b,key});}
       container.append(el('div',l.status==='PASS'?'↓':'┊ 미도달/미확정','trace-arrow'),el('div',`${show(dst)} · ${show(tuple.destination_ip)}:${show(tuple.destination_port)} · ${l.status==='PASS'?'모델상 허용':'도달/응답 미확정 또는 차단'}`,'trace-endpoint'));
       const f=forward?data.forwarding:l.forwarding;const details=el('details');details.append(el('summary','전달 후보 (정책 제외)'),el('pre',JSON.stringify({status:f?.status,hops:f?.hops||[],path_kind:f?.path_kind},null,2),'trace-evidence'));container.append(details);return container;
     }
-    function render(){clearOverlay();reset();timeline=[];const e=entries[Number(select.value)];data=e?.d||null;result.hidden=!data;controls.forEach(id=>$(id).disabled=!data);if(!data)return;const t=data.session_trace;const box=$('trace-overall');box.replaceChildren(el('h2',`종합 판정: ${data.predicted_connectivity}`),el('p',`최초 차단: ${data.first_blocker_step??'없음/미확정'} · 근거 ${data.first_blocker??'없음'} · 후속 조건부 장애: ${data.conditional_blockers.join(', ')||'없음'}`),el('p',`지원 범위: ${show(t.scope)} · 지원 여부: ${show(t.scope_supported)}`));$('trace-lanes').replaceChildren(lane('request'),lane('response'));$('trace-coverage').textContent=JSON.stringify({scenario:data.scenario,assumptions:t.assumptions,limitations:t.limitations,coverage:data.coverage},null,2);$('trace-message').textContent=`${e.name} · JSON 기반 표시 (재계산 없음)`;const why=overlayCompatibility(data);box.append(el('p',why||'입력 파일 지문 일치 · 구조도 연동 가능 (결과 진위 검증 아님)'));for(const key of ['request','response']){const b=el('button',`${key==='request'?'요청':'응답'} 전달 후보를 구조도에서 보기`);b.type='button';b.disabled=Boolean(why);b.addEventListener('click',()=>{stop();openTraceOverlay(data,e.name,key,null);});box.append(b);}}
-    function advance(){if(!data)return false;const next=timeline[cursor+1];if(!next||next.step.evaluation_mode!=='PREDICTED_PATH'){stop();$('trace-play-status').textContent='예상 경로 재생 종료 · 조건부/미확인 단계는 클릭하여 확인';return false;}cursor++;inspect(next.step,next.b);next.b.dataset.playing='true';$('trace-play-status').textContent=`${next.key==='request'?'요청':'응답'} · ${next.step.id} · ${next.step.status}`;if(next.step.status!=='PASS'){stop();$('trace-play-status').textContent+=' · 재생 중단';return false;}return true;}
+    function render(){$('aws-static-result').hidden=true;clearOverlay();reset();timeline=[];awsData=null;const e=entries[Number(select.value)];if(e?.d.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION'){renderAws(e.d,e.name);return;}data=e?.d||null;result.hidden=!data;controls.forEach(id=>$(id).disabled=!data);if(!data)return;const t=data.session_trace;const box=$('trace-overall');box.replaceChildren(el('h2',`종합 판정: ${data.predicted_connectivity}`),el('p',`최초 차단: ${data.first_blocker_step??'없음/미확정'} · 근거 ${data.first_blocker??'없음'} · 후속 조건부 장애: ${data.conditional_blockers.join(', ')||'없음'}`),el('p',`지원 범위: ${show(t.scope)} · 지원 여부: ${show(t.scope_supported)}`));$('trace-lanes').replaceChildren(lane('request'),lane('response'));$('trace-coverage').textContent=JSON.stringify({scenario:data.scenario,assumptions:t.assumptions,limitations:t.limitations,coverage:data.coverage},null,2);$('trace-message').textContent=`${e.name} · JSON 기반 표시 (재계산 없음)`;const why=overlayCompatibility(data);box.append(el('p',why||'입력 파일 지문 일치 · 구조도 연동 가능 (결과 진위 검증 아님)'));for(const key of ['request','response']){const b=el('button',`${key==='request'?'요청':'응답'} 전달 후보를 구조도에서 보기`);b.type='button';b.disabled=Boolean(why);b.addEventListener('click',()=>{stop();openTraceOverlay(data,e.name,key,null);});box.append(b);}}
+    function advance(){if(awsData){
+      const next=timeline[cursor+1],status=$('aws-replay-status');
+      if(!next){stop();status.textContent='요청 예상 검사 종료 · 응답 및 독립 검사는 별도 확인';return false;}
+      if(active){active.removeAttribute('aria-current');active.removeAttribute('data-playing');}
+      cursor++;active=next.b;active.setAttribute('aria-current','step');active.dataset.playing='true';
+      status.textContent=`요청 ${next.f.stage} · ${next.f.status}`;
+      if(next.f.status!=='PASS'){stop();status.textContent+=' · 재생 중단';return false;}return true;
+    }if(!data)return false;const next=timeline[cursor+1];if(!next||next.step.evaluation_mode!=='PREDICTED_PATH'){stop();$('trace-play-status').textContent='예상 경로 재생 종료 · 조건부/미확인 단계는 클릭하여 확인';return false;}cursor++;inspect(next.step,next.b);next.b.dataset.playing='true';$('trace-play-status').textContent=`${next.key==='request'?'요청':'응답'} · ${next.step.id} · ${next.step.status}`;if(next.step.status!=='PASS'){stop();$('trace-play-status').textContent+=' · 재생 중단';return false;}return true;}
     $('trace-play').addEventListener('click',()=>{if(timer!==null){stop();return;}if(cursor>=0)reset();if(advance()){$('trace-play').textContent='정지';timer=setInterval(()=>{advance();},850);}});
-    $('trace-next').addEventListener('click',()=>{stop();advance();});$('trace-reset').addEventListener('click',reset);select.addEventListener('change',render);
-    $('trace-file').addEventListener('change',async e=>{let n=0;const errors=[];for(const f of e.target.files){try{if(f.size>5*1024*1024)throw Error('5 MiB 초과');add(f.name,JSON.parse(await f.text()));n++;}catch(err){errors.push(`${f.name}: ${err.message}`);}}if(n){select.value=String(entries.length-1);render();}if(errors.length)$('trace-message').textContent=errors.join(' | ');e.target.value='';});
+    $('trace-next').addEventListener('click',()=>{stop();advance();});$('trace-reset').addEventListener('click',reset);select.addEventListener('change',()=>{render();$('live-result-notice').textContent='저장/이전 분석 결과 선택됨 · 현재 입력값을 재계산하려면 분석 실행을 누르세요.';});
+    $('trace-file').addEventListener('change',async e=>{let n=0;const errors=[];for(const f of e.target.files){try{if(f.size>5*1024*1024)throw Error('5 MiB 초과');add(f.name,JSON.parse(await f.text()));n++;}catch(err){errors.push(`${f.name}: ${err.message}`);}}if(n){select.value=String(entries.length-1);render();}if(errors.length)$('trace-message').textContent=errors.join(' | ')+' · 구성 및 구조도는 변경되지 않습니다.';e.target.value='';});
     // Phase 5-3: local API only; offline HTML retains original viewer behavior.
     let liveContext=null, liveResult=null, liveCount=0;
     const liveFlags=['complete_config','complete_nacl_config','complete_routing_config','assume_direct_private','assume_tracked_response','assume_unmodified_default_nacl'];
+    function renderAws(d,name){
+      validateAwsResult(d);reset();clearOverlay();data=null;awsData=d;timeline=[];result.hidden=true;controls.forEach(id=>$(id).disabled=false);
+      const panel=$('aws-static-result');panel.hidden=false;
+      panel.replaceChildren(el('h2','AWS Inventory · 정적 TCP 분석'),el('p',`전체 ${d.predicted_connectivity} · 조건부 ${d.conditional_connectivity} · 실제 관측 없음`),el('p','IAM 및 애플리케이션 권한·호스트 방화벽은 이번 TCP 분석에서 미평가입니다.'),el('p',`최초 예상 차단: ${d.first_blocker||'없음/미확정'} · 조건부 차단: ${d.conditional_first_blocker||'없음/미확정'}`),el('p',`수집 시각 ${d.collected_at} · ${d.scenario.source_ip}:${d.scenario.source_port} → ${d.scenario.destination_ip}:${d.scenario.destination_port}`),el('p','수집 정보의 진위·최신성·완전성은 검증되지 않았습니다. 응답은 연결 추적을 가정한 조건부 검사입니다.'));
+      const replayStatus=el('p','요청 예상 검사 재생 전 · 실제 관측 아님');replayStatus.id='aws-replay-status';replayStatus.setAttribute('role','status');panel.append(replayStatus);
+      const same=d.input_identity===GRAPHS.input_identity;
+      panel.append(el('p',same?'입력 파일 지문 일치 · 결과 진위는 별도 검증 필요':'입력 파일 지문 불일치 · 구조도 연동 불가'));
+      const grid=el('div',undefined,'trace-grid');const cards=new Map();
+      const findingCard=f=>{
+        const card=el('div',undefined,'trace-step');card.dataset.status=f.status;card.dataset.mode=f.evaluation_mode==='PREDICTED_PATH'?'PREDICTED_PATH':'CONDITIONAL';card.dataset.finding=f.id;cards.set(f.id,card);
+        card.append(el('strong',`${f.stage} · ${f.status}`),el('p',f.reason),el('p',f.evaluation_mode==='PREDICTED_PATH'?'예상 경로':f.evaluation_mode==='CONDITIONAL_CHECK'?'조건부 검사':'독립 검사 · 패킷 경로 아님'));
+        const explanation=explainAwsFinding(d,f), natural=el('div',undefined,'trace-natural');
+        natural.append(el('strong',explanation.message),el('p',explanation.flow));
+        for(const fact of explanation.facts)natural.append(el('div',fact,'trace-small'));
+        card.append(natural);
+        const detail=el('details');detail.append(el('summary','원본 JSON 판정 근거 및 가정'),el('pre',JSON.stringify({evidence:f.evidence,assumptions:f.assumptions,dependencies:f.dependencies},null,2),'trace-evidence'));card.append(detail);
+        const ids=awsEvidenceIds(d,f,GRAPHS.input_identity,new Set(GRAPHS.network_graph.nodes.map(n=>n.id)));
+        const jump=el('button','구조도에서 보기');jump.type='button';jump.disabled=!ids.length;
+        if(!ids.length)jump.title='현재 입력과 일치하는 구조도 근거가 없습니다.';
+        jump.addEventListener('click',()=>{stop();openAwsFocus(d,f);});card.append(jump);
+        return card;
+      };
+      for(const key of ['request','response']){
+        const lane=el('section',undefined,'trace-lane');const dir=d[key];lane.append(el('h3',`${key==='request'?'요청 예상 경로':'응답 조건부 검사'} · ${dir.status}`));
+        for(const fid of dir.trace){const f=d.findings.find(x=>x.id===fid);if(f){lane.append(el('div',key==='request'?'↓':'┊ 조건부','trace-arrow'),findingCard(f));}}
+        if(!dir.path_complete)lane.append(el('p','경로 중단 또는 미평가 · 이후 단계는 독립 검사로만 표시'));
+        grid.append(lane);
+      }
+      panel.append(grid,el('h3','독립 검사 · 실제 전달 경로 아님'));
+      for(const f of d.findings.filter(f=>f.evaluation_mode==='INDEPENDENT_CHECK'))panel.append(findingCard(f));
+      const detail=el('details');detail.append(el('summary','지원 범위 · 가정 · 제한'),el('pre',JSON.stringify({coverage:d.coverage,assumptions:d.assumptions,limitations:d.limitations},null,2)));panel.append(detail);
+      timeline=awsRequestReplay(d).map(f=>({f,b:cards.get(f.id)}));
+      $('trace-message').textContent=`${name||'AWS 분석'} · ${d.scenario.source_ip}:${d.scenario.source_port} → ${d.scenario.destination_ip}:${d.scenario.destination_port} · 선택된 결과 표시 (재계산 없음)`;
+    }
     async function initLive(){
       if(location.protocol!=='http:'||!['localhost','127.0.0.1'].includes(location.hostname)||location.pathname!=='/')return;
       try{
         const r=await fetch('/api/context',{cache:'no-store'});if(!r.ok)return;
-        const c=await r.json();if(c.input_identity!==GRAPHS.input_identity){$('upload-panel').hidden=false;$('upload-run').disabled=true;$('upload-status').textContent='다른 탭에서 입력이 변경됐습니다. 새로고침하세요.';return;}if(!Array.isArray(c.endpoints)||typeof c.token!=='string')return;
+        const c=await r.json();if(c.input_identity!==GRAPHS.input_identity){$('upload-panel').hidden=false;$('upload-run').disabled=true;$('upload-status').textContent='다른 탭에서 입력이 변경됐습니다. 현재 서버 구성을 다시 불러오세요.';$('upload-reload').hidden=false;return;}if(!Array.isArray(c.endpoints)||typeof c.token!=='string')return;
         liveContext=c;$('live-analysis').hidden=false;$('upload-panel').hidden=false;
         const snap=c.snapshot||{};
-        $('snapshot-info').textContent=`현재 입력: ${snap.files?.length||0}개 파일 · ${snap.resource_count??'미확인'}개 리소스 · ${c.endpoints.length}개 명시적 IPv4 엔드포인트`;
+        $('snapshot-info').textContent=`현재 입력: ${(snap.files||[]).map(f=>f.name).join(', ')||'파일명 미확인'} · ${snap.input_type||'HCL'} · ${snap.resource_count??'미확인'}개 리소스 · ${c.endpoints.length}개 명시적 IPv4 엔드포인트 · 지문 ${c.input_identity}`;
         $('snapshot-files').replaceChildren(...(snap.files||[]).map(f=>el('li',`${f.name} · ${f.bytes} bytes`)));
         $('snapshot-warnings').replaceChildren(...(snap.warnings||[]).map(w=>el('li',w)));
         if(snap.input_type==='TERRAFORM_PLAN_JSON'){$('snapshot-info').append(el('p','Plan JSON · ID 기반 관계도 (코드 의존성 아님) · '+(snap.analysis_restricted?'통신 판정 제한':'제한된 직접 IPv4 통신 분석 지원')));const tab=document.querySelector('[data-mode=reference_graph]');if(tab)tab.textContent='Plan ID 관계';}
-        if(snap.input_type==='AWS_INVENTORY_JSON'){$('snapshot-info').append(el('p',`AWS Inventory · ${snap.region} · ${snap.vpc_id} · 수집 시각 ${snap.collected_at} · 구성 조회 전용 (통신 판정 미지원)`));const tab=document.querySelector('[data-mode=reference_graph]');if(tab)tab.textContent='AWS ID 관계';}
+        if(snap.input_type==='AWS_INVENTORY_JSON'){$('snapshot-info').append(el('p',`AWS Inventory · ${snap.region} · ${snap.vpc_id} · 수집 시각 ${snap.collected_at} · 정적 TCP 분석 지원 여부: ${snap.aws_static_session_available?'제한적 지원':'미지원'}`));const tab=document.querySelector('[data-mode=reference_graph]');if(tab)tab.textContent='AWS ID 관계';}
         if(Array.isArray(snap.expression_reference_hints)&&snap.expression_reference_hints.length){$('snapshot-warnings').append(el('li','표현식 참조 후보 (실제 연결 아님): '+snap.expression_reference_hints.length+'개'));for(const h of snap.expression_reference_hints)$('snapshot-warnings').append(el('li',`${h.source}.${h.field} → ${h.target} · 참조 후보`));}
-        if(snap.analysis_restricted)$('snapshot-info').append(el('p','부분 구조도만 제공, 통신 분석 제한.'));
+        const aws=Boolean(snap.aws_static_session_available);
+        if(aws){$('live-description').textContent='AWS Inventory 기반 동일 VPC·서로 다른 Subnet·단일 ENI EC2 IPv4 TCP 정적 검사. 실제 패킷 전송 없음.';$('live-assumptions').hidden=true;$('live-protocol').replaceChildren(el('option','TCP'));$('live-protocol').options[0].value='tcp';}
+        if(snap.analysis_restricted)$('snapshot-info').append(el('p',aws?'기존 IaC 분석 제한 유지 · AWS 전용 정적 분석만 지원.':'부분 구조도만 제공, 통신 분석 제한.'));
         for(const id of ['live-source','live-destination'])c.endpoints.forEach((e,i)=>{const o=el('option',`${e.resource} · ${e.ip}`);o.value=String(i);$(id).append(o);});
-        if(c.endpoints.length>=2&&!snap.analysis_restricted){$('live-destination').selectedIndex=1;$('live-run').disabled=false;}
-        else $('live-status').textContent=snap.input_type==='AWS_INVENTORY_JSON'?'AWS 구성 수집 전용 단계입니다. 통신 판정은 후속 개발 예정입니다.':snap.analysis_restricted?'미지원 구성으로 종합 통신 분석이 제한됩니다.':'분석 가능한 명시적 IPv4 엔드포인트가 2개 이상 필요합니다.';
+        if(c.endpoints.length>=2&&(!snap.analysis_restricted||aws)){$('live-destination').selectedIndex=1;$('live-run').disabled=false;}
+        else $('live-status').textContent=snap.input_type==='AWS_INVENTORY_JSON'?'AWS 전용 분석에 서로 다른 EC2 IPv4 엔드포인트 2개 이상이 필요합니다.':snap.analysis_restricted?'미지원 구성으로 종합 통신 분석이 제한됩니다.':'분석 가능한 명시적 IPv4 엔드포인트가 2개 이상 필요합니다.';
       }catch(e){/* offline viewer */}
     }
+    // UPLOAD_ERROR_STATE_BEGIN
+    function showUploadFailure(files,message){
+      const status=$('upload-status'), dialog=$('upload-error-dialog');
+      document.body.dataset.configError='true';
+      stop();
+      $('graph-view').hidden=true;$('packet-trace-view').hidden=true;
+      clearOverlay();
+      $('graph-mode').inert=true;
+      for(const tab of document.querySelectorAll('#graph-mode button'))tab.disabled=true;
+      $('upload-error-view').hidden=false;
+      $('upload-files').value='';
+      $('upload-reload').hidden=false;
+      const text=`교체 실패: ${files.map(f=>f.name).join(', ')||'파일 미선택'} · ${message}`;
+      status.dataset.state='error';status.setAttribute('role','alert');status.textContent=text;
+      $('upload-dialog-message').textContent=text;
+      if(typeof dialog.showModal==='function'&&!dialog.open){try{dialog.showModal();}catch(e){$('upload-error-title').focus();}}
+      else if(!dialog.open)$('upload-error-title').focus();
+    }
+    // UPLOAD_ERROR_STATE_END
+    $('upload-reload').addEventListener('click',()=>{if(confirm('현재 서버 구성을 다시 불러옵니다. 저장하지 않은 화면 분석 결과는 사라질 수 있습니다. 계속할까요?'))location.reload();});
     $('upload-form').addEventListener('submit',async e=>{
       e.preventDefault();if(!liveContext||$('upload-run').disabled)return;
       const files=Array.from($('upload-files').files), status=$('upload-status');
-      if(!files.length||files.length>50||files.some(f=>!f.name.endsWith('.tf')&&!f.name.endsWith('.json'))||(files.some(f=>f.name.endsWith('.json'))&&files.length!==1)||files.reduce((n,f)=>n+f.size,0)>5*1024*1024){status.textContent='1~50개 .tf 또는 Plan/AWS Inventory JSON 1개, 합계 5 MiB 이내로 선택하세요.';return;}
-      if(!confirm('현재 입력 구성과 화면에 남은 분석 결과를 교체합니다. 필요한 JSON은 먼저 저장하세요. 계속할까요?'))return;
-      $('upload-run').disabled=true;status.textContent='파일 읽기 및 구성 분석 중…';
+      if(!files.length||files.length>50||files.some(f=>!f.name.endsWith('.tf')&&!f.name.endsWith('.json'))||(files.some(f=>f.name.endsWith('.json'))&&files.length!==1)||files.reduce((n,f)=>n+f.size,0)>5*1024*1024){showUploadFailure(files,'1~50개 .tf 또는 Plan/AWS Inventory JSON 1개, 합계 5 MiB 이내로 선택하세요.');return;}
+      $('upload-run').disabled=true;status.textContent='선택 파일 유형 확인 중…';$('upload-reload').hidden=document.body.dataset.configError!=='true';
       try{
+        if(files.length===1&&files[0].name.endsWith('.json')){
+          let doc;try{doc=JSON.parse(await files[0].text());}catch(e){throw Error('JSON 문법 오류 · 현재 구성은 유지됩니다.');}
+          const why=configJsonError(doc);if(why)throw Error(why);
+        }
+        if(!confirm('현재 입력 구성과 화면에 남은 분석 결과를 교체합니다. 필요한 JSON은 먼저 저장하세요. 계속할까요?')){status.textContent=document.body.dataset.configError==='true'?'구성 교체 취소 · 이전 실패 상태 유지. 새 파일을 선택하거나 서버 구성을 다시 불러오세요.':'구성 교체 취소 · 기존 구성 유지';return;}
+        status.textContent='파일 읽기 및 구성 분석 중…';
         const encoded=[];
         for(const f of files){const bytes=new Uint8Array(await f.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));encoded.push({name:f.name,content_base64:btoa(binary)});}
         const r=await fetch('/api/upload',{method:'POST',headers:{'Content-Type':'application/json','X-CloudPath-Token':liveContext.token},body:JSON.stringify({input_identity:liveContext.input_identity,files:encoded})});
-        const d=await r.json();if(!r.ok)throw Error(d.error||'업로드 실패');
-        status.textContent='새 구성 적용 완료. 화면 갱신 중…';location.replace('/');
-      }catch(err){status.textContent=String(err.message||err)+' · 서버 응답을 확인하세요. 필요 시 새로고침하세요.';$('upload-run').disabled=false;}
+        const d=await r.json();if(!r.ok)throw Error(r.status===403?'현재 화면의 입력 토큰이 만료되었거나 서버가 다시 시작되었습니다. 현재 서버 구성을 다시 불러오세요.':d.error||'업로드 실패');
+        status.textContent=`새 구성 적용 완료: ${files.map(f=>f.name).join(', ')} · 화면 갱신 중…`;location.replace('/');
+      }catch(err){showUploadFailure(files,String(err.message||err));}finally{$('upload-run').disabled=false;}
     });
+    let inputRevision=0;
+    $('live-form').addEventListener('input',()=>{inputRevision++;liveResult=null;$('live-save').disabled=true;$('live-result-notice').textContent='입력값 변경됨 · 아래 결과는 이전 분석입니다. 분석 실행을 눌러 다시 계산하세요.';});
     $('live-form').addEventListener('submit',async e=>{
       e.preventDefault();if(!liveContext||$('live-run').disabled)return;
       const body={source:Number($('live-source').value),destination:Number($('live-destination').value),protocol:$('live-protocol').value,source_port:Number($('live-sport').value),destination_port:Number($('live-dport').value),input_identity:GRAPHS.input_identity};
-      for(const k of liveFlags)body[k]=$('live-'+k).checked;
-      $('live-run').disabled=true;$('live-save').disabled=true;liveResult=null;$('live-status').textContent='분석 중…';
+      const revision=inputRevision;
+      const aws=Boolean(liveContext.snapshot?.aws_static_session_available);
+      if(!aws)for(const k of liveFlags)body[k]=$('live-'+k).checked;
+      stop();
+      $('live-run').disabled=true;$('live-save').disabled=true;liveResult=null;$('live-status').textContent='분석 중…';$('live-result-notice').textContent='재계산 중 · 아래 결과는 이전 분석입니다.';
       try{
-        const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json','X-CloudPath-Token':liveContext.token},body:JSON.stringify(body)});
-        const d=await r.json();if(!r.ok)throw Error(d.error||'분석 실패');if(d.input_identity!==GRAPHS.input_identity)throw Error('입력 구성 불일치');
-        add(`웹 분석 ${++liveCount} · ${d.scenario.protocol.toUpperCase()} ${d.scenario.source_port} → ${d.scenario.destination_port}`,d);select.value=String(entries.length-1);render();liveResult=d;$('live-save').disabled=false;$('live-status').textContent='분석 완료 · '+d.predicted_connectivity;
-      }catch(err){$('live-status').textContent=String(err.message||err);}finally{$('live-run').disabled=false;}
+        const r=await fetch(aws?'/api/aws-analyze':'/api/analyze',{method:'POST',headers:{'Content-Type':'application/json','X-CloudPath-Token':liveContext.token},body:JSON.stringify(body)});
+        const d=await r.json();if(!r.ok)throw Error(d.error||'분석 실패');if(d.input_identity!==GRAPHS.input_identity)throw Error('입력 구성 불일치');if(!sameLiveScenario(d,body,liveContext))throw Error('요청과 응답의 통신 시나리오 불일치');
+        if(aws){validateAwsResult(d);add(`AWS 웹 분석 ${++liveCount} · TCP ${d.scenario.source_port} → ${d.scenario.destination_port}`,d);select.value=String(entries.length-1);render();}else{add(`웹 분석 ${++liveCount} · ${d.scenario.protocol.toUpperCase()} ${d.scenario.source_port} → ${d.scenario.destination_port}`,d);select.value=String(entries.length-1);render();}liveResult=revision===inputRevision?d:null;$('live-save').disabled=!liveResult;$('live-status').textContent='분석 완료 · '+d.predicted_connectivity;$('live-result-notice').textContent=liveResult?`새 분석 #${liveCount} · ${d.scenario.source_ip}:${d.scenario.source_port} → ${d.scenario.destination_ip}:${d.scenario.destination_port} · ${d.input_identity}`:'분석 중 입력값이 변경되었습니다. 표시된 결과는 이전 요청에 대한 결과입니다. 다시 분석하세요.';
+      }catch(err){$('live-status').textContent=String(err.message||err);$('live-result-notice').textContent='새 분석 실패 · 아래 결과는 이전 분석입니다.';}finally{$('live-run').disabled=false;}
     });
-    $('live-save').addEventListener('click',()=>{if(!liveResult)return;const url=URL.createObjectURL(new Blob([JSON.stringify(liveResult,null,2)],{type:'application/json'}));const a=el('a');a.href=url;a.download='communication_web.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+    $('live-save').addEventListener('click',()=>{if(!liveResult)return;const url=URL.createObjectURL(new Blob([JSON.stringify(liveResult,null,2)],{type:'application/json'}));const a=el('a');a.href=url;a.download=liveResult.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION'?'aws_static_session.json':'communication_web.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
     initLive();
     for(const entry of (GRAPHS.packet_traces||[])){try{add(entry.name,entry.result);}catch(err){$('trace-message').textContent=err.message;}}
     if(entries.length){select.value='0';render();}
