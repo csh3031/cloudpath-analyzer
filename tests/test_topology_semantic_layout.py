@@ -50,13 +50,14 @@ def test_subnet_role_comes_from_route_rules_not_resource_names(tmp_path):
 def test_vpc_and_subnet_policy_layout_are_not_packet_hops(tmp_path):
     html = html_for_sample(tmp_path)
     for segment in (
-        'function positionNetwork(graph)',
+        'function positionNetwork(graph, collapsed = new Set(), display={})',
+        'positionNetwork(graph,collapsedRegions,GRAPHS.resource_display||{})',
         'subnetTable = new Map()',
         "edge.relation === 'uses_route_table'",
         "kind:'egress-region'",
         "kind:'internal-region'",
         "kind:'external-region'",
-        '서브넷에 적용된 라우팅 정책 (패킷 홉 아님)',
+        'Subnet 경계 참조 · ',
     ):
         assert segment in html
     data = payload_of(html)

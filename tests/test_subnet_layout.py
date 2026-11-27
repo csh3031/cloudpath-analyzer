@@ -64,7 +64,7 @@ def test_shared_policies_and_unknown_membership_not_nested(layout):
     for id in ('rt','sg','acl','missing','conflict'):
         assert not any(overlap(p[id],a) for a in areas)
     assert set(p)=={n['id'] for n in graph()['nodes']}
-    assert len([r for r in layout['regions'] if r['kind']=='other-region'])==1
+    assert len([r for r in layout['regions'] if r['kind']=='boundary-gate-region'])==2
 
 
 def test_no_overlap_and_parent_boundaries(layout):

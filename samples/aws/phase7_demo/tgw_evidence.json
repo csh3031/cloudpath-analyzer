@@ -1,0 +1,93 @@
+{
+  "format": "cloudpath-tgw-evidence-v1",
+  "collected_at": "2026-11-25T11:00:00Z",
+  "region": "ap-northeast-2",
+  "TransitGateways": [
+    {
+      "TransitGatewayId": "tgw-abcdef12",
+      "State": "available"
+    }
+  ],
+  "TransitGatewayVpcAttachments": [
+    {
+      "TransitGatewayAttachmentId": "tgw-attach-11111111",
+      "TransitGatewayId": "tgw-abcdef12",
+      "VpcId": "vpc-12345678",
+      "State": "available",
+      "SubnetIds": [
+        "subnet-12345678"
+      ],
+      "Options": {
+        "ApplianceModeSupport": "disable"
+      },
+      "Association": {
+        "State": "associated",
+        "TransitGatewayRouteTableId": "tgw-rtb-11111111"
+      }
+    },
+    {
+      "TransitGatewayAttachmentId": "tgw-attach-22222222",
+      "TransitGatewayId": "tgw-abcdef12",
+      "VpcId": "vpc-aaaaaaaa",
+      "State": "available",
+      "SubnetIds": [
+        "subnet-bbbbbbbb"
+      ],
+      "Options": {
+        "ApplianceModeSupport": "disable"
+      },
+      "Association": {
+        "State": "associated",
+        "TransitGatewayRouteTableId": "tgw-rtb-22222222"
+      }
+    }
+  ],
+  "TransitGatewayRouteTables": [
+    {
+      "TransitGatewayRouteTableId": "tgw-rtb-11111111",
+      "TransitGatewayId": "tgw-abcdef12",
+      "State": "available"
+    },
+    {
+      "TransitGatewayRouteTableId": "tgw-rtb-22222222",
+      "TransitGatewayId": "tgw-abcdef12",
+      "State": "available"
+    }
+  ],
+  "route_exports": [
+    {
+      "TransitGatewayRouteTableId": "tgw-rtb-11111111",
+      "complete": true,
+      "AdditionalRoutesAvailable": false,
+      "Routes": [
+        {
+          "DestinationCidrBlock": "10.1.0.0/16",
+          "State": "active",
+          "Type": "propagated",
+          "TransitGatewayAttachments": [
+            {
+              "TransitGatewayAttachmentId": "tgw-attach-22222222"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "TransitGatewayRouteTableId": "tgw-rtb-22222222",
+      "complete": true,
+      "AdditionalRoutesAvailable": false,
+      "Routes": [
+        {
+          "DestinationCidrBlock": "10.0.0.0/16",
+          "State": "active",
+          "Type": "propagated",
+          "TransitGatewayAttachments": [
+            {
+              "TransitGatewayAttachmentId": "tgw-attach-11111111"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

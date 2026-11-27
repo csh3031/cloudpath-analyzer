@@ -1,0 +1,12 @@
+{
+  "NetworkInsightsAnalyses": [
+    {
+      "NetworkInsightsAnalysisId": "nia-12345678",
+      "NetworkInsightsAnalysisArn": "arn:aws:ec2:ap-northeast-2:000000000000:network-insights-analysis/nia-12345678",
+      "NetworkInsightsPathId": "nip-12345678",
+      "Status": "succeeded",
+      "NetworkPathFound": true,
+      "StartDate": "2026-11-25T11:01:00Z"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "format": "cloudpath-alb-rules-v1",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "ListenerArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:listener/app/demo-app/1111111111111111/3333333333333333",
+  "complete": true,
+  "Rules": [
+    {
+      "RuleArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:listener-rule/app/demo-app/1111111111111111/3333333333333333/aaaaaaaaaaaaaaaa",
+      "Priority": "default",
+      "IsDefault": true,
+      "Conditions": [],
+      "Actions": [
+        {
+          "Type": "forward",
+          "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-app/5555555555555555"
+        }
+      ]
+    },
+    {
+      "RuleArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:listener-rule/app/demo-app/1111111111111111/3333333333333333/bbbbbbbbbbbbbbbb",
+      "Priority": "20",
+      "IsDefault": false,
+      "Conditions": [
+        {
+          "Field": "path-pattern",
+          "PathPatternConfig": {
+            "Values": [
+              "/api/*"
+            ]
+          }
+        }
+      ],
+      "Actions": [
+        {
+          "Type": "forward",
+          "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-app/5555555555555555"
+        }
+      ]
+    },
+    {
+      "RuleArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:listener-rule/app/demo-app/1111111111111111/3333333333333333/cccccccccccccccc",
+      "Priority": "10",
+      "IsDefault": false,
+      "Conditions": [
+        {
+          "Field": "host-header",
+          "HostHeaderConfig": {
+            "Values": [
+              "api.example.com",
+              "*.example.net"
+            ]
+          }
+        },
+        {
+          "Field": "path-pattern",
+          "PathPatternConfig": {
+            "Values": [
+              "/api/*"
+            ]
+          }
+        }
+      ],
+      "Actions": [
+        {
+          "Type": "forward",
+          "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-api/7777777777777777"
+        }
+      ]
+    }
+  ]
+}

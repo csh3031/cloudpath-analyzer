@@ -63,7 +63,7 @@ def test_aws_association_not_duplicated_and_conflict_not_reinserted():
 def test_toggles_default_off_and_trace_independent():
     html=TEMPLATE.read_text();assert re.findall(r'data-policy-layer="([a-z]+)"',html)==['sg','acl','association','next','other']
     assert not re.search(r'<input[^>]+data-policy-layer[^>]+checked',html)
-    assert 'boundary||nodes.get(e.target)' in html
+    assert 'boundary||nodes.get(target)' in html
     assert "querySelectorAll('.trace-candidate')" in html
     assert 'policy-next-arrow' in html
 

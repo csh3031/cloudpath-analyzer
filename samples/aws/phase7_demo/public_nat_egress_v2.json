@@ -1,0 +1,312 @@
+{
+  "format": "cloudpath-aws-inventory-v2",
+  "region": "ap-northeast-2",
+  "vpc_id": "vpc-12345678",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "inventory": {
+    "Vpcs": [
+      {
+        "VpcId": "vpc-12345678",
+        "CidrBlock": "10.0.0.0/16",
+        "State": "available",
+        "Tags": [
+          {
+            "Key": "secret",
+            "Value": "SYNTHETIC_DEMO"
+          }
+        ]
+      }
+    ],
+    "Subnets": [
+      {
+        "SubnetId": "subnet-12345678",
+        "VpcId": "vpc-12345678",
+        "CidrBlock": "10.0.1.0/24",
+        "AvailabilityZone": "ap-northeast-2a",
+        "State": "available"
+      },
+      {
+        "SubnetId": "subnet-87654321",
+        "VpcId": "vpc-12345678",
+        "CidrBlock": "10.0.2.0/24",
+        "State": "available"
+      }
+    ],
+    "RouteTables": [
+      {
+        "RouteTableId": "rtb-12345678",
+        "VpcId": "vpc-12345678",
+        "Associations": [
+          {
+            "RouteTableAssociationId": "rtbassoc-12345678",
+            "Main": true,
+            "AssociationState": {
+              "State": "associated"
+            }
+          }
+        ],
+        "Routes": [
+          {
+            "DestinationCidrBlock": "10.0.0.0/16",
+            "GatewayId": "local",
+            "State": "active"
+          },
+          {
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "GatewayId": "igw-12345678",
+            "State": "active"
+          }
+        ]
+      },
+      {
+        "RouteTableId": "rtb-87654321",
+        "VpcId": "vpc-12345678",
+        "Associations": [
+          {
+            "RouteTableAssociationId": "rtbassoc-87654321",
+            "SubnetId": "subnet-12345678",
+            "Main": false,
+            "AssociationState": {
+              "State": "associated"
+            }
+          }
+        ],
+        "Routes": [
+          {
+            "DestinationCidrBlock": "10.0.0.0/16",
+            "GatewayId": "local",
+            "State": "active"
+          },
+          {
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "NatGatewayId": "nat-12345678",
+            "State": "active"
+          }
+        ]
+      }
+    ],
+    "InternetGateways": [
+      {
+        "InternetGatewayId": "igw-12345678",
+        "Attachments": [
+          {
+            "VpcId": "vpc-12345678",
+            "State": "available"
+          }
+        ]
+      }
+    ],
+    "NatGateways": [
+      {
+        "NatGatewayId": "nat-12345678",
+        "VpcId": "vpc-12345678",
+        "SubnetId": "subnet-87654321",
+        "State": "available",
+        "ConnectivityType": "public",
+        "NatGatewayAddresses": [
+          {
+            "PrivateIp": "10.0.2.30",
+            "PublicIp": "11.0.0.11",
+            "NetworkInterfaceId": "eni-aaaaaaaa",
+            "AllocationId": "eipalloc-aaaaaaaa",
+            "AssociationId": "eipassoc-aaaaaaaa",
+            "IsPrimary": true,
+            "Status": "succeeded"
+          }
+        ]
+      }
+    ],
+    "SecurityGroups": [
+      {
+        "GroupId": "sg-12345678",
+        "VpcId": "vpc-12345678",
+        "IpPermissions": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "IpRanges": [
+              {
+                "CidrIp": "10.0.0.0/16",
+                "Description": "SYNTHETIC_DEMO"
+              }
+            ]
+          }
+        ],
+        "IpPermissionsEgress": [
+          {
+            "IpProtocol": "-1",
+            "IpRanges": [
+              {
+                "CidrIp": "0.0.0.0/0"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "NetworkAcls": [
+      {
+        "NetworkAclId": "acl-12345678",
+        "VpcId": "vpc-12345678",
+        "Associations": [
+          {
+            "SubnetId": "subnet-12345678",
+            "NetworkAclAssociationId": "aclassoc-12345678"
+          },
+          {
+            "SubnetId": "subnet-87654321",
+            "NetworkAclAssociationId": "aclassoc-87654321"
+          }
+        ],
+        "Entries": [
+          {
+            "RuleNumber": 100,
+            "Protocol": "6",
+            "RuleAction": "allow",
+            "Egress": true,
+            "CidrBlock": "10.0.0.0/16",
+            "PortRange": {
+              "From": 1,
+              "To": 65535
+            }
+          },
+          {
+            "RuleNumber": 100,
+            "Protocol": "6",
+            "RuleAction": "allow",
+            "Egress": false,
+            "CidrBlock": "10.0.0.0/16",
+            "PortRange": {
+              "From": 1,
+              "To": 65535
+            }
+          },
+          {
+            "RuleNumber": 32767,
+            "Protocol": "-1",
+            "RuleAction": "deny",
+            "Egress": true,
+            "CidrBlock": "0.0.0.0/0"
+          },
+          {
+            "RuleNumber": 32767,
+            "Protocol": "-1",
+            "RuleAction": "deny",
+            "Egress": false,
+            "CidrBlock": "0.0.0.0/0"
+          }
+        ]
+      }
+    ],
+    "Reservations": [
+      {
+        "OwnerId": "SYNTHETIC_DEMO",
+        "Instances": [
+          {
+            "InstanceId": "i-12345678",
+            "VpcId": "vpc-12345678",
+            "SubnetId": "subnet-12345678",
+            "PrivateIpAddress": "10.0.1.10",
+            "State": {
+              "Name": "running"
+            },
+            "SecurityGroups": [
+              {
+                "GroupId": "sg-12345678"
+              }
+            ],
+            "NetworkInterfaces": [
+              {
+                "NetworkInterfaceId": "eni-12345678"
+              }
+            ]
+          },
+          {
+            "InstanceId": "i-87654321",
+            "VpcId": "vpc-12345678",
+            "SubnetId": "subnet-87654321",
+            "PrivateIpAddress": "10.0.2.10",
+            "State": {
+              "Name": "running"
+            },
+            "SecurityGroups": [
+              {
+                "GroupId": "sg-12345678"
+              }
+            ],
+            "NetworkInterfaces": [
+              {
+                "NetworkInterfaceId": "eni-87654321"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "NetworkInterfaces": [
+      {
+        "NetworkInterfaceId": "eni-12345678",
+        "VpcId": "vpc-12345678",
+        "SubnetId": "subnet-12345678",
+        "PrivateIpAddress": "10.0.1.10",
+        "PrivateIpAddresses": [
+          {
+            "PrivateIpAddress": "10.0.1.10"
+          }
+        ],
+        "Groups": [
+          {
+            "GroupId": "sg-12345678"
+          }
+        ],
+        "Attachment": {
+          "InstanceId": "i-12345678",
+          "DeviceIndex": 0
+        },
+        "Status": "in-use",
+        "InterfaceType": "interface",
+        "RequesterManaged": false
+      },
+      {
+        "NetworkInterfaceId": "eni-87654321",
+        "VpcId": "vpc-12345678",
+        "SubnetId": "subnet-87654321",
+        "PrivateIpAddress": "10.0.2.10",
+        "PrivateIpAddresses": [
+          {
+            "PrivateIpAddress": "10.0.2.10"
+          }
+        ],
+        "Groups": [
+          {
+            "GroupId": "sg-12345678"
+          }
+        ],
+        "Attachment": {
+          "InstanceId": "i-87654321",
+          "DeviceIndex": 0
+        },
+        "Status": "in-use",
+        "InterfaceType": "interface",
+        "RequesterManaged": false
+      },
+      {
+        "NetworkInterfaceId": "eni-aaaaaaaa",
+        "VpcId": "vpc-12345678",
+        "SubnetId": "subnet-87654321",
+        "PrivateIpAddress": "10.0.2.30",
+        "PrivateIpAddresses": [
+          {
+            "PrivateIpAddress": "10.0.2.30",
+            "Primary": true
+          }
+        ],
+        "Groups": [],
+        "Status": "in-use",
+        "InterfaceType": "nat_gateway",
+        "RequesterManaged": true
+      }
+    ]
+  }
+}

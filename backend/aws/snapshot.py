@@ -7,6 +7,8 @@ from datetime import datetime
 from backend.models.infrastructure import InfrastructureResource
 
 FORMAT = 'cloudpath-aws-inventory-v1'
+FORMAT_V2 = 'cloudpath-aws-inventory-v2'
+FORMATS = (FORMAT, FORMAT_V2)
 OPERATIONS = {
     'describe-vpcs': ('Vpcs', 'vpc-id'),
     'describe-subnets': ('Subnets', 'vpc-id'),
@@ -31,6 +33,13 @@ SCHEMAS = {
  'Reservations': 'Instances[InstanceId,VpcId,SubnetId,PrivateIpAddress,State.Name,SecurityGroups.GroupId,NetworkInterfaces.NetworkInterfaceId]',
  'NetworkInterfaces': 'NetworkInterfaceId VpcId SubnetId PrivateIpAddress PrivateIpAddresses[PrivateIpAddress] Groups[GroupId] Attachment.InstanceId Attachment.DeviceIndex Status InterfaceType RequesterManaged',
 }
+
+SCHEMAS_V2 = dict(SCHEMAS)
+SCHEMAS_V2['NatGateways'] += ' NatGatewayAddresses[PrivateIp,PublicIp,NetworkInterfaceId,AllocationId,AssociationId,IsPrimary,Status]'
+SCHEMAS_V2['NetworkInterfaces'] = SCHEMAS['NetworkInterfaces'].replace(
+    'PrivateIpAddresses[PrivateIpAddress]',
+    'PrivateIpAddresses[PrivateIpAddress,Primary,Association.PublicIp,Association.CarrierIp,Association.CustomerOwnedIp,Association.AllocationId,Association.AssociationId]') + ' Association.PublicIp Association.CarrierIp Association.CustomerOwnedIp Association.AllocationId Association.AssociationId'
+SCHEMAS_V2['Reservations'] = SCHEMAS['Reservations'].replace('PrivateIpAddress,State.Name', 'PrivateIpAddress,PublicIpAddress,State.Name')
 
 def _obj(x):
     if not isinstance(x,dict): raise ValueError('Invalid AWS inventory object')
@@ -61,9 +70,11 @@ def _pick(value,tree):
         raise ValueError('Invalid AWS inventory scalar')
     return {k:('REDACTED' if k=='CoreNetworkArn' else _pick(v,tree[k])) for k,v in _obj(value).items() if k in tree and v is not None}
 
-def sanitize_inventory(data):
-    if set(_obj(data))!=set(SCHEMAS):raise ValueError('Incomplete AWS inventory: nine response groups required')
-    return {k:_pick(_arr(data[k]),[_tree(spec)]) for k,spec in SCHEMAS.items()}
+def sanitize_inventory(data, *, version=FORMAT):
+    if version not in FORMATS: raise ValueError('Invalid AWS inventory version')
+    schemas=SCHEMAS_V2 if version==FORMAT_V2 else SCHEMAS
+    if set(_obj(data))!=set(schemas):raise ValueError('Incomplete AWS inventory: nine response groups required')
+    return {k:_pick(_arr(data[k]),[_tree(spec)]) for k,spec in schemas.items()}
 
 def _id(value,prefix):
     if not isinstance(value,str) or not re.fullmatch(re.escape(prefix)+r'-[0-9a-f]{8,17}',value):raise ValueError('Invalid AWS resource ID')
@@ -86,12 +97,12 @@ def load_aws_snapshot(raw,name='aws_snapshot.json',max_resources=300):
     try:
         from backend.iac.plan_adapter import _read
         doc=_read(raw)
-        if doc.get('format')!=FORMAT or set(doc)!={'format','region','vpc_id','collected_at','inventory'}:raise ValueError('Invalid AWS inventory format')
+        if doc.get('format') not in FORMATS or set(doc)!={'format','region','vpc_id','collected_at','inventory'}:raise ValueError('Invalid AWS inventory format')
         region=doc['region'];vpc=_id(doc['vpc_id'],'vpc')
         if not isinstance(region,str) or not re.fullmatch(r'[a-z]{2}(?:-[a-z0-9]+)+-\d+',region):raise ValueError('Invalid AWS region')
         time=datetime.fromisoformat(doc['collected_at'])
         if time.tzinfo is None:raise ValueError('Collection timestamp needs timezone')
-        inv=sanitize_inventory(doc['inventory'])
+        inv=sanitize_inventory(doc['inventory'], version=doc['format'])
         if len(inv['Vpcs'])!=1 or inv['Vpcs'][0].get('VpcId')!=vpc:raise ValueError('Expected exactly selected VPC')
         resources=[];seen=set();warnings={'AWS inventory only: no live packet or session verdict.','Sequential API reads are not an atomic snapshot; uploaded inventory is not authenticated.','Single VPC / region, EC2 networking only; ALB, RDS, ECS, TGW and external peer configurations not collected.'}
         def add(kind,native,attrs):
@@ -115,6 +126,7 @@ def load_aws_snapshot(raw,name='aws_snapshot.json',max_resources=300):
             scope(g);attrs={'vpc_id':vr,'observed_state':g.get('State'),'connectivity_type':g.get('ConnectivityType')}
             if g.get('SubnetId'):attrs['subnet_id']=_ref('subnet',g['SubnetId'],'subnet')
             else:warnings.add('NAT gateway without known subnet; placement not inferred.')
+            if doc['format']==FORMAT_V2:attrs['observed_nat_addresses']=g.get('NatGatewayAddresses',[])
             add('nat_gateway',_id(g['NatGatewayId'],'nat'),attrs)
         def sg_rules(rows):
             result=[]
@@ -147,6 +159,10 @@ def load_aws_snapshot(raw,name='aws_snapshot.json',max_resources=300):
         for i in inv['NetworkInterfaces']:
             scope(i);a={'vpc_id':vr,'subnet_id':_ref('subnet',i['SubnetId'],'subnet'),'security_groups':[_ref('security_group',g['GroupId'],'sg') for g in i['Groups']], 'private_ips':[_ip(x['PrivateIpAddress']) for x in i.get('PrivateIpAddresses',[])], 'observed_state':i.get('Status'),'observed_interface_type':i.get('InterfaceType'),'requester_managed':i.get('RequesterManaged')}
             optional_ip(i,a)
+            a['observed_device_index']=i.get('Attachment',{}).get('DeviceIndex')
+            if doc['format']==FORMAT_V2:
+                a['observed_address_associations']=[{'private_ip':x.get('PrivateIpAddress'),'association':x.get('Association',{})} for x in i.get('PrivateIpAddresses',[])]
+                if i.get('Association'):a['observed_address_associations'].append({'private_ip':i.get('PrivateIpAddress'),'association':i['Association']})
             if i.get('Attachment',{}).get('InstanceId'):a['instance_id']=_ref('instance',i['Attachment']['InstanceId'],'i')
             add('network_interface',_id(i['NetworkInterfaceId'],'eni'),a)
         targets={'NatGatewayId':('nat_gateway_id','nat_gateway','nat'),'NetworkInterfaceId':('network_interface_id','network_interface','eni'),'InstanceId':('instance_id','instance','i'),'TransitGatewayId':('transit_gateway_id','transit_gateway','tgw'),'VpcPeeringConnectionId':('vpc_peering_connection_id','vpc_peering_connection','pcx'),'EgressOnlyInternetGatewayId':('egress_only_gateway_id','egress_only_internet_gateway','eigw'),'LocalGatewayId':('local_gateway_id','local_gateway','lgw'),'CarrierGatewayId':('carrier_gateway_id','carrier_gateway','cagw'),'VpcEndpointId':('vpc_endpoint_id','vpc_endpoint','vpce')}
@@ -177,6 +193,6 @@ def load_aws_snapshot(raw,name='aws_snapshot.json',max_resources=300):
         from backend.analyzer.reference_graph_analyzer import analyze_reference_graph
         if analyze_reference_graph(resources)['issues']:warnings.add('Some referenced resources were not collected; no missing links are invented.')
         # The old graph synthesizes implicit main routes. The web integration removes these.
-        identity='sha256-aws-v1:'+hashlib.sha256(raw).hexdigest()
+        identity=('sha256-aws-v2:' if doc['format']==FORMAT_V2 else 'sha256-aws-v1:')+hashlib.sha256(raw).hexdigest()
         return resources,identity,{'files':[{'name':name,'bytes':len(raw)}],'resource_count':len(resources),'analysis_restricted':True,'warnings':sorted(warnings),'input_type':'AWS_INVENTORY_JSON','region':region,'vpc_id':vpc,'collected_at':time.isoformat(),'relationship_source':'AWS_ID_RELATIONSHIPS_UNVERIFIED_SNAPSHOT'}
     except (KeyError,TypeError,AttributeError,OverflowError,RecursionError) as exc:raise ValueError('Invalid or incomplete AWS inventory fields') from exc

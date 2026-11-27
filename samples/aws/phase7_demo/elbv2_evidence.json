@@ -1,0 +1,96 @@
+{
+  "format": "cloudpath-elbv2-evidence-v1",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "LoadBalancers": [
+    {
+      "LoadBalancerArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:loadbalancer/app/demo-app/1111111111111111",
+      "Type": "application",
+      "VpcId": "vpc-12345678",
+      "IpAddressType": "ipv4",
+      "Scheme": "internal",
+      "State": {
+        "Code": "active"
+      },
+      "AvailabilityZones": [
+        {
+          "SubnetId": "subnet-12345678",
+          "ZoneName": "ap-northeast-2a"
+        },
+        {
+          "SubnetId": "subnet-87654321",
+          "ZoneName": "ap-northeast-2c"
+        }
+      ]
+    },
+    {
+      "LoadBalancerArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:loadbalancer/net/demo-net/2222222222222222",
+      "Type": "network",
+      "VpcId": "vpc-12345678",
+      "IpAddressType": "ipv4",
+      "Scheme": "internal",
+      "State": {
+        "Code": "active"
+      },
+      "AvailabilityZones": [
+        {
+          "SubnetId": "subnet-12345678",
+          "ZoneName": "ap-northeast-2a"
+        },
+        {
+          "SubnetId": "subnet-87654321",
+          "ZoneName": "ap-northeast-2c"
+        }
+      ]
+    }
+  ],
+  "Listeners": [
+    {
+      "ListenerArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:listener/app/demo-app/1111111111111111/3333333333333333",
+      "LoadBalancerArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:loadbalancer/app/demo-app/1111111111111111",
+      "Port": 443,
+      "Protocol": "HTTPS",
+      "DefaultActions": [
+        {
+          "Type": "forward",
+          "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-app/5555555555555555"
+        }
+      ]
+    },
+    {
+      "ListenerArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:listener/net/demo-net/2222222222222222/4444444444444444",
+      "LoadBalancerArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:loadbalancer/net/demo-net/2222222222222222",
+      "Port": 443,
+      "Protocol": "TCP",
+      "DefaultActions": [
+        {
+          "Type": "forward",
+          "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-net/6666666666666666"
+        }
+      ]
+    }
+  ],
+  "TargetGroups": [
+    {
+      "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-app/5555555555555555",
+      "LoadBalancerArns": [
+        "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:loadbalancer/app/demo-app/1111111111111111"
+      ],
+      "VpcId": "vpc-12345678",
+      "Port": 8080,
+      "Protocol": "HTTP",
+      "TargetType": "instance",
+      "IpAddressType": "ipv4"
+    },
+    {
+      "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-net/6666666666666666",
+      "LoadBalancerArns": [
+        "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:loadbalancer/net/demo-net/2222222222222222"
+      ],
+      "VpcId": "vpc-12345678",
+      "Port": 8080,
+      "Protocol": "TCP",
+      "TargetType": "instance",
+      "IpAddressType": "ipv4"
+    }
+  ]
+}

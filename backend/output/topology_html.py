@@ -1,8 +1,10 @@
 """Phase 3-2: offline graph rendering with safe, limited resource display metadata."""
 
 import json
+import re
 from ipaddress import ip_address
 from pathlib import Path
+from backend.output.policy_display import build_policy_display
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = ROOT / "frontend" / "static" / "topology_viewer.html"
@@ -16,6 +18,8 @@ def build_resource_display(resources) -> dict[str, dict]:
 
     This does not resolve variables/modules and never modifies the routing model.
     """
+    resources = list(resources)
+    policies = build_policy_display(resources)
     output = {}
     for resource in resources:
         attributes = resource.attributes
@@ -43,6 +47,54 @@ def build_resource_display(resources) -> dict[str, dict]:
                 ips = list(dict.fromkeys(ip for value in values if (ip := known_ip(value))))
                 if ips:
                     display["private_ips"] = ips
+        # Observed attachment facts are display-only. An allocation ID is required
+        # before a public address can be labelled EIP; absence is not proof of auto-assignment.
+        if resource.resource_type == "network_interface":
+            device = attributes.get("observed_device_index")
+            if type(device) is int and 0 <= device <= 255:
+                display["device_index"] = device
+            if type(attributes.get("requester_managed")) is bool:
+                display["requester_managed"] = attributes["requester_managed"]
+            associations = attributes.get("observed_address_associations")
+            if isinstance(associations, list):
+                rows = []
+                for item in associations:
+                    if not isinstance(item, dict) or not isinstance(item.get("association"), dict):
+                        continue
+                    a = item["association"]
+                    private, public = known_ip(item.get("private_ip")), known_ip(a.get("PublicIp"))
+                    if not private or not public:
+                        continue
+                    allocation = a.get("AllocationId")
+                    row = {"private_ip": private, "public_ip": public, "kind": "PUBLIC_IP_TYPE_UNKNOWN"}
+                    if isinstance(allocation, str) and re.fullmatch(r"eipalloc-[0-9a-f]{8,17}", allocation):
+                        row.update(kind="EIP_ASSOCIATION", allocation_id=allocation)
+                    if row not in rows:
+                        rows.append(row)
+                # Keep conflicting evidence visible, not an invented single mapping.
+                display["public_addresses"] = rows
+        if resource.resource_type == "nat_gateway":
+            addresses = attributes.get("observed_nat_addresses")
+            if isinstance(addresses, list):
+                rows = []
+                for item in addresses:
+                    if not isinstance(item, dict):
+                        continue
+                    eni = item.get("NetworkInterfaceId")
+                    if not isinstance(eni, str) or not re.fullmatch(r"eni-[0-9a-f]{8,17}", eni):
+                        continue
+                    row = {"eni_id": "aws_network_interface." + eni}
+                    for source, dest in (("PrivateIp", "private_ip"), ("PublicIp", "public_ip")):
+                        if value := known_ip(item.get(source)):
+                            row[dest] = value
+                    alloc = item.get("AllocationId")
+                    if isinstance(alloc, str) and re.fullmatch(r"eipalloc-[0-9a-f]{8,17}", alloc):
+                        row["allocation_id"] = alloc
+                    if item.get("Status") == "succeeded":
+                        row["associated"] = True
+                    if row not in rows:
+                        rows.append(row)
+                display["nat_addresses"] = rows
         enums = {
             "observed_state": {"available", "pending", "running", "stopping", "stopped", "shutting-down", "terminated", "in-use", "attaching", "detaching", "detached", "failed", "deleting", "deleted"},
             "connectivity_type": {"public", "private"},
@@ -57,6 +109,8 @@ def build_resource_display(resources) -> dict[str, dict]:
                 rules = attributes.get(direction)
                 if isinstance(rules, list) and all(isinstance(rule, dict) for rule in rules):
                     display[direction + "_inline_count"] = len(rules)
+        if resource.id in policies:
+            display["policy_details"] = policies[resource.id]
         if display:
             output[resource.id] = display
     return output

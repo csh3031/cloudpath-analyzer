@@ -69,11 +69,11 @@ def load_snapshot(files):
     items = validate_files(files, allow_plan=True)
     if items[0][0].endswith('.json'):
         from backend.iac.plan_adapter import load_plan, _read
-        from backend.aws.snapshot import FORMAT, load_aws_snapshot
+        from backend.aws.snapshot import FORMATS, load_aws_snapshot
         doc = _read(items[0][1])
         if isinstance(doc.get('analysis_type'), str) and doc['analysis_type'].startswith('STATIC_'):
             raise ValueError('Saved analysis result JSON: use Packet Trace result import; configuration unchanged')
-        if doc.get('format') == FORMAT:
+        if doc.get('format') in FORMATS:
             return load_aws_snapshot(items[0][1], items[0][0], MAX_RESOURCES)
         return load_plan(items[0][1], items[0][0], MAX_RESOURCES)
     from backend.iac.terraform_parser import parse_terraform

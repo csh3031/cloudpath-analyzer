@@ -14,6 +14,7 @@
     .subtitle { color:#afc4dc; margin-top:4px; font-size:12px; }
     .tabs { display:flex; background:#1b385a; padding:4px; border-radius:10px; gap:5px; }
     .tab { border:0; border-radius:7px; background:transparent; color:#cfdeef; padding:10px 14px; cursor:pointer; font-weight:700; }
+    .peering-link { color:#cfdeef; padding:10px 14px; font-weight:700; text-decoration:none; }
     .tab[aria-pressed="true"] { background:#f7fbff; color:#183a64; }
     .shell { padding:22px; max-width:1800px; margin:0 auto; }
     .notice { border:1px solid #cbdaf0; background:#e8f0fe; color:#29466f; padding:11px 15px; border-radius:10px; margin-bottom:16px; font-size:13px; }
@@ -39,6 +40,13 @@
     .region { position:absolute; border:2px solid #81a4d3; border-radius:17px; background:#e8f1ff90; box-shadow:inset 0 0 0 1px #fff; }
     .region-label { position:absolute; top:10px; left:15px; font-size:11px; color:#4a6c94; font-weight:700; letter-spacing:.2px; }
     .node { position:absolute; text-align:left; background:#fff; width:218px; min-height:64px; border:1px solid #cbd7e6; border-left:4px solid #87a0bd; border-radius:10px; padding:10px 11px; cursor:pointer; pointer-events:auto; box-shadow:0 4px 11px #142a4211; transition:border-color .12s,transform .12s,box-shadow .12s; }
+    .node-drag-mode .node { cursor:grab; touch-action:none; }
+    .node-drag-mode .node:hover,.node.node-moving { transform:none; transition:none; }
+    .node.node-moving { cursor:grabbing; z-index:10; outline:2px solid #2563eb; }
+    .policy-rule-card { border:1px solid #d9e3f1; padding:8px; margin:6px 0; border-radius:7px; font-size:12px; overflow-wrap:anywhere; }
+    .policy-rule-card dl { display:grid; grid-template-columns:minmax(65px,auto) minmax(0,1fr); gap:4px 8px; margin:6px 0; }
+    .policy-rule-card dt { color:#526780; } .policy-rule-card dd { margin:0; }
+    .policy-rule-warn { color:#9b6614!important; }
     .node:hover { transform:translateY(-2px); box-shadow:0 6px 15px #142a4225; }
     .node.selected { border-color:#1461b4; outline:2px solid #4b95eb55; }
     .node.vpc { background:#204d86; border-color:#204d86; color:#fff; }
@@ -80,6 +88,17 @@
     .internal-region { border:1px dashed #a9bcd5; background:#eff2f83b; }
     .external-region { border:1px dashed #c2c7d0; background:#f5f7fb; }
     .other-region,.unresolved-region,.local-policy-region { border:1px dashed #afb7c6; background:#f3f5f8; }
+    .boundary-gate-region .region-label,.sg-gate-region .region-label { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    .boundary-gate-region { border:2px dashed #8e74b8; background:#f4effa; }
+    .sg-gate-region { border:1px dashed #8e74b8; background:#f4effa; }
+    .policy-ref { position:absolute; text-align:left; background:#f8f4ff; border:2px dashed #9476bb; border-radius:9px; padding:10px; pointer-events:auto; cursor:pointer; overflow:hidden; font:11px system-ui,sans-serif; color:#49336a; }
+    .policy-ref .name { font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .policy-ref.dimmed { opacity:.32; }
+    .policy-ref.selected { outline:2px solid #2563eb; }
+    .gate-target { font-size:9px; margin:4px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .node[data-gate-target] { border-top:3px solid #9476bb; }
+    .policy-column { border:1px solid #d4dbe6; background:#ffffff38; border-radius:6px; }
+    .policy-column .region-label { color:#475569; }
     .subnet-region { border:2px solid #649bd0; border-radius:10px; background:#dcecff90; }
     .subnet-region .region-label { color:#214e7c; max-width:calc(100% - 30px); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
     .reference-column { border:1px dashed #c3cfdf; background:#eef3f93b; }
@@ -100,6 +119,17 @@
     /* Phase 3-4: fixed layout footprint, measured before routing. */
     .node { height:112px; overflow:hidden; }
     .node:hover { transform:none; }
+    .edge-service-slot {border:1px solid #279a89;background:#e6f6f1;border-radius:7px;}
+    .node.edge-service {min-height:0;height:78px;padding:5px 9px;border-color:#279a89;background:#f2fcf8;}
+    .node.edge-service .name {margin:2px 0;}
+    #egress-path-summary {margin:6px 0;line-height:1.7;font-size:12px;overflow-wrap:anywhere;}
+    #egress-path-summary:empty {display:none;}
+    .attachment-summary {font-size:10px;line-height:14px;color:#345675;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .address-ref {position:absolute;box-sizing:border-box;border:1px solid #79a991;background:#edf8f1;border-radius:6px;color:#235b40;padding:5px 8px;text-align:left;font-size:10px;line-height:14px;cursor:pointer;overflow:hidden;pointer-events:auto;}
+    .address-ref .name {font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .address-ref:focus-visible {outline:2px solid #176b8a;}
+    .address-ref.dimmed {opacity:.25;}
+    .address-ref.selected {outline:2px solid #176b8a;}
     .node-note { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
     .policy-layer-tools { padding:9px 17px; border-bottom:1px solid #e3e9f2; font-size:12px; }
     .policy-layer-tools label { display:inline-flex; align-items:center; gap:4px; margin:4px 12px 4px 0; }
@@ -158,6 +188,13 @@
     .trace-node-reason { font-weight:600; margin:5px 0; }
 
     @media(max-width:760px) { .trace-grid { grid-template-columns:1fr; } .tabs { flex-wrap:wrap; } }
+    .region-fold { pointer-events:auto; cursor:pointer; margin-left:8px; padding:2px 7px; background:white; border:1px solid #7191b8; border-radius:4px; color:#173b64; font-size:11px; }
+    .fold-summary { position:absolute; left:15px; right:15px; bottom:6px; font-size:11px; color:#425a75; line-height:1.3; }
+    .fold-summary.fold-blocked { color:#a31525; font-weight:800; }
+    .fold-summary.fold-unknown { color:#936000; font-weight:800; }
+    .region-label:has(.region-fold) { display:flex; align-items:center; gap:4px; max-width:calc(100% - 30px); overflow:visible; white-space:nowrap; }
+    .region-fold-name { overflow:hidden; text-overflow:ellipsis; min-width:0; }
+    .region-fold { flex:none; }
     /* Failed configuration input must never look like a successful replacement. */
     #upload-status[data-state="error"] { color:#991b1b; background:#fff1f2; border:2px solid #b91c1c; border-radius:8px; padding:12px; font-weight:700; overflow-wrap:anywhere; }
     #upload-error-view { padding:22px; }
@@ -168,6 +205,15 @@
     body[data-config-error="true"] #graph-view, body[data-config-error="true"] #packet-trace-view { display:none !important; }
     body[data-config-error="true"] #snapshot-info { opacity:.7; }
     #upload-error-view[hidden], #upload-error-dialog:not([open]) { display:none; }
+    /* File selection only: existing upload/analysis validation remains authoritative. */
+    .file-drop-zone { display:flex; flex-direction:column; align-items:flex-start; gap:6px; border:2px dashed #9bb0c9; border-radius:9px; background:#f8fbff; padding:11px 14px; margin:6px 0; min-width:0; max-width:100%; }
+    .file-drop-zone input[type="file"] { max-width:100%; }
+    .file-drop-zone .file-drop-hint { color:#3d5878; font-size:12px; font-weight:600; }
+    .file-drop-zone[data-drag-active="true"] { border-color:#2563eb; background:#e2eeff; box-shadow:0 0 0 2px #2563eb25; }
+    .file-drop-error { color:#991b1b; font-size:12px; font-weight:700; overflow-wrap:anywhere; }
+    .file-drop-error:empty { display:none; }
+    #upload-form .file-drop-zone { max-width:720px; }
+    .trace-tools .file-drop-zone { flex:1 1 260px; }
   </style>
 </head>
 <body>
@@ -178,6 +224,8 @@
       <button class="tab" data-mode="network_graph" aria-pressed="true">Network Topology</button>
       <button class="tab" data-mode="reference_graph" aria-pressed="false">IaC 참조 관계</button>
       <button class="tab" id="packet-trace-tab" aria-pressed="false">Packet Trace</button>
+      <a class="peering-link" href="/peering">VPC Peering</a>
+      <a class="peering-link" href="/tgw">Transit Gateway</a>
     </nav>
   </header>
   <section class="shell" id="upload-panel" hidden style="padding-bottom:0">
@@ -227,10 +275,14 @@
           <label><input type="checkbox" data-policy-layer="association"><span class="swatch" style="border-color:#c47b16"></span> Route Table 연결</label>
           <label><input type="checkbox" data-policy-layer="next"><span class="swatch next" style="border-color:#16719a"></span> 라우트 대상 →</label>
           <label><input type="checkbox" data-policy-layer="other"><span class="swatch" style="border-color:#7897c5"></span> 기타 구성 연결</label>
+          <label><input id="default-egress-toggle" type="checkbox" autocomplete="off"><span class="swatch" style="border-color:#087f83"></span> 기본 출구 구성 참조 (실제 전달 아님)</label>
           <button id="policy-all" type="button">모두 표시</button> <button id="policy-none" type="button">모두 숨기기</button>
           <p>선은 구성 관계이며 실제 패킷 이동이 아닙니다. local 경로와 미확정 대상은 Route Table 상세에서 확인하세요. Packet Trace 강조는 독립적입니다.</p>
         </div>
-        <div id="trace-overlay-bar" hidden><label for="overlay-direction">분석 방향 </label><select id="overlay-direction" disabled><option value="request">요청</option><option value="response">응답</option></select> <button id="overlay-clear" type="button" disabled>강조 해제</button> <button id="overlay-back" type="button">Packet Trace로 이동</button><p id="overlay-status"></p></div>
+        <div id="region-fold-tools" class="trace-tools" hidden><button id="fold-all" type="button">VPC·Subnet 모두 접기</button><button id="unfold-all" type="button">모두 펼치기</button><span>접기는 화면 표시만 변경합니다. 숨겨진 구성 관계는 임의 연결하지 않습니다.</span></div>
+        <div id="node-drag-tools" class="trace-tools"><label><input type="checkbox" id="node-drag-mode"> 리소스 배치 편집</label><button id="node-drag-reset" type="button">자동 배치 복원</button><span id="node-drag-status" role="status">편집 모드에서 리소스를 끌어 이동합니다. 기존 소속 영역 안에서만 이동합니다.</span></div>
+        <div id="layout-storage-tools" class="trace-tools"><button id="layout-save" type="button">배치 저장</button><button id="layout-restore" type="button">저장 배치 복원</button><button id="layout-clear" type="button">전체 배치 초기화</button><span id="layout-storage-status" role="status" aria-live="polite">현재 입력 지문별 브라우저 저장 · 두 구조도 및 접기 상태</span></div>
+        <div id="trace-overlay-bar" hidden><label for="overlay-direction">분석 방향 </label><select id="overlay-direction" disabled><option value="request">요청</option><option value="response">응답</option></select> <button id="overlay-clear" type="button" disabled>강조 해제</button> <button id="overlay-back" type="button">Packet Trace로 이동</button><p id="overlay-status"></p><p id="egress-path-summary" aria-live="polite"></p></div>
         <div id="routing-status" class="routing-status" aria-live="polite"></div>
         <div class="scroll-area" id="canvas-viewport" tabindex="0" aria-label="인프라 구성도 이동 및 확대 가능 영역"><div id="canvas-stage"><div id="topology"><svg id="links" aria-hidden="true"></svg><div id="regions"></div><div id="nodes"></div></div></div></div>
       </section>
@@ -251,7 +303,9 @@
         <form id="live-form">
           <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end">
             <label>출발지 <select id="live-source" required></select></label>
-            <label>목적지 <select id="live-destination" required></select></label>
+            <label id="live-scope-label" hidden>분석 범위 <select id="live-scope"><option value="internal">VPC 내부 통신</option><option value="egress">인터넷 방향 (IGW/NAT)</option></select></label>
+            <label id="live-destination-label">목적지 <select id="live-destination" required></select></label>
+            <label id="live-external-label" hidden>외부 IPv4 <input id="live-external-ip" type="text" maxlength="15" placeholder="8.8.8.8" disabled required></label>
             <label>프로토콜 <select id="live-protocol"><option value="tcp">TCP</option><option value="udp">UDP</option></select></label>
             <label>출발지 포트 <input id="live-sport" type="number" min="1" max="65535" step="1" value="49152" required></label>
             <label>목적지 포트 <input id="live-dport" type="number" min="1" max="65535" step="1" value="443" required></label>
@@ -379,7 +433,11 @@ let mode = 'network_graph';
 let selectedId = null;
 let focusActive = false;
 let currentLayout = null;
+const collapsedRegions = new Set(); // presentation only; reset on new input/page load
 let zoom = 1;
+const manualOffsets={network_graph:new Map(),reference_graph:new Map()};
+let nodeDrag=null;
+let suppressNodeClick=false;
 
 const text = (value) => String(value == null ? '—' : value);
 const make = (tag, className, value) => {
@@ -400,6 +458,31 @@ const renderDetailRow = (label, value) => {
   details.append(make('div', 'detail-label', label));
   details.append(make('div', 'detail-value', value));
 };
+function appendPolicyDetails(target, data){
+  if(!data)return;
+  const names={ingress:'인바운드 규칙 (Ingress)',egress:'아웃바운드 규칙 (Egress)',route:'정의된 라우팅 규칙'};
+  const fieldNames={protocol:'프로토콜',ip_protocol:'프로토콜',from_port:'시작 포트',to_port:'종료 포트',rule_no:'규칙 번호',rule_number:'규칙 번호',action:'동작',rule_action:'동작',cidr_blocks:'IPv4 CIDR',ipv6_cidr_blocks:'IPv6 CIDR',cidr_block:'IPv4 CIDR',ipv6_cidr_block:'IPv6 CIDR',cidr_ipv4:'IPv4 CIDR',cidr_ipv6:'IPv6 CIDR',security_groups:'참조 SG',source_security_group_id:'참조 SG',referenced_security_group_id:'참조 SG',prefix_list_ids:'Prefix List',prefix_list_id:'Prefix List',self:'자기 SG 참조',observed_state:'수집 상태',observed_origin:'수집 출처',observed_target_ids:'수집 대상 ID',destination_cidr_block:'목적지 IPv4 CIDR',destination_ipv6_cidr_block:'목적지 IPv6 CIDR',destination_prefix_list_id:'목적지 Prefix List',icmp_type:'ICMP Type',icmp_code:'ICMP Code',state:'상태'};
+  target.append(make('h3','','정책 세부 설정'),make('p','','입력에 정의된 규칙입니다. 실제 적용 여부나 통신 허용 판정은 아닙니다.'));
+  if(data.kind.includes('security_group'))target.append(make('p','','SG는 허용 규칙만 정의합니다. 인바운드의 상대는 출발지, 아웃바운드의 상대는 목적지입니다.'));
+  if(data.kind.includes('network_acl'))target.append(make('p','','NACL은 규칙 번호순으로 평가하며 첫 일치 규칙이 적용됩니다. 미확인 기본 규칙은 임의 생성하지 않습니다.'));
+  for(const warning of data.warnings||[])target.append(make('p','policy-rule-warn',warning));
+  for(const [direction,section] of Object.entries(data.sections)){
+    target.append(make('div','detail-label',`${names[direction]||direction} · ${section.rows.length}개`));
+    if(!section.rows.length)target.append(make('p','',section.presence==='defined'?'입력에 정의된 규칙 없음 (유효 정책은 별도 확인)':'입력에 규칙 목록 없음 · 미확정'));
+    else if(section.presence!=='defined')target.append(make('p','','별도 정의된 규칙 · 전체 목록의 완전성 미확정'));
+    for(const row of section.rows){
+      const card=make('div','policy-rule-card');card.append(make('strong','',row.source));
+      const fields=row.fields,dl=make('dl','');
+      if(data.kind.includes('security_group'))dl.append(make('dt','','규칙 동작'),make('dd','','허용 (ALLOW 정의)'));
+      for(const [k,v] of Object.entries(fields)){
+        if(Array.isArray(v)&&!v.length)continue;
+        const value=Array.isArray(v)?v.join(', '):String(v);
+        dl.append(make('dt','',fieldNames[k]||k),make('dd','',['protocol','ip_protocol'].includes(k)?({'-1':'전체 (-1)','6':'TCP (6)','17':'UDP (17)','1':'ICMP (1)','58':'ICMPv6 (58)'}[value]||value):value));
+      }
+      card.append(dl);target.append(card);
+    }
+  }
+}
 function selectNode(id, byUser = true) {
   selectedId = id;
   if (byUser) focusActive = true;
@@ -423,6 +506,23 @@ function selectNode(id, byUser = true) {
     renderDetailRow('가용 영역', display.availability_zone);
   }
   if (node.synthetic) renderDetailRow('주의', '분석기가 추론한 가상 리소스 (실제 AWS ID 아님)');
+  if(mode==='network_graph'){
+    if(node.resource_type==='nat_gateway'){
+      const sub=graph.edges.filter(e=>e.relation==='contains'&&e.target===id&&graph.nodes.some(n=>n.id===e.source&&n.resource_type==='subnet'));
+      renderDetailRow('소속 Subnet',sub.length===1?sub[0].source:'미확인');
+      renderDetailRow('경계 서비스 역할','외부 방향 연결의 주소 변환 및 중계. 응답은 기존 NAT 상태가 필요하며 외부 신규 연결 경로 아님.');
+    }
+    const integrated=[...(currentLayout?.aliases||[])].filter(([,owner])=>owner===id).map(([eni])=>eni);
+    for(const eni of integrated){
+      const d=displayOf(eni);renderDetailRow('통합 표시 ENI',eni);renderDetailRow('사설 IP',d.private_ip||'미확인');
+      const b=make('button','', 'ENI 상세 보기 · '+eni);b.type='button';b.addEventListener('click',()=>selectNode(eni,true));details.append(b);
+      for(const a of d.public_addresses||[])renderDetailRow(a.kind==='EIP_ASSOCIATION'?'EIP 연결 증거':'공인 IP (유형 미확인)',a.public_ip+(a.allocation_id?' · '+a.allocation_id:''));
+    }
+    if(currentLayout?.aliases?.has(id)){const owner=currentLayout.aliases.get(id);const b=make('button','','관리/부착 객체 보기');b.type='button';b.addEventListener('click',()=>selectNode(owner,true));details.append(b);}
+    if(display.private_ip)renderDetailRow('사설 IP',display.private_ip);
+    for(const a of display.public_addresses||[])renderDetailRow(a.kind==='EIP_ASSOCIATION'?'EIP 연결 증거':'공인 IP (유형 미확인)',a.public_ip+(a.allocation_id?' · '+a.allocation_id:''));
+    for(const a of display.nat_addresses||[])renderDetailRow(a.allocation_id?'NAT EIP 할당 증거':'NAT 주소 증거',`${a.eni_id} · ${a.private_ip||'미확인'} → ${a.public_ip||'미확인'} · ${a.allocation_id||'할당 ID 미확인'} · ${a.associated?'연결 성공 기록':'연결 상태 미확인'}`);
+  }
   const relationships = graph.edges.filter(edge => edge.source === id || edge.target === id);
   details.append(make('div','detail-label',`관련 연결 (${relationships.length})`));
   if (!relationships.length) details.append(make('p','','표시 가능한 연결 관계가 없습니다.'));
@@ -430,8 +530,8 @@ function selectNode(id, byUser = true) {
     const other = edge.source === id ? edge.target : edge.source;
     details.append(make('span','chip',`${relationshipLabel(graph,edge)}: ${other}`));
   });
-  if (mode === 'network_graph') {
-    const rules = (graph.route_rules || []).filter(rule => rule.route_table === id || rule.target === id);
+  {
+    const rules = (GRAPHS.network_graph.route_rules || []).filter(rule => rule.route_table === id || rule.target === id);
     if (rules.length) {
       details.append(make('div','detail-label',`연관 라우팅 규칙 (${rules.length})`));
       const list = make('ul','route-list');
@@ -439,6 +539,7 @@ function selectNode(id, byUser = true) {
       details.append(list);
     }
   }
+  appendPolicyDetails(details,display.policy_details);
   const traceSteps=activeNodeTraceSteps(id);
   if(traceSteps.length){
     details.append(make('h3','','현재 분석 판정 근거'));
@@ -464,8 +565,9 @@ function updateFocus() {
       if (rule.target === selectedId) near.add(rule.route_table);
     }
   }
+  if(mode==='network_graph')for(const [eni,owner] of currentLayout?.aliases||[])if(near.has(eni))near.add(owner);
   nodeLayer.querySelectorAll('.node').forEach(element => {
-    element.classList.toggle('selected', element.dataset.id === selectedId);
+    element.classList.toggle('selected', element.dataset.id === selectedId || currentLayout?.aliases?.get(selectedId)===element.dataset.id);
     element.classList.toggle('dimmed', Boolean(active) && !near.has(element.dataset.id));
     element.classList.toggle('connected', Boolean(active) && near.has(element.dataset.id) && element.dataset.id !== selectedId);
   });
@@ -474,6 +576,8 @@ function updateFocus() {
     element.classList.toggle('dimmed', Boolean(active) && !connected);
     element.classList.toggle('focused', Boolean(active) && connected);
   });
+  for(const e of nodeLayer.querySelectorAll('.policy-ref')){e.classList.toggle('selected',e.dataset.policyId===selectedId);e.classList.toggle('dimmed',Boolean(active)&&!near.has(e.dataset.policyId)&&!near.has(e.dataset.gateTarget));}
+  for(const e of nodeLayer.querySelectorAll('.address-ref')){e.classList.toggle('selected',e.dataset.addressOwner===selectedId);e.classList.toggle('dimmed',Boolean(active)&&!near.has(e.dataset.addressOwner));}
   applyOverlayFocus();
   applyAwsFocus();
 }
@@ -482,7 +586,7 @@ function routeEvidenceForSubnet(graph, subnetId, tableId, vpcId, index) {
   if (!tableId) return {kind:'unknown',label:'Route Table 확인 불가',reason:'경로 미확인'};
   const rules = (graph.route_rules || []).filter(rule => rule.route_table === tableId);
   const defaultRules = rules.filter(rule => rule.destination === '0.0.0.0/0');
-  if (defaultRules.some(rule => rule.status !== 'RESOLVED'))
+  if (defaultRules.some(rule => rule.status !== 'RESOLVED'||rule.observed_state==='blackhole'))
     return {kind:'unknown',label:'기본경로 해석 불가',reason:'미해결 라우팅 규칙'};
   const internet = defaultRules.find(rule => {
     if (rule.target_kind !== 'gateway_id' || rule.status !== 'RESOLVED') return false;
@@ -490,17 +594,42 @@ function routeEvidenceForSubnet(graph, subnetId, tableId, vpcId, index) {
     return graph.edges.some(edge => edge.source === vpcId && edge.target === rule.target && edge.relation === 'attached_to');
   });
   if (internet) return {kind:'igw',label:'IGW 기본경로 구성',reason:'0.0.0.0/0 → IGW (접속 성공 미판정)'};
-  if (defaultRules.some(rule => rule.status === 'RESOLVED' && rule.target_kind === 'nat_gateway_id'))
+  if (defaultRules.some(rule => rule.status === 'RESOLVED' && rule.target_kind === 'nat_gateway_id' && index.get(rule.target)?.resource_type==='nat_gateway'))
     return {kind:'nat',label:'NAT 기본경로 구성',reason:'0.0.0.0/0 → NAT (직접 IGW 아님)'};
   if (defaultRules.length) return {kind:'other',label:'기타 기본경로 구성',reason:'0.0.0.0/0 대상 확인 필요'};
   return {kind:'no_igw',label:'IGW 기본경로 없음',reason:'제공된 구성에 IGW 기본경로 없음 (격리 판정 아님)'};
 }
-function positionNetwork(graph) {
+function attachmentProjection(graph, display={}) {
+  const index=new Map(graph.nodes.map(n=>[n.id,n])), parents=new Map(), owners=new Map(), candidates=new Map();
+  for(const e of graph.edges)if(e.relation==='contains'&&index.get(e.source)?.resource_type==='subnet'){
+    if(!parents.has(e.target))parents.set(e.target,new Set());parents.get(e.target).add(e.source);
+  }
+  const sameSubnet=(a,b)=>parents.get(a)?.size===1&&parents.get(b)?.size===1&&[...parents.get(a)][0]===[...parents.get(b)][0];
+  function candidate(eni,owner){if(!candidates.has(eni))candidates.set(eni,new Set());candidates.get(eni).add(owner);}
+  for(const e of graph.edges){
+    const d=display[e.source]||{};
+    if(e.relation==='attached_to'&&index.get(e.source)?.resource_type==='network_interface'&&index.get(e.target)?.resource_type==='instance'&&d.device_index===0&&d.requester_managed===false&&d.observed_interface_type==='interface'&&sameSubnet(e.source,e.target))candidate(e.source,e.target);
+  }
+  for(const n of graph.nodes.filter(n=>n.resource_type==='nat_gateway'))for(const a of display[n.id]?.nat_addresses||[]){
+    const d=display[a.eni_id]||{};
+    if(index.get(a.eni_id)?.resource_type==='network_interface'&&d.requester_managed===true&&d.observed_interface_type==='nat_gateway'&&a.associated===true&&a.private_ip&&a.private_ip===d.private_ip&&sameSubnet(a.eni_id,n.id))candidate(a.eni_id,n.id);
+  }
+  for(const [eni,cs] of candidates)if(cs.size===1){const owner=[...cs][0];if(!owners.has(owner))owners.set(owner,[]);owners.get(owner).push(eni);}
+  const aliases=new Map();
+  for(const [owner,enis] of owners){
+    // Multiple purported primary interfaces are inconsistent. NAT may legitimately have multiple addresses.
+    if(index.get(owner)?.resource_type==='instance'&&enis.length!==1)continue;
+    for(const eni of enis)aliases.set(eni,owner);
+  }
+  return aliases;
+}
+function positionNetwork(graph, collapsed = new Set(), display={}) {
   // Containment is based on verified structural edges, never on policy/attachment guesses.
   const nodes=graph.nodes,index=new Map(nodes.map(n=>[n.id,n]));
   const sorted=items=>items.slice().sort((a,b)=>a.id.localeCompare(b.id));
   const vpcs=sorted(nodes.filter(n=>n.resource_type==='vpc'));
-  const positions=new Map(),regions=[],labels=new Map(),assigned=new Set();
+  const positions=new Map(),regions=[],labels=new Map(),assigned=new Set(),hiddenBy=new Map();
+  const aliases=attachmentProjection(graph,display);
   const parent=new Map(),subnetTable = new Map(),candidates=new Map();
   const subnetTypes=new Set(['instance','network_interface','nat_gateway']);
   for(const edge of graph.edges){
@@ -519,49 +648,104 @@ function positionNetwork(graph) {
     while(parent.has(cur)&&!seen.has(cur)){seen.add(cur);cur=parent.get(cur);if(index.get(cur)?.resource_type==='vpc')return cur;}
     return null;
   }
-  // A policy may be placed near a subnet only if every known application
-  // resolves to that same subnet. It is still outside the subnet boundary.
+  // Policy resources are VPC-scoped; visible gate slots are attachment presentations, not containment or hops.
+  // Scope labels describe only confirmed application edges, not effective policy.
   const policyTypes=new Set(['security_group','network_acl','route_table','default_route_table']);
   const policyScopes=new Map();
   for(const e of graph.edges){
     let policy,scope;
-    if(e.relation==='uses_route_table'){policy=e.target;scope=e.source;}
+    if(e.relation==='uses_route_table'&&policyTypes.has(index.get(e.target)?.resource_type)){policy=e.target;scope=e.source;}
     else if(e.relation==='applies_to'&&policyTypes.has(index.get(e.source)?.resource_type)){
       policy=e.source;scope=index.get(e.target)?.resource_type==='subnet'?e.target:parent.get(e.target);
     }else continue;
     if(!policyScopes.has(policy))policyScopes.set(policy,new Set());
-    policyScopes.get(policy).add(index.get(scope)?.resource_type==='subnet'?scope:null);
+    policyScopes.get(policy).add(index.get(scope)?.resource_type==='subnet'&&rootVpc(policy)&&rootVpc(policy)===rootVpc(scope)?scope:null);
   }
-  const near=new Map();
-  for(const [id,scopes] of policyScopes){
-    const scope=[...scopes][0];
-    if(scopes.size===1&&scope&&rootVpc(id)&&rootVpc(id)===rootVpc(scope)){
-      if(!near.has(scope))near.set(scope,[]);near.get(scope).push(index.get(id));
-    }
+  for(const n of nodes.filter(n=>policyTypes.has(n.resource_type))){
+    const scopes=policyScopes.get(n.id)||new Set(),known=[...scopes].filter(Boolean).sort();
+    const isSg=n.resource_type==='security_group';
+    const scope=known.length===0?(isSg?'적용 리소스 소재 Subnet 미확인':'적용 Subnet 미확인'):known.length===1?(isSg?'적용 리소스 소재: ':'확인된 적용: ')+(index.get(known[0]).name||known[0]):`${isSg?'적용 리소스 소재':'확인된 공유 적용'}: Subnet ${known.length}개`;
+    labels.set(n.id,scope+(scopes.has(null)&&known.length?' · 추가 적용 미확인':''));
   }
-  const policyOrder={network_acl:0,route_table:1,default_route_table:1,security_group:2};
-  for(const ps of near.values())ps.sort((a,b)=>(policyOrder[a.resource_type]??9)-(policyOrder[b.resource_type]??9)||a.id.localeCompare(b.id));
-  const childrenOf=subnet=>sorted(nodes.filter(n=>parent.get(n.id)===subnet.id&&!assigned.has(n.id)));
+  const childrenOf=subnet=>sorted(nodes.filter(n=>parent.get(n.id)===subnet.id&&!assigned.has(n.id)&&!aliases.has(n.id)));
   const baseX=36,pad=44,gap=100,step=270,rowStep=164;
   let cursorY=110,worldW=690;
-  const put=(n,x,y)=>{positions.set(n.id,{x,y,w:POS_W,h:POS_H});assigned.add(n.id);};
+  const gates=[],gateKeys=new Set(),addressRefs=[],edgeServices=[],defaultEgressRefs=[];
+  const put=(n,x,y,w=POS_W,h=POS_H)=>{positions.set(n.id,{x,y,w,h});assigned.add(n.id);};
   const gridWidth=c=>2*pad+POS_W+(c-1)*step;
-  const cardCols=subnet=>Math.min(3,Math.max(1,childrenOf(subnet).length,(near.get(subnet.id)||[]).length));
-  function placeSubnet(subnet,x,y,w,cols){
-    const children=childrenOf(subnet),policies=(near.get(subnet.id)||[]).filter(n=>!assigned.has(n.id));
-    const rows=Math.ceil((children.length+1)/cols),h=children.length?58+rows*rowStep:194;
-    regions.push({x,y,w,h,name:'Subnet 경계 · '+(subnet.name||subnet.id),kind:'subnet-region',subnetId:subnet.id});
-    put(subnet,x+pad,y+42);
-    children.forEach((n,j)=>{const k=j+1;put(n,x+pad+(k%cols)*step,y+42+Math.floor(k/cols)*rowStep);});
-    if(!policies.length)return h;
-    const py=y+h+72,ph=54+Math.ceil(policies.length/cols)*rowStep;
-    regions.push({x,y:py,w,h:ph,name:'이 Subnet의 확인된 적용 정책 (소속 아님)',kind:'local-policy-region'});
-    policies.forEach((n,j)=>put(n,x+pad+(j%cols)*step,py+46+Math.floor(j/cols)*rowStep));
-    return h+72+ph;
+  const hideIn=(n,owner)=>{hiddenBy.set(n.id,owner);assigned.add(n.id);};
+  // Use only confirmed, same-VPC attachment relationships. Never attach SG to a subnet or NAT.
+  const attachments=new Map();
+  for(const e of graph.edges){
+    const r=index.get(e.relation==='uses_route_table'?e.target:e.source),t=index.get(e.relation==='uses_route_table'?e.source:e.target);
+    if(!r||!t||!rootVpc(r.id)||rootVpc(r.id)!==rootVpc(t.id))continue;
+    const kind=e.relation==='uses_route_table'&&['route_table','default_route_table'].includes(r.resource_type)&&t.resource_type==='subnet'?'route':e.relation==='applies_to'&&r.resource_type==='network_acl'&&t.resource_type==='subnet'?'acl':e.relation==='applies_to'&&r.resource_type==='security_group'&&['instance','network_interface'].includes(t.resource_type)?'sg':null;
+    if(!kind)continue;
+    if(!attachments.has(t.id))attachments.set(t.id,[]);
+    const list=attachments.get(t.id);if(!list.some(g=>g.id===r.id&&g.kind===kind))list.push({id:r.id,kind,target:t.id});
+  }
+  const refs=(id,kind)=> {
+    const direct=(attachments.get(id)||[]).filter(g=>g.kind===kind);
+    const attached=[...aliases].filter(([,owner])=>owner===id).flatMap(([eni])=>(attachments.get(eni)||[]).filter(g=>g.kind===kind));
+    return [...attached,...direct.filter(g=>!attached.some(a=>a.id===g.id))].sort((a,b)=>a.id.localeCompare(b.id));
+  };
+  function putGate(g,x,y){
+    const primary=!assigned.has(g.id);
+    if(primary)put(index.get(g.id),x,y);
+    gates.push({...g,x,y,w:POS_W,h:POS_H,primary});gateKeys.add(JSON.stringify([g.id,g.target,g.kind]));
   }
   function dimensions(subnets){
-    const cols=Math.max(1,...subnets.map(cardCols)),w=gridWidth(cols),count=Math.min(subnets.length||1,cols>=3?2:3,Math.max(1,Math.floor(1900/(w+gap))));
+    const cols=Math.max(2,...subnets.map(n=>1+Math.max(0,...childrenOf(n).map(c=>refs(c.id,'sg').length))));
+    const w=gridWidth(cols),count=Math.min(subnets.length||1,2,Math.max(1,Math.floor(1900/(w+gap))));
     return {cols,w,count,width:Math.max(620,count*w+(count-1)*gap+2*pad)};
+  }
+  function eips(n){
+    const rows=n.resource_type==='nat_gateway'?(display[n.id]?.nat_addresses||[]).filter(a=>a.associated===true):[n.id,...[...aliases].filter(([,owner])=>owner===n.id).map(([eni])=>eni)].flatMap(id=>(display[id]?.public_addresses||[]).filter(a=>a.kind==='EIP_ASSOCIATION'));
+    const unique=new Map();for(const a of rows)if(a.allocation_id&&a.public_ip)unique.set(JSON.stringify([a.allocation_id,a.public_ip]),a);
+    return [...unique.values()];
+  }
+  // Future service types must have their own proven membership semantics before inclusion.
+  const edgeServiceTypes=new Set(['nat_gateway']);
+  function placeSubnet(subnet,x,y,w,cols){
+    const children=childrenOf(subnet),folded=collapsed.has(subnet.id),visible=folded?[]:children;
+    const acl=refs(subnet.id,'acl'),route=refs(subnet.id,'route'),boundaryRows=Math.max(acl.length,route.length);
+    let top=y;
+    // Boundary band is outside the workload containment rectangle but inside the VPC.
+    if(boundaryRows){
+      const h=54+boundaryRows*rowStep;
+      regions.push({x,y,w,h,name:'Subnet 경계 참조 · '+(subnet.name||subnet.id)+' · NACL 접근 제어 / Route 전달 결정',kind:'boundary-gate-region'});
+      acl.forEach((g,i)=>putGate(g,x+pad,y+42+i*rowStep));
+      route.forEach((g,i)=>putGate(g,x+pad+step,y+42+i*rowStep));
+      top+=h+12;
+    }
+    // Service slots stay within the actual subnet, above workload cards. They are not new resources.
+    const services=visible.filter(n=>edgeServiceTypes.has(n.resource_type)),workloads=visible.filter(n=>!edgeServiceTypes.has(n.resource_type));
+    const hasSg=workloads.some(n=>refs(n.id,'sg').length),workW=gridWidth(1),extra=n=>Math.min(eips(n).length,4)*70;
+    const slotH=services.length?52+services.reduce((sum,n)=>sum+108+extra(n),0):0;
+    const h=folded?218:58+(workloads.length+1)*rowStep+workloads.reduce((sum,n)=>sum+extra(n),0)+slotH;
+    regions.push({x,y:top,w:hasSg?workW:w,h,name:'Subnet 경계 · '+(subnet.name||subnet.id),kind:'subnet-region',subnetId:subnet.id,folded});
+    put(subnet,x+pad,top+42);
+    if(hasSg)regions.push({x:x+workW+4,y:top,w:w-workW-4,h,name:'SG 부착 참조 · 옆의 리소스에 적용 (Subnet 전체 아님)',kind:'sg-gate-region'});
+    let yy=top+42+rowStep;
+    if(services.length){
+      regions.push({x:x+12,y:yy-10,w:(hasSg?workW:w)-24,h:slotH-12,name:'경계 서비스 · 소속 Subnet 내부',kind:'edge-service-slot'});
+      yy+=34;
+      for(const n of services){
+        put(n,x+pad,yy,194,78);edgeServices.push({id:n.id,subnetId:subnet.id,kind:n.resource_type});
+        const addresses=eips(n);addresses.slice(0,4).forEach((a,i)=>addressRefs.push({...a,owner:n.id,x:x+pad,y:yy+88+i*70,w:194,h:60,additional:i===3?Math.max(0,addresses.length-4):0}));
+        yy+=108+extra(n);
+      }
+      yy=top+42+rowStep+slotH;
+    }
+    workloads.forEach(n=>{
+      put(n,x+pad,yy);
+      refs(n.id,'sg').forEach((g,i)=>putGate(g,x+pad+step*(i+1),yy));
+      const addresses=eips(n);addresses.slice(0,4).forEach((a,i)=>addressRefs.push({...a,owner:n.id,x:x+pad,y:yy+POS_H+10+i*70,w:POS_W,h:60,additional:i===3?Math.max(0,addresses.length-4):0}));
+      yy+=rowStep+extra(n);
+    });
+    if(folded)children.forEach(n=>hideIn(n,subnet.id));
+    for(const [eni,owner] of aliases)if(parent.get(owner)===subnet.id){assigned.add(eni);if(folded)hiddenBy.set(eni,subnet.id);}
+    return top-y+h;
   }
   function placeGrid(subnets,x,y,d){
     let next=y;
@@ -573,33 +757,42 @@ function positionNetwork(graph) {
     return next;
   }
   for(const vpc of vpcs){
+    if(collapsed.has(vpc.id)){
+      const width=620,h=218;
+      regions.push({x:baseX,y:cursorY,w:width,h,name:`VPC 구성 영역 · ${vpc.name||vpc.id}`,kind:'vpc-region',vpcId:vpc.id,folded:true});
+      put(vpc,baseX+pad,cursorY+42);
+      for(const n of nodes)if(rootVpc(n.id)===vpc.id)hideIn(n,vpc.id);
+      worldW=Math.max(worldW,baseX+width+48);cursorY+=h+140;continue;
+    }
     const allSubnets=sorted(nodes.filter(n=>n.resource_type==='subnet'&&rootVpc(n.id)===vpc.id));
     const groups={igw:[],nat:[],no_igw:[],other:[],unknown:[]};
     for(const subnet of allSubnets){const label=routeEvidenceForSubnet(graph,subnet.id,subnetTable.get(subnet.id),vpc.id,index);groups[label.kind].push(subnet);labels.set(subnet.id,label.reason);}
     const outbound=[...groups.igw,...groups.nat],internal=[...groups.no_igw,...groups.other,...groups.unknown];
-    const ordered=[...outbound,...internal],d=dimensions(ordered),width=d.width;
-    worldW=Math.max(worldW,baseX+width+48);
+    const ordered=[...outbound,...internal],d=dimensions(ordered);
+    for(const subnet of allSubnets){
+      const route=routeEvidenceForSubnet(graph,subnet.id,subnetTable.get(subnet.id),vpc.id,index);
+      for(const n of childrenOf(subnet))if(n.resource_type==='instance')labels.set(n.id,route.kind==='nat'?'기본 외부 경로: NAT 경유':route.kind==='igw'?'기본 외부 경로: IGW (공인 IP 필요)':route.label);
+    }
     const gateways=sorted(nodes.filter(n=>n.resource_type==='internet_gateway'&&parent.get(n.id)===vpc.id));
-    const attachedPolicies=new Set(ordered.flatMap(n=>(near.get(n.id)||[]).map(p=>p.id)));
-    const shared=sorted(nodes.filter(n=>!assigned.has(n.id)&&rootVpc(n.id)===vpc.id&&n.resource_type!=='subnet'&&!subnetTypes.has(n.resource_type)&&n.resource_type!=='internet_gateway'&&!attachedPolicies.has(n.id)));
-    const vpcRegion={x:baseX,y:cursorY,w:width,h:0,name:`VPC 구성 영역 · ${vpc.name||vpc.id}`,kind:'vpc-region'};regions.push(vpcRegion);
-    if(gateways.length)regions.push({x:baseX+width-380,y:cursorY-94,w:380,h:66,name:'외부 인터넷 (설명용 영역 · 실제 AWS 리소스 아님)',kind:'external-region'});
-    const header=[vpc,...gateways],hc=Math.max(1,Math.floor((width-2*pad-32+step-POS_W)/step));
+    const policies=sorted(nodes.filter(n=>policyTypes.has(n.resource_type)&&rootVpc(n.id)===vpc.id));
+    const width=d.width;
+    worldW=Math.max(worldW,baseX+width+48);
+    const vpcRegion={x:baseX,y:cursorY,w:width,h:0,name:`VPC 구성 영역 · ${vpc.name||vpc.id}`,kind:'vpc-region',vpcId:vpc.id,folded:false};regions.push(vpcRegion);
+    if(gateways.length)regions.push({x:baseX+d.width-380,y:cursorY-94,w:380,h:66,name:'외부 인터넷 (설명용 영역 · 실제 AWS 리소스 아님)',kind:'external-region'});
+    const header=[vpc,...gateways],hc=Math.max(1,Math.floor((d.width-2*pad-32+step-POS_W)/step));
     header.forEach((n,i)=>put(n,baseX+pad+(i%hc)*step,cursorY+42+Math.floor(i/hc)*rowStep));
     let next=cursorY+42+Math.ceil(header.length/hc)*rowStep+36;
-    // Shared policies remain unique and outside every subnet.
-    if(shared.length){
-      const h=52+Math.ceil(shared.length/hc)*rowStep,sw=gridWidth(Math.min(hc,shared.length)),sx=baseX+Math.floor((width-sw)/2);
-      regions.push({x:sx,y:next,w:sw,h,name:'VPC 공용 정책·리소스 (서브넷 소속이 아닌 적용 관계)',kind:'other-region'});
-      shared.forEach((n,i)=>put(n,sx+pad+(i%hc)*step,next+44+Math.floor(i/hc)*rowStep));
-      next+=h+80;
-    }
     // Route categories are compact headers, never empty full-height lanes.
     for(const group of [{items:outbound,kind:'egress-region',name:'기본 출구 경로 구성 (IGW / NAT)'},{items:internal,kind:'internal-region',name:'IGW 기본경로 미설정·기타·미확인 서브넷'}]){
       if(!group.items.length)continue;
-      regions.push({x:baseX+pad,y:next,w:width-2*pad,h:32,name:group.name,kind:group.kind});
+      regions.push({x:baseX+pad,y:next,w:d.width-2*pad,h:32,name:group.name,kind:group.kind});
       next=placeGrid(group.items,baseX+pad,next+68,d);
     }
+    // Policies without a visible verified attachment stay in VPC scope, never a guessed gate.
+    const remaining=policies.filter(n=>!assigned.has(n.id));
+    if(remaining.length){const cols=Math.max(1,Math.floor((d.width-2*pad-40-POS_W)/step)+1),h=60+Math.ceil(remaining.length/cols)*rowStep;
+      regions.push({x:baseX+pad,y:next,w:d.width-2*pad,h,name:'VPC 정책 보관 · 적용 위치 미확인 또는 접힌 객체 (통신 순서 아님)',kind:'other-region'});
+      remaining.forEach((n,i)=>put(n,baseX+pad+20+(i%cols)*step,next+42+Math.floor(i/cols)*rowStep));next+=h+44;}
     vpcRegion.h=next-cursorY+28;cursorY+=vpcRegion.h+140;
   }
   // A known subnet membership is still useful when its VPC cannot be resolved.
@@ -613,8 +806,39 @@ function positionNetwork(graph) {
     loose.forEach((r,i)=>put(r,baseX+pad+(i%n)*step,start+Math.floor(i/n)*rowStep));cursorY=start+Math.ceil(loose.length/n)*rowStep;
   }
   if(orphanSubnets.length||loose.length){unknownRegion.h=cursorY-unknownY+24;regions.splice(unknownIndex,0,unknownRegion);worldW=Math.max(worldW,baseX+unknownRegion.w+48);cursorY+=64;}
-  for(const n of nodes)if(n.resource_type==='route_table'||n.resource_type==='default_route_table')labels.set(n.id,'서브넷에 적용된 라우팅 정책 (패킷 홉 아님)');
-  return {positions,regions,labels,width:worldW,height:Math.max(470,cursorY+30)};
+  // Default-route association projection. Do not infer from subnet names or draw unconfirmed targets.
+  for(const n of nodes.filter(n=>['instance','nat_gateway'].includes(n.resource_type)&&positions.has(n.id))){
+    const sub=parent.get(n.id),vpc=rootVpc(n.id);if(!sub||!vpc)continue;
+    const tables=[...new Set(graph.edges.filter(e=>e.relation==='uses_route_table'&&e.source===sub).map(e=>e.target))];
+    if(tables.length!==1)continue;
+    const defaults=(graph.route_rules||[]).filter(r=>r.route_table===tables[0]&&r.destination==='0.0.0.0/0');
+    if(defaults.length!==1)continue;
+    const r=defaults[0],t=index.get(r.target);if(r.status!=='RESOLVED'||r.observed_state==='blackhole'||!t||!positions.has(t.id)||rootVpc(t.id)!==vpc)continue;
+    if(n.resource_type==='instance'&&t.resource_type==='nat_gateway'&&r.target_kind==='nat_gateway_id'||n.resource_type==='nat_gateway'&&t.resource_type==='internet_gateway'&&r.target_kind==='gateway_id')defaultEgressRefs.push({source:n.id,target:t.id,table:tables[0],subnet:sub});
+  }
+  // Policy placement is presentation only; no traversal edges are created.
+  return {positions,regions,labels,hiddenBy,gates,gateKeys,aliases,addressRefs,edgeServices,defaultEgressRefs,width:worldW,height:Math.max(470,cursorY+30)};
+}
+function collapsedEvidenceSummary(hiddenBy, owner, checks) {
+  const counts={hidden:0,blocked:0,conditional:0,unknown:0};
+  const members=new Set([...hiddenBy].filter(([,id])=>id===owner).map(([id])=>id));
+  counts.hidden=members.size;
+  for(const check of checks){
+    if(!check.ids.some(id=>members.has(id)))continue;
+    if(check.status==='BLOCKED'){
+      if(check.mode==='PREDICTED_PATH')counts.blocked++;
+      else counts.conditional++;
+    }else if(check.status==='UNKNOWN'||check.status==='WARNING')counts.unknown++;
+  }
+  return counts;
+}
+function currentCollapseChecks(){
+  if(awsFocus){
+    const d=awsFocus.data;
+    return (d?.findings||[awsFocus.finding]).filter(f=>f.direction===overlayDirection.value).map(f=>({ids:f.web_resource_ids||[],status:f.status,mode:f.evaluation_mode}));
+  }
+  if(traceOverlay){const d=traceOverlay.data;return d.session_trace[overlayDirection.value].steps.map(step=>({ids:[...traceStepResources(d,step)],status:step.status,mode:step.evaluation_mode}));}
+  return [];
 }
 function positionReference(graph) {
   // A code-dependency graph. Classify by Terraform resource roles, not packet flow.
@@ -747,27 +971,41 @@ function renderLinks(graph,layout) {
   // Render after nodes are attached; never use the estimated POS_H as obstacle height.
   linkLayer.querySelectorAll('.link-path').forEach(el=>el.remove());
   const nodes=new Map([...nodeLayer.querySelectorAll('.node')].map(el=>[el.dataset.id,domBox(el)]));
-  const labels=[...regionLayer.querySelectorAll('.region-label')].map(el=>{
+  const labels=[...regionLayer.querySelectorAll('.region-label, .fold-summary')].map(el=>{
     const r=el.parentElement;
     return {x:r.offsetLeft+r.clientLeft+el.offsetLeft,y:r.offsetTop+r.clientTop+el.offsetTop,w:el.offsetWidth,h:el.offsetHeight};
   }).filter(r=>r.w>0&&r.h>0);
   const subnetBounds=new Map([...regionLayer.querySelectorAll('[data-subnet-id]')].map(el=>[el.dataset.subnetId,domBox(el)]));
+  labels.push(...[...nodeLayer.querySelectorAll('.policy-ref,.address-ref')].map(domBox));
   const geometry={nodes,labels,regions:[...regionLayer.children].map(domBox),bounds:{x:0,y:0,w:layout.width,h:layout.height},reserved:[],overlap:0};
-  let count=0;const failures=[];
+  let count=0,gateCount=0;const failures=[];
   const all=mode==='network_graph'?policyLines(graph):graph.edges.map(e=>({...e,layer:'reference',color:'#7D91A8',dash:'3 5',label:e.relation,directed:true}));
   const enabled=new Set(policyControls.filter(el=>el.checked).map(el=>el.dataset.policyLayer));
-  const lines=all.filter(e=>e.layer==='reference'||enabled.has(e.layer));
+  const internalActive=awsFocus?.data?.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION';
+  const toggled=all.filter(e=>(e.layer==='reference'||enabled.has(e.layer))&&!(internalActive&&e.layer==='next'));
+  const hiddenBy=layout.hiddenBy||new Map();
+  const lines=toggled.filter(e=>!hiddenBy.has(e.source)&&!hiddenBy.has(e.target));
   for(const e of lines){
-    const boundary=e.layer==='acl'?subnetBounds.get(e.target):null;
-    const failure=lineBetween(nodes.get(e.source),boundary||nodes.get(e.target),e.color,e.dash,e.label,e.source,e.target,e.directed,geometry,e.layer);
+    const gateKey=e.layer==='association'?JSON.stringify([e.target,e.source,'route']):JSON.stringify([e.source,e.target,e.layer]);
+    if(layout.gateKeys?.has(gateKey)){gateCount++;continue;}
+    const source=layout.aliases?.get(e.source)||e.source,target=layout.aliases?.get(e.target)||e.target;
+    if(source===target){gateCount++;continue;}
+    const boundary=e.layer==='acl'?subnetBounds.get(target):null;
+    const failure=lineBetween(nodes.get(source),boundary||nodes.get(target),e.color,e.dash,e.label,source,target,e.directed,geometry,e.layer);
     if(failure)failures.push(failure);else count++;
+  }
+  let defaultCount=0;
+  if(mode==='network_graph'&&!internalActive&&document.getElementById('default-egress-toggle').checked)for(const ref of layout.defaultEgressRefs||[]){
+    const g={...geometry,regions:[]};
+    const fail=lineBetween(nodes.get(ref.source),nodes.get(ref.target),'#087f83','5 5','기본 출구 구성 참조 · '+ref.table+' · 실제 전달 아님',ref.source,ref.target,true,g,'next');
+    if(fail)failures.push(fail);else defaultCount++;
   }
   currentPolicySegments=geometry.reserved;
   const status=document.getElementById('routing-status');
-  status.replaceChildren(make('span','',`연결선 표시 ${count} / ${lines.length} · 미표시 ${failures.length} · 토글로 숨김 ${all.length-lines.length} · 근접·중첩 잔존 ${geometry.overlap} · 표시 실패는 통신 차단 판정이 아닙니다.`));
+  status.replaceChildren(make('span','',`연결선 표시 ${count} / ${lines.length} · 경계/부착 참조 ${gateCount} · 기본 출구 참조 ${defaultCount} · 미표시 ${failures.length} · 토글로 숨김 ${all.length-toggled.length} · 접기로 숨김 ${toggled.length-lines.length} · 근접·중첩 잔존 ${geometry.overlap} · 표시 실패는 통신 차단 판정이 아닙니다.`));
   if(mode==='network_graph'){
     const local=(graph.route_rules||[]).filter(r=>r.target==='local').length;
-    const unresolved=(graph.route_rules||[]).filter(r=>r.status!=='RESOLVED'||r.observed_state==='blackhole'||(r.target!=='local'&&!nodes.has(r.target))).length;
+    const unresolved=(graph.route_rules||[]).filter(r=>r.status!=='RESOLVED'||r.observed_state==='blackhole'||(r.target!=='local'&&!nodes.has(r.target)&&!hiddenBy.has(r.target))).length;
     if(local||unresolved)status.append(make('div','',`선으로 표시하지 않는 local ${local}개 · 미확정/비활성/미수집 라우트 ${unresolved}개 (상세에서 확인)`));
   }
   if(failures.length){
@@ -781,10 +1019,11 @@ function refreshPolicyLayers(){
   if(mode!=='network_graph'||!currentLayout)return;
   hideTraceTooltip();renderLinks(GRAPHS[mode],currentLayout);updateFocus();
   // Re-route visual trace lines around currently visible policy lanes.
-  if(traceOverlay){linkLayer.querySelectorAll('.trace-candidate').forEach(p=>p.remove());document.getElementById('trace-candidate-arrow')?.parentElement.remove();renderOverlay();}
+  if(traceOverlay||awsFocus){linkLayer.querySelectorAll('.trace-candidate').forEach(p=>p.remove());document.getElementById('trace-candidate-arrow')?.parentElement.remove();renderOverlay();}
 }
 for(const el of policyControls)el.addEventListener('change',refreshPolicyLayers);
-for(const [id,value] of [['policy-all',true],['policy-none',false]])document.getElementById(id).addEventListener('click',()=>{for(const el of policyControls)el.checked=value;refreshPolicyLayers();});
+document.getElementById('default-egress-toggle').addEventListener('change',refreshPolicyLayers);
+for(const [id,value] of [['policy-all',true],['policy-none',false]])document.getElementById(id).addEventListener('click',()=>{for(const el of policyControls)el.checked=value;document.getElementById('default-egress-toggle').checked=value;refreshPolicyLayers();});
 function setZoom(nextZoom,centerX,centerY) {
   if (!currentLayout) return;
   hideTraceTooltip();
@@ -880,10 +1119,11 @@ function classifyInputJson(d){
   if(!d||typeof d!=='object'||Array.isArray(d))return 'UNKNOWN';
   if(typeof d.analysis_type==='string'&&d.analysis_type.startsWith('STATIC_')){
     if(d.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION')return 'AWS_RESULT';
+    if(d.analysis_type==='STATIC_AWS_INTERNET_EGRESS_TCP_CONSTRAINTS')return 'AWS_EGRESS_RESULT';
     if(d.analysis_type==='STATIC_IAC_PREDICTION')return d.session_trace?.schema_version==='1.0'?'IAC_SESSION_RESULT':'LEGACY_RESULT';
     return 'OTHER_RESULT';
   }
-  if(d.format==='cloudpath-aws-inventory-v1')return 'AWS_CONFIG';
+  if(['cloudpath-aws-inventory-v1','cloudpath-aws-inventory-v2'].includes(d.format))return 'AWS_CONFIG';
   if('planned_values' in d&&'resource_changes' in d)return 'PLAN_CONFIG';
   return 'UNKNOWN';
 }
@@ -908,7 +1148,7 @@ function validateAwsResult(d) {
   const verdicts=['REACHABLE','BLOCKED','UNKNOWN','NOT_EVALUATED'];
   const states=['PASS','BLOCKED','UNKNOWN','NOT_EVALUATED','CONDITIONAL'];
   const port=x=>Number.isInteger(x)&&x>=1&&x<=65535;
-  if(!obj(d)||d.analysis_type!=='STATIC_AWS_INVENTORY_PREDICTION'||d.live_observation!==false||!/^sha256-aws-v1:[0-9a-f]{64}$/.test(d.input_identity)||!str(d.collected_at)||!obj(d.scenario)||d.scenario.protocol!=='tcp'||!str(d.scenario.source_ip)||!str(d.scenario.destination_ip)||!port(d.scenario.source_port)||!port(d.scenario.destination_port)||!arr(d.findings)||d.findings.length!==12)fail();
+  if(!obj(d)||d.analysis_type!=='STATIC_AWS_INVENTORY_PREDICTION'||d.live_observation!==false||!/^sha256-aws-v[12]:[0-9a-f]{64}$/.test(d.input_identity)||!str(d.collected_at)||!obj(d.scenario)||d.scenario.protocol!=='tcp'||!str(d.scenario.source_ip)||!str(d.scenario.destination_ip)||!port(d.scenario.source_port)||!port(d.scenario.destination_port)||!arr(d.findings)||d.findings.length!==12)fail();
   const map=new Map();
   for(const f of d.findings){
     if(!obj(f)||!['request','response'].includes(f.direction)||!stages.includes(f.stage)||f.id!==f.direction+':'+f.stage||map.has(f.id)||!states.includes(f.status)||!str(f.reason)||!obj(f.evidence)||!arr(f.assumptions)||!arr(f.dependencies)||!arr(f.web_resource_ids)||f.web_resource_ids.length>1000||!f.web_resource_ids.every(str)||!['PREDICTED_PATH','CONDITIONAL_CHECK','INDEPENDENT_CHECK'].includes(f.evaluation_mode))fail();
@@ -931,7 +1171,7 @@ function validateAwsResult(d) {
 }
 function awsRequestReplay(d){return d.request.trace.map(id=>d.findings.find(f=>f.id===id));}
 function awsEvidenceIds(d,f,identity,known){
-  if(d.input_identity!==identity||!String(identity).startsWith('sha256-aws-v1:'))return [];
+  if(d.input_identity!==identity||!/^sha256-aws-v[12]:/.test(String(identity)))return [];
   return [...new Set(f.web_resource_ids.filter(id=>known.has(id)))];
 }
 function explainAwsFinding(d,f){
@@ -969,6 +1209,93 @@ function sameLiveScenario(d,body,c){
   const s=d.scenario||{}, a=c.endpoints[body.source], b=c.endpoints[body.destination];
   return d.input_identity===body.input_identity&&!!a&&!!b&&s.source_ip===a.ip&&s.destination_ip===b.ip&&s.protocol===body.protocol&&s.source_port===body.source_port&&s.destination_port===body.destination_port;
 }
+function validateEgressResult(d){
+  const fail=()=>{throw Error('외부 통신 분석 결과 형식 또는 검사 순서 오류');};
+  const port=x=>Number.isInteger(x)&&x>=1&&x<=65535;
+  const ip=x=>typeof x==='string'&&x.split('.').length===4&&x.split('.').every(v=>/^(0|[1-9][0-9]{0,2})$/.test(v)&&Number(v)<=255);
+  const reqStages=['SOURCE_ENDPOINT','EGRESS_SCOPE','SOURCE_SG_EGRESS','SOURCE_NACL_EGRESS','SOURCE_ROUTE','NAT_SUBNET_INGRESS','NAT_ROUTE','NAT_SUBNET_EGRESS','EGRESS_ROUTE_SCOPE','ADDRESS_MAPPING'];
+  const retStages=['IGW_RETURN_SCOPE','NAT_SUBNET_INGRESS_PORT_RANGE','NAT_REVERSE_MAPPING','NAT_RETURN_ROUTE','NAT_SUBNET_EGRESS','SOURCE_NACL_INGRESS','SOURCE_SG_INGRESS'];
+  if(!d||d.analysis_type!=='STATIC_AWS_INTERNET_EGRESS_TCP_CONSTRAINTS'||d.live_observation!==false||d.internet_reachability!=='UNKNOWN'||!/^sha256-aws-v[12]:[0-9a-f]{64}$/.test(d.input_identity)||!d.scenario||d.scenario.protocol!=='tcp'||!ip(d.scenario.source_ip)||!ip(d.scenario.destination_ip)||!port(d.scenario.source_port)||!port(d.scenario.destination_port)||!d.route||d.route.input_identity!==d.input_identity||!Array.isArray(d.limitations)||!d.limitations.every(x=>typeof x==='string'))fail();
+  for(const direction of ['request','response']){
+    const rows=d[direction], stages=direction==='request'?reqStages:retStages;
+    if(!Array.isArray(rows)||rows.length>stages.length||(!rows.length&&direction==='request'))fail();
+    let stopped=null,last=-1;
+    for(const row of rows){
+      const ix=stages.indexOf(row?.stage);if(ix<=last||ix<0||typeof row.reason!=='string'||!['ALLOW_CANDIDATE','CONDITIONAL','BLOCKED','UNKNOWN','NOT_EVALUATED','NO_MATCH','LOCAL_CANDIDATE'].includes(row.status))fail();
+      if(row.evaluation_mode!==(stopped?'INDEPENDENT_CHECK':direction==='request'?'PREDICTED_PATH':'CONDITIONAL_CHECK'))fail();
+      if(!stopped&&!['ALLOW_CANDIDATE','CONDITIONAL'].includes(row.status))stopped=row;last=ix;
+    }
+    if(direction==='request'&&(d.first_request_stop!==(stopped?.stage??null)||d.request_status!==(stopped?.status??'CONDITIONAL_CANDIDATE')))fail();
+    if(direction==='response'&&(d.conditional_first_response_stop!==(stopped?.stage??null)||d.response_status!==(rows.length?'UNKNOWN':'NOT_EVALUATED')))fail();
+  }
+  if(d.session_status!==(d.request_status==='BLOCKED'?'BLOCKED':'UNKNOWN'))fail();return d;
+}
+function sameEgressScenario(d,body,c){
+  const s=d.scenario||{};return d.input_identity===body.input_identity&&s.source_ip===c.endpoints[body.source]?.ip&&s.destination_ip===body.destination_ip&&s.protocol===body.protocol&&s.source_port===body.source_port&&s.destination_port===body.destination_port;
+}
+function egressEvidenceIds(d,row,identity,known){
+  if(d.input_identity!==identity||!/^sha256-aws-v[12]:/.test(String(identity)))return [];
+  const ids=[],ep=d.route.endpoint||{}, add=(type,id)=>{if(typeof id==='string')ids.push('aws_'+type+'.'+id);};
+  add('security_group',row.group_id);add('network_acl',row.acl_id);add('route_table',row.route_table_id||row.route?.route_table_id);add('subnet',row.source_subnet_id||row.route?.source_subnet_id);
+  if(row.stage.startsWith('SOURCE_')){add('instance',ep.instance_id);add('network_interface',ep.eni_id);add('subnet',ep.subnet_id);}
+  for(const seg of (Array.isArray(row.segments)?row.segments:[]))add('network_acl',seg?.evidence?.acl_id);
+  const hops=Array.isArray(d.route.hops)?d.route.hops:[];
+  if(row.stage.startsWith('NAT_SUBNET_')&&d.route.translation?.kind==='PUBLIC_NAT_THEN_IGW'&&d.route.route_lookups?.length===2)add('subnet',d.route.route_lookups[1]?.source_subnet_id);
+  if(row.stage.startsWith('NAT_')||row.stage==='ADDRESS_MAPPING')for(const h of hops)if(h?.stage==='PUBLIC_NAT_GATEWAY')add('nat_gateway',h.resource_id);
+  if(row.stage==='IGW_RETURN_SCOPE'||row.stage==='ADDRESS_MAPPING')for(const h of hops)if(h?.stage==='INTERNET_GATEWAY')add('internet_gateway',h.resource_id);
+  return [...new Set(ids.filter(id=>known.has(id)))];
+}
+function explainEgressRow(row){
+  const stage=row.stage, status=row.status;
+  const verdict=status==='ALLOW_CANDIDATE'?'허용 후보':status==='BLOCKED'?'차단':status==='CONDITIONAL'?'조건부':'미확정 / 미평가';
+  if(stage.includes('_SG_'))return `보안그룹 ${stage.endsWith('EGRESS')?'송신':'수신'} ${verdict} · ${row.group_id||''} ${row.reason}`;
+  if(stage.includes('NACL')||stage.startsWith('NAT_SUBNET'))return `네트워크 ACL ${verdict} · ${row.rule_number!=null?'규칙 '+row.rule_number:row.port_range?'변환 포트 범위 '+row.port_range.join('–'):'규칙 미확정'} · ${row.reason}`;
+  if(stage.includes('ROUTE'))return `라우팅 ${verdict} · ${row.route_table_id||row.route?.route_table_id||''} · ${row.reason}`;
+  if(stage==='ADDRESS_MAPPING')return `주소 매핑 ${verdict} · 실제 변환 상태 미관측`;
+  if(stage==='NAT_REVERSE_MAPPING')return 'NAT 역변환은 기존 런타임 세션이 있어야 합니다.';
+  if(stage==='IGW_RETURN_SCOPE')return 'IGW 수신 경로 및 실제 응답 상태는 미확정입니다.';
+  return `${stage} · ${verdict} · ${row.reason}`;
+}
+// Logical check anchors, not physical router or firewall hops.
+function planAwsLocalPath(d,g,identity,direction){
+  const out={anchors:[],note:'',stop:null,complete:false};
+  if(d?.analysis_type!=='STATIC_AWS_INVENTORY_PREDICTION'||d.input_identity!==identity||!['request','response'].includes(direction))return {...out,note:'입력 또는 분석 범위 불일치'};
+  try{validateAwsResult(d);}catch{return {...out,note:'분석 결과 검증 실패'};}
+  const lane=d[direction], map=new Map(d.findings.map(f=>[f.id,f]));
+  if(!lane.trace.length)return {...out,note:'요청 미성립 · 조건부 응답 경로 없음'};
+  const pre=map.get(lane.trace[0]), a=pre.evidence.source,b=pre.evidence.destination;
+  const id=(type,value)=>typeof value==='string'?'aws_'+type+'.'+value:null;
+  const known=new Map(g.nodes.map(n=>[n.id,n.resource_type]));
+  const edge=(source,target,relation)=>g.edges.some(e=>e.source===source&&e.target===target&&e.relation===relation);
+  const ep=x=>({instance:id('instance',x?.instance_id),eni:id('network_interface',x?.eni_id),subnet:id('subnet',x?.subnet_id),vpc:id('vpc',x?.vpc_id),groups:x?.security_group_ids,ip:x?.private_ip});
+  const src=ep(a),dst=ep(b), reply=direction==='response';
+  const valid=x=>known.get(x.instance)==='instance'&&known.get(x.eni)==='network_interface'&&known.get(x.subnet)==='subnet'&&known.get(x.vpc)==='vpc'&&edge(x.eni,x.instance,'attached_to')&&edge(x.subnet,x.eni,'contains')&&edge(x.subnet,x.instance,'contains')&&edge(x.vpc,x.subnet,'contains');
+  if(pre.status!=='PASS'||!valid(src)||!valid(dst)||src.vpc!==dst.vpc||src.subnet===dst.subnet||src.ip!==(reply?d.scenario.destination_ip:d.scenario.source_ip)||dst.ip!==(reply?d.scenario.source_ip:d.scenario.destination_ip))return {...out,note:'지원 범위 또는 엔드포인트 근거 미확인'};
+  out.anchors.push({id:src.eni,target:null,stage:'SOURCE_ENDPOINT',label:'출발 EC2 '+src.ip,status:'PASS'});
+  for(const fid of lane.trace.slice(1)){
+    const f=map.get(fid),e=f.evidence,x=f.stage.startsWith('DESTINATION')?dst:src;
+    let resource,target,label;
+    const pass=f.status==='PASS'||(reply&&f.status==='CONDITIONAL');
+    if(f.stage.includes('_SG_')){
+      const groups=(Array.isArray(x.groups)?x.groups:[]).map(v=>id('security_group',v)).filter(v=>known.get(v)==='security_group'&&edge(v,x.eni,'applies_to'));
+      resource=e.group_id?id('security_group',e.group_id):groups.length===1?groups[0]:null;
+      if(!groups.includes(resource))resource=null;
+      target=x.eni;label='SG '+(f.stage.startsWith('SOURCE')?'송신':'수신');
+    }else if(f.stage.includes('_NACL_')){
+      resource=id('network_acl',e.acl_id);target=x.subnet;label='NACL '+(f.stage.startsWith('SOURCE')?'송신':'수신');
+      if(known.get(resource)!=='network_acl'||!edge(resource,target,'applies_to'))resource=null;
+    }else if(f.stage==='ROUTE_LOOKUP'){
+      const r=e.route_lookup||{};resource=id('route_table',r.route_table_id);target=src.subnet;label='VPC local 경로 선택';
+      if(known.get(resource)!=='route_table'||!edge(target,resource,'uses_route_table')||r.source_subnet_id!==a.subnet_id||r.destination_ip!==dst.ip)resource=null;
+      if(pass&&(!resource||r.status!=='LOCAL_CANDIDATE'||r.selected_route?.GatewayId!=='local'||r.selected_route?.State!=='active'||!g.route_rules.some(q=>q.route_table===resource&&q.target==='local'&&q.destination===r.selected_route.DestinationCidrBlock&&q.status==='RESOLVED'&&q.observed_state==='active'))){out.note='현재 구성과 local 라우팅 근거 불일치';out.stop=f.stage;return out;}
+    }
+    if(!resource){out.note='검사 적용 위치 미확인: '+f.stage;out.stop=f.stage;return out;}
+    out.anchors.push({id:resource,target,stage:f.stage,label,status:f.status});
+    if(!pass){out.stop=f.stage;out.note='검사 중단: '+f.stage+' · '+f.status;return out;}
+  }
+  if(lane.path_complete){out.anchors.push({id:dst.eni,target:null,stage:'DESTINATION_ENDPOINT',label:'목적 EC2 '+dst.ip,status:'PASS'});out.complete=true;}
+  return out;
+}
 // AWS_RESULT_CONTRACT_END
 const overlayBar=document.getElementById('trace-overlay-bar');
 const overlayDirection=document.getElementById('overlay-direction');
@@ -1002,8 +1329,13 @@ function appendResourceTooltip(target,id){
   resourceTipRow(target,'수집 상태',display.observed_state);
   resourceTipRow(target,'연결 유형',display.connectivity_type);
   resourceTipRow(target,'인터페이스 유형',display.observed_interface_type);
+  if(Number.isInteger(display.device_index))resourceTipRow(target,'DeviceIndex',display.device_index);
+  for(const [eni,owner] of currentLayout?.aliases||[])if(mode==='network_graph'&&owner===id)resourceTipRow(target,'통합 ENI',eni+' · '+(displayOf(eni).private_ip||'IP 미확인'));
+  for(const a of display.public_addresses||[])resourceTipRow(target,a.kind==='EIP_ASSOCIATION'?'EIP 연결':'공인 IP 유형 미확인',a.public_ip);
+  for(const a of display.nat_addresses||[])resourceTipRow(target,'NAT 주소 증거',`${a.private_ip||'미확인'} → ${a.public_ip||'미확인'}`);
   if(display.ingress_inline_count!==undefined)resourceTipRow(target,'Inline Ingress',display.ingress_inline_count+'개');
   if(display.egress_inline_count!==undefined)resourceTipRow(target,'Inline Egress',display.egress_inline_count+'개');
+  if(display.policy_details)for(const [key,section] of Object.entries(display.policy_details.sections))resourceTipRow(target,({ingress:'전체 표시 Ingress',egress:'전체 표시 Egress',route:'정의 라우트'})[key],section.rows.length+'개 · 상세 클릭');
   const edges=graph.edges.filter(e=>e.source===id||e.target===id);
   resourceTipRow(target,'관련 연결',edges.length+'개 (현재 그래프)');
   const ordered=edges.slice().sort((a,b)=>Number(['applies_to','uses_route_table'].includes(b.relation))-Number(['applies_to','uses_route_table'].includes(a.relation)));
@@ -1094,16 +1426,33 @@ function applyOverlayFocus() {
     el.classList.toggle('trace-conditional',!first.has(id)&&conditional.has(id));
     el.classList.toggle('trace-inspected',inspected.has(id));
   }
+  // A shared policy ID is not enough to mark a particular attachment as the blocker.
+  for(const el of nodeLayer.querySelectorAll('[data-gate-target]')){
+    const id=el.dataset.policyId||el.dataset.id,target=el.dataset.gateTarget;
+    const steps=lane.steps.filter(step=>{const ids=traceStepResources(d,step);return ids.has(id)&&ids.has(target);});
+    const firstHere=steps.some(step=>step.id===d.first_blocker_step&&step.status==='BLOCKED');
+    el.classList.toggle('trace-first',firstHere);
+    el.classList.toggle('trace-conditional',!firstHere&&steps.some(step=>d.conditional_blockers.includes(step.finding_id)&&step.status==='BLOCKED'));
+    if(el.dataset.policyId){el.classList.toggle('trace-related',steps.length>0);el.classList.toggle('dimmed',!steps.length);}
+  }
   linkLayer.querySelectorAll('.link-path').forEach(el=>{const relevant=related.has(el.dataset.source)&&related.has(el.dataset.target)&&['sg','acl','association'].includes(el.dataset.layer);el.classList.toggle('dimmed',!relevant);el.classList.toggle('focused',relevant);});
 }
 function applyAwsFocus(){
   if(!awsFocus||mode!=='network_graph')return;
-  const ids=new Set(awsFocus.ids),f=awsFocus.finding;
+  const f=awsFocus.finding, directionMatches=f.direction===overlayDirection.value;
+  const ids=new Set(directionMatches?awsFocus.ids:[]);
   for(const el of nodeLayer.querySelectorAll('.node')){
-    const related=ids.has(el.dataset.id);el.classList.toggle('dimmed',!related);el.classList.remove('connected');
+    const related=ids.has(el.dataset.id)||[...(currentLayout.aliases||[])].some(([eni,owner])=>owner===el.dataset.id&&ids.has(eni));el.classList.toggle('dimmed',!related);el.classList.remove('connected');
     el.classList.toggle('trace-related',related);el.classList.toggle('trace-first',related&&f.status==='BLOCKED'&&f.evaluation_mode==='PREDICTED_PATH');
     el.classList.toggle('trace-conditional',related&&f.status==='BLOCKED'&&f.evaluation_mode!=='PREDICTED_PATH');
   }
+  for(const el of nodeLayer.querySelectorAll('[data-gate-target]')){
+    const id=el.dataset.policyId||el.dataset.id,target=el.dataset.gateTarget,here=ids.has(id)&&ids.has(target);
+    el.classList.toggle('trace-first',here&&f.status==='BLOCKED'&&f.evaluation_mode==='PREDICTED_PATH');
+    el.classList.toggle('trace-conditional',here&&f.status==='BLOCKED'&&f.evaluation_mode!=='PREDICTED_PATH');
+    if(el.dataset.policyId){el.classList.toggle('trace-related',here);el.classList.toggle('dimmed',!here);}
+  }
+  for(const el of nodeLayer.querySelectorAll('.address-ref'))el.classList.toggle('dimmed',!ids.has(el.dataset.addressOwner));
   for(const el of regionLayer.querySelectorAll('[data-subnet-id]'))el.classList.toggle('aws-evidence-region',ids.has(el.dataset.subnetId));
   for(const el of linkLayer.querySelectorAll('.link-path')){
     const relevant=ids.has(el.dataset.source)&&ids.has(el.dataset.target)&&el.dataset.layer!=='next';
@@ -1112,16 +1461,104 @@ function applyAwsFocus(){
 }
 function openAwsFocus(d,f){
   const ids=awsEvidenceIds(d,f,GRAPHS.input_identity,new Set(GRAPHS.network_graph.nodes.map(n=>n.id)));if(!ids.length)return;
-  traceOverlay=null;awsFocus={ids,finding:f};overlayDirection.value=f.direction;
+  traceOverlay=null;awsFocus={ids,finding:f,data:d};overlayDirection.value=f.direction;
   document.getElementById('packet-trace-view').hidden=true;document.getElementById('graph-view').hidden=false;
   mode='network_graph';selectedId=ids.find(id=>!id.startsWith('aws_subnet.'))||ids[0];focusActive=false;render();
 }
+function renderEgressConfigPath(d){
+  if(d?.analysis_type!=='STATIC_AWS_INTERNET_EGRESS_TCP_CONSTRAINTS'||d.input_identity!==GRAPHS.input_identity||d.route?.status!=='EGRESS_ROUTE_CANDIDATE'||!Array.isArray(d.route.hops)||d.route.hops.length>8)return '';
+  const direction=overlayDirection.value;
+  const index=new Map(GRAPHS.network_graph.nodes.map(n=>[n.id,n]));
+  const names={SOURCE_ENDPOINT:'network_interface',ROUTE_LOOKUP:'route_table',PUBLIC_NAT_GATEWAY:'nat_gateway',INTERNET_GATEWAY:'internet_gateway'};
+  const dom=[...nodeLayer.querySelectorAll('.node,.policy-ref,.address-ref')], boxes=new Map(dom.map((el,i)=>['box'+i,domBox(el)]));
+  const native=(type,id)=>'aws_'+type+'.'+id;
+  let routeIndex=0;const hops=[];
+  for(const [i,h] of d.route.hops.entries()){
+    if(!h||typeof h.resource_id!=='string'||!names[h.stage])return ' · 경로 표시 범위 외';
+    const id=native(names[h.stage],h.resource_id);if(!index.has(id))return ' · 경로 리소스 미확인';
+    if(currentLayout.hiddenBy?.has(id))return ' · 접힌 경로 리소스 있음';
+    let el;
+    if(h.stage==='ROUTE_LOOKUP'){
+      const lookup=d.route.route_lookups?.[routeIndex++];
+      if(lookup?.route_table_id!==h.resource_id)return ' · 경로 근거 미확인';
+      const subnet=native('subnet',lookup.source_subnet_id), next=d.route.hops[i+1], prev=d.route.hops[i-1];
+      if(!next||!prev||!names[next.stage]||!names[prev.stage])return ' · 경로 순서 미확인';
+      const target=native(names[next.stage],next.resource_id),source=native(names[prev.stage],prev.resource_id),g=GRAPHS.network_graph;
+      if(!g.edges.some(e=>e.relation==='uses_route_table'&&e.source===subnet&&e.target===id)||!g.edges.some(e=>e.relation==='contains'&&e.source===subnet&&e.target===source)||!g.route_rules.some(r=>r.route_table===id&&r.target===target&&r.status==='RESOLVED'&&r.observed_state!=='blackhole'&&r.destination===lookup.selected_route?.DestinationCidrBlock))return ' · 현재 구성과 경로 근거 불일치';
+      el=dom.find(e=>(e.dataset.id||e.dataset.policyId)===id&&e.dataset.gateTarget===subnet);
+    }else el=dom.find(e=>e.dataset.id===(currentLayout.aliases?.get(id)||id));
+    if(!el)return ' · 경로 적용 위치 미확인';
+    hops.push(dom.indexOf(el));
+  }
+  if(hops.length<2)return '';
+  // Return is a conditional projection, not the inverse of the forward route table sequence.
+  const response=direction==='response';
+  if(response&&d.request_status==='BLOCKED')return ' · 요청 차단: 조건부 응답 경로 표시 안 함';
+  const chosen=response?hops.filter((_,i)=>d.route.hops[i].stage!=='ROUTE_LOOKUP').reverse():hops;
+  const nat=d.route.hops.some(h=>h.stage==='PUBLIC_NAT_GATEWAY');
+  const readable=i=>{const e=dom[i];return e.querySelector('.name')?.textContent||e.dataset.id||e.dataset.policyId;};
+  document.getElementById('egress-path-summary').textContent=(response?'조건부 응답 (기존 세션 필요): 외부 '+d.scenario.destination_ip+' → ':'요청 구성 후보: ')+chosen.map(readable).join(' → ')+(response?'':' → 외부 '+d.scenario.destination_ip+' (IGW 이후 미검증)')+(nat&&response?' · 외부 신규 연결 아님':'')+(response?' · 응답 라우팅 및 실제 NAT 상태 미검증':'');
+  for(const i of chosen){dom[i].classList.remove('dimmed');dom[i].classList.add('trace-related');}
+  const color=response?'#9b5b12':'#176b8a';
+  const defs=svgEl('defs',{}),marker=svgEl('marker',{id:'trace-candidate-arrow',markerWidth:7,markerHeight:7,refX:6,refY:3,orient:'auto'});
+  marker.append(svgEl('path',{d:'M0 0 L6 3 L0 6Z',fill:color}));defs.append(marker);linkLayer.append(defs);
+  let shown=0;const reserved=currentPolicySegments.slice();
+  const labels=[...regionLayer.querySelectorAll('.region-label,.fold-summary')].map(el=>{const r=el.parentElement;return{x:r.offsetLeft+r.clientLeft+el.offsetLeft,y:r.offsetTop+r.clientTop+el.offsetTop,w:el.offsetWidth,h:el.offsetHeight};}).filter(r=>r.w&&r.h);
+  const regions=[...regionLayer.children].map(domBox);
+  for(let i=1;i<chosen.length;i++){
+    const a='box'+chosen[i-1],b='box'+chosen[i];if(a===b)continue;
+    const from=boxes.get(a),to=boxes.get(b),obstacles=[...boxes].filter(([id])=>id!==a&&id!==b).map(([,box])=>box);
+    obstacles.push(...regions.filter(box=>!overlaps(from,box)&&!overlaps(to,box)),...labels);
+    const bounds={x:0,y:0,w:currentLayout.width,h:currentLayout.height};
+    let result=routeWithLanes(from,to,obstacles,bounds,reserved);
+    // Subnet/slot outlines are membership markers, not physical barriers. Never cross cards or labels.
+    if(result.status!=='routed')result=routeWithLanes(from,to,[...boxes].filter(([id])=>id!==a&&id!==b).map(([,box])=>box).concat(labels),bounds,reserved);
+    if(result.status!=='routed')continue;
+    reserved.push(...pathSegments(result.points));const path=svgEl('path',{d:CloudPathOrthogonalRouter.svgPath(result),fill:'none',stroke:color,'stroke-width':4,'stroke-dasharray':response?'8 5':'none','marker-end':'url(#trace-candidate-arrow)',class:'trace-candidate egress-config-path'});
+    path.dataset.source=readable(chosen[i-1]);path.dataset.target=readable(chosen[i]);path.dataset.direction=direction;
+    const title=svgEl('title',{});title.textContent=response?'조건부 응답 · 실제 전달/역방향 라우팅 미확정':'구성상 요청 경로 후보 · 정책 통과 및 실제 전달 아님';path.append(title);linkLayer.append(path);shown++;
+  }
+  return ` · ${response?'갈색 점선: 조건부 응답':'청록 실선: 구성상 요청'} ${shown}/${chosen.length-1} (미표시 ${chosen.length-1-shown} · 실제 전달 아님${response?' · 역방향 라우팅 미확정':' · 차단 이후도 구성만 표시'})`;
+}
+function renderAwsLocalPath(d){
+  const direction=overlayDirection.value,plan=planAwsLocalPath(d,GRAPHS.network_graph,GRAPHS.input_identity,direction);
+  const summary=document.getElementById('egress-path-summary');
+  const prefix=direction==='response'?'조건부 응답 검사 (기존 연결 추적 가정): ':'내부 요청 검사 후보: ';
+  summary.textContent=prefix+plan.anchors.map(a=>a.label).join(' → ')+(plan.note?' · '+plan.note:'')+' · 내부 검사 표시 (NAT/IGW 출구 미표시) · 실제 패킷 전달 아님';
+  const dom=[...nodeLayer.querySelectorAll('.node,.policy-ref,.address-ref')],boxes=dom.map(domBox), chosen=[];
+  let note='';
+  for(const a of plan.anchors){
+    if(currentLayout.hiddenBy?.has(a.id)||currentLayout.hiddenBy?.has(a.target)){note='접힌 검사 위치 있음';break;}
+    const e=a.target?dom.find(el=>(el.dataset.policyId||el.dataset.id)===a.id&&el.dataset.gateTarget===a.target):dom.find(el=>el.dataset.id===(currentLayout.aliases?.get(a.id)||a.id));
+    if(!e){note='검사 적용 위치 미표시: '+a.stage;break;}
+    chosen.push({index:dom.indexOf(e),a});e.classList.remove('dimmed');e.classList.add('trace-related');
+    if(a.status==='BLOCKED')e.classList.add(direction==='request'?'trace-first':'trace-conditional');
+  }
+  const color=direction==='response'?'#9b5b12':'#176b8a';
+  const defs=svgEl('defs',{}),marker=svgEl('marker',{id:'trace-candidate-arrow',markerWidth:7,markerHeight:7,refX:6,refY:3,orient:'auto'});
+  marker.append(svgEl('path',{d:'M0 0 L6 3 L0 6Z',fill:color}));defs.append(marker);linkLayer.append(defs);
+  const labels=[...regionLayer.querySelectorAll('.region-label,.fold-summary')].map(el=>{const r=el.parentElement;return{x:r.offsetLeft+r.clientLeft+el.offsetLeft,y:r.offsetTop+r.clientTop+el.offsetTop,w:el.offsetWidth,h:el.offsetHeight};}).filter(r=>r.w&&r.h);
+  const reserved=[],bounds={x:0,y:0,w:currentLayout.width,h:currentLayout.height};let shown=0;
+  for(let i=1;i<chosen.length;i++){
+    const a=chosen[i-1],b=chosen[i];if(a.index===b.index)continue;
+    const obstacles=boxes.filter((_,j)=>j!==a.index&&j!==b.index).concat(labels);
+    const res=routeWithLanes(boxes[a.index],boxes[b.index],obstacles,bounds,reserved);
+    if(res.status!=='routed'){note='연결선 배치 실패: '+b.a.stage;break;}
+    reserved.push(...pathSegments(res.points));
+    const path=svgEl('path',{d:CloudPathOrthogonalRouter.svgPath(res),fill:'none',stroke:color,'stroke-width':4,'stroke-dasharray':direction==='response'?'8 5':'none','marker-end':'url(#trace-candidate-arrow)',class:'trace-candidate aws-local-path'});
+    path.dataset.source=a.a.id;path.dataset.target=b.a.id;path.dataset.direction=direction;path.dataset.stage=b.a.stage;
+    const title=svgEl('title',{});title.textContent='논리적 검사 순서 · 물리 홉 아님: '+a.a.label+' → '+b.a.label;path.append(title);linkLayer.append(path);shown++;
+  }
+  return ` · ${direction==='response'?'조건부 응답':'내부 요청'} 검사 연결 ${shown}/${Math.max(0,plan.anchors.length-1)}${note?' · '+note:''} · ${plan.complete?'분석상 목적지 후보':'목적지 도달 미확정/중단'} · ${plan.anchors.some(a=>a.stage==='ROUTE_LOOKUP'&&a.status==='PASS')?'local 확인 · NAT/IGW 미경유':'local 전달 미확정'} `;
+}
 function renderOverlay(){
   overlayBar.hidden=mode!=='network_graph';
+  document.getElementById('egress-path-summary').textContent='';
   if(mode==='network_graph'&&awsFocus){
-    overlayDirection.disabled=true;document.getElementById('overlay-clear').disabled=false;
+    overlayDirection.disabled=!['STATIC_AWS_INTERNET_EGRESS_TCP_CONSTRAINTS','STATIC_AWS_INVENTORY_PREDICTION'].includes(awsFocus.data?.analysis_type);document.getElementById('overlay-clear').disabled=false;
     applyAwsFocus();const f=awsFocus.finding;
-    overlayStatus.textContent=`AWS 검사 근거 · ${f.stage} · ${f.status} · ${f.evaluation_mode} · 기존 구성 관계만 강조 (패킷 홉 아님) · 지문 일치 ≠ 결과 진위 검증`;
+    const pathNote=awsFocus.data?.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION'?renderAwsLocalPath(awsFocus.data):renderEgressConfigPath(awsFocus.data);
+    overlayStatus.textContent=`AWS 선택 검사 근거 (${f.direction==='request'?'요청':'응답'}) · ${f.stage} · ${f.status} · ${f.evaluation_mode} · ${awsFocus.data?.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION'?'논리적 검사 경로 (정책 카드 = 검사 위치, 물리 홉 아님)':'기존 구성 관계 및 출구 후보 (패킷 홉 아님)'} · 지문 일치 ≠ 결과 진위 검증${pathNote}`;
     return;
   }
   const active=mode==='network_graph'&&traceOverlay;
@@ -1130,13 +1567,15 @@ function renderOverlay(){
   if(!active){overlayStatus.textContent='Packet Trace 탭에서 분석 결과를 선택해 구조도에 표시하세요.';return;}
   const d=traceOverlay.data,key=overlayDirection.value,lane=d.session_trace[key], f=key==='request'?d.forwarding:lane.forwarding;
   const nodes=new Map([...nodeLayer.querySelectorAll('.node')].map(el=>[el.dataset.id,domBox(el)]));
-  const labels=[...regionLayer.querySelectorAll('.region-label')].map(el=>{const r=el.parentElement;return{x:r.offsetLeft+r.clientLeft+el.offsetLeft,y:r.offsetTop+r.clientTop+el.offsetTop,w:el.offsetWidth,h:el.offsetHeight};}).filter(r=>r.w&&r.h);
+  const labels=[...regionLayer.querySelectorAll('.region-label, .fold-summary')].map(el=>{const r=el.parentElement;return{x:r.offsetLeft+r.clientLeft+el.offsetLeft,y:r.offsetTop+r.clientTop+el.offsetTop,w:el.offsetWidth,h:el.offsetHeight};}).filter(r=>r.w&&r.h);
+  labels.push(...[...nodeLayer.querySelectorAll('.policy-ref,.address-ref')].map(domBox));
   const regions=[...regionLayer.children].map(domBox);
   const defs=svgEl('defs',{}), marker=svgEl('marker',{id:'trace-candidate-arrow',markerWidth:7,markerHeight:7,refX:6,refY:3,orient:'auto'});
   marker.append(svgEl('path',{d:'M0 0 L6 3 L0 6Z',fill:'#2563eb'}));defs.append(marker);linkLayer.append(defs);
-  let shown=0, missed=0;const reserved=currentPolicySegments.slice();
+  let shown=0, missed=0, foldedHops=0;const reserved=currentPolicySegments.slice();
   for(let i=1;i<f.hops.length;i++){
     const a=f.hops[i-1].resource,b=f.hops[i].resource;if(a===b)continue;
+    if(currentLayout.hiddenBy?.has(a)||currentLayout.hiddenBy?.has(b)){foldedHops++;continue;}
     const from=nodes.get(a),to=nodes.get(b);if(!from||!to){missed++;continue;}
     const obstacles=[...nodes].filter(([id])=>id!==a&&id!==b).map(([,box])=>box);
     obstacles.push(...regions.filter(box=>!overlaps(from,box)&&!overlaps(to,box)),...labels);
@@ -1147,7 +1586,7 @@ function renderOverlay(){
     path.dataset.source=a;path.dataset.target=b;const title=svgEl('title',{});title.textContent=`논리적 전달 후보 ${i} → ${i+1} (정책 통과 아님)`;path.append(title);linkLayer.append(path);shown++;
   }
   applyOverlayFocus();
-  overlayStatus.textContent=`${traceOverlay.name} · ${key==='request'?'요청':'응답'} ${lane.status} · 전체 ${d.predicted_connectivity} · 전달 후보 선 ${shown}, 미표시 ${missed} · 파란 점선: 정책 제외 후보 / 빨간 실선 테두리: 최초 차단 / 붉은 점선 테두리: 후속 조건부 차단 · 파일 지문 일치(결과 진위 검증 아님)`;
+  overlayStatus.textContent=`${traceOverlay.name} · ${key==='request'?'요청':'응답'} ${lane.status} · 전체 ${d.predicted_connectivity} · 전달 후보 선 ${shown}, 미표시 ${missed}, 접기로 숨김 ${foldedHops} · 파란 점선: 정책 제외 후보 / 빨간 실선 테두리: 최초 차단 / 붉은 점선 테두리: 후속 조건부 차단 · 파일 지문 일치(결과 진위 검증 아님)`;
 }
 function renderGraphForAws(){render();}
 function openTraceOverlay(data,name,key,step){
@@ -1157,19 +1596,139 @@ function openTraceOverlay(data,name,key,step){
   mode='network_graph';selectedId=step?.resource||data.scenario[key==='request'?'source_resource':'destination_resource'];focusActive=false;render();
   return '';
 }
-overlayDirection.addEventListener('change',()=>{if(traceOverlay){traceOverlay.stepId=null;render();}});
+overlayDirection.addEventListener('change',()=>{if(traceOverlay){traceOverlay.stepId=null;render();}else if(awsFocus){const d=awsFocus.data,key=overlayDirection.value;if(d?.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION'){const f=d.findings.find(f=>f.id===d[key].trace[0]);if(f)awsFocus={data:d,finding:f,ids:awsEvidenceIds(d,f,GRAPHS.input_identity,new Set(GRAPHS.network_graph.nodes.map(n=>n.id)))};}render();}});
 document.getElementById('overlay-clear').addEventListener('click',clearOverlay);
 document.getElementById('overlay-back').addEventListener('click',()=>document.getElementById('packet-trace-tab').click());
 
+function boxInside(box,area,pad=0){return box.x>=area.x+pad&&box.y>=area.y+pad&&box.x+box.w<=area.x+area.w-pad&&box.y+box.h<=area.y+area.h-pad;}
+function validManualPlacement(base,next,regions,obstacles,bounds){
+  if(!boxInside(next,bounds,2))return false;
+  for(const area of regions){
+    if(boxInside(base,area)){if(!boxInside(next,area,4))return false;}
+    else if(overlaps(next,area))return false;
+  }
+  return !obstacles.some(other=>overlaps(next,other));
+}
+function manualGeometry(element,base){
+  const regions=[...regionLayer.children].map(domBox);
+  const obstacles=[...nodeLayer.querySelectorAll('.node,.policy-ref,.address-ref')].filter(el=>el!==element).map(domBox);
+  for(const el of regionLayer.querySelectorAll('.region-label,.fold-summary')){
+    const r=el.parentElement;obstacles.push({x:r.offsetLeft+r.clientLeft+el.offsetLeft,y:r.offsetTop+r.clientTop+el.offsetTop,w:el.offsetWidth,h:el.offsetHeight});
+  }
+  if(element.dataset.gateTarget||currentLayout.gates?.some(g=>(currentLayout.aliases?.get(g.target)||g.target)===element.dataset.id)||currentLayout.addressRefs?.some(a=>a.owner===element.dataset.id))regions.push({x:base.x-14,y:base.y-14,w:base.w+28,h:base.h+28});
+  return {regions,obstacles,bounds:{x:0,y:0,w:currentLayout.width,h:currentLayout.height},base};
+}
+function autoBox(element){const p=currentLayout.positions.get(element.dataset.id);return {...domBox(element),x:p.x,y:p.y};}
+function placeNode(element,box){element.style.left=`${box.x}px`;element.style.top=`${box.y}px`;}
+function applyManualOffsets(){
+  const offsets=manualOffsets[mode];
+  layoutRejected=0;
+  for(const element of nodeLayer.querySelectorAll('.node')){
+    const offset=offsets.get(element.dataset.id);if(!offset)continue;
+    const base=autoBox(element),next={...base,x:base.x+offset.x,y:base.y+offset.y},g=manualGeometry(element,base);
+    if(validManualPlacement(base,next,g.regions,g.obstacles,g.bounds))placeNode(element,next);else layoutRejected++;
+  }
+}
+function rerouteAfterPlacement(){
+  linkLayer.querySelectorAll('.trace-candidate').forEach(p=>p.remove());document.getElementById('trace-candidate-arrow')?.parentElement.remove();
+  renderLinks(GRAPHS[mode],currentLayout);updateFocus();renderOverlay();
+}
+// Presentation-only persistence. No raw infrastructure, credentials, results or tokens.
+const LAYOUT_VERSION=1, NETWORK_LAYOUT_REVISION=5, LAYOUT_LIMIT=256*1024, LAYOUT_NODE_LIMIT=2000, LAYOUT_OFFSET_LIMIT=1000000;
+const LAYOUT_MODES=['network_graph','reference_graph'];
+function layoutStorageKey(identity){
+  return typeof identity==='string'&&/^sha256-(?:(?:files|plan)-v1|aws-v[12]):[0-9a-f]{64}$/.test(identity)?'cloudpath:layout:v1:'+identity:null;
+}
+function decodeSavedLayout(raw,graphs){
+  if(typeof raw!=='string'||raw.length>LAYOUT_LIMIT)throw Error('저장 배치 크기 제한 초과');
+  const d=JSON.parse(raw),key=layoutStorageKey(graphs.input_identity);
+  if(!key||!d||d.version!==LAYOUT_VERSION||d.identity!==graphs.input_identity||!d.offsets||!Array.isArray(d.collapsed))throw Error('저장 배치 버전 또는 입력 지문 불일치');
+  const result={offsets:{},collapsed:new Set(),networkMigrated:d.network_revision!==NETWORK_LAYOUT_REVISION};let count=0;
+  const regions=new Set(graphs.network_graph.nodes.filter(n=>['vpc','subnet'].includes(n.resource_type)).map(n=>n.id));
+  if(d.collapsed.length>LAYOUT_NODE_LIMIT)throw Error('접기 항목 제한 초과');
+  for(const id of d.collapsed){if(typeof id!=='string'||!regions.has(id)||result.collapsed.has(id))throw Error('잘못된 접기 대상');result.collapsed.add(id);}
+  for(const mode of LAYOUT_MODES){
+    const rows=d.offsets[mode], ids=new Set(graphs[mode].nodes.map(n=>n.id)), offsets=new Map();
+    if(!Array.isArray(rows)||(count+=rows.length)>LAYOUT_NODE_LIMIT)throw Error('배치 항목 제한 초과');
+    for(const row of rows){
+      if(!Array.isArray(row)||row.length!==3)throw Error('잘못된 배치 형식');
+      const [id,x,y]=row;
+      if(typeof id!=='string'||!ids.has(id)||offsets.has(id)||!Number.isSafeInteger(x)||!Number.isSafeInteger(y)||Math.abs(x)>LAYOUT_OFFSET_LIMIT||Math.abs(y)>LAYOUT_OFFSET_LIMIT)throw Error('잘못된 배치 좌표 또는 리소스');
+      offsets.set(id,{x,y});
+    }
+    result.offsets[mode]=mode==='network_graph'&&result.networkMigrated?new Map():offsets;
+  }
+  return result;
+}
+function encodeSavedLayout(graphs,offsets,collapsed){
+  const d={version:LAYOUT_VERSION,network_revision:NETWORK_LAYOUT_REVISION,identity:graphs.input_identity,offsets:Object.fromEntries(LAYOUT_MODES.map(m=>[m,[...offsets[m]].map(([id,p])=>[id,p.x,p.y])])),collapsed:[...collapsed]};
+  const raw=JSON.stringify(d);decodeSavedLayout(raw,graphs);return raw;
+}
+const layoutKey=layoutStorageKey(GRAPHS.input_identity);
+const layoutStatus=document.getElementById('layout-storage-status');
+let layoutRejected=0;
+function reportLayout(message,error=false){layoutStatus.textContent=message;layoutStatus.style.color=error?'#991b1b':'';}
+function saveLayout(){
+  if(!layoutKey||nodeDrag)return;
+  try{localStorage.setItem(layoutKey,encodeSavedLayout(GRAPHS,manualOffsets,collapsedRegions));reportLayout('현재 입력 배치 저장 완료 · 두 구조도와 접기 상태');}
+  catch(e){reportLayout('배치 저장 실패 · '+String(e.message||e),true);}
+}
+function restoreLayout(initial=false){
+  if(!layoutKey||nodeDrag)return false;
+  try{
+    const raw=localStorage.getItem(layoutKey);
+    if(raw===null){reportLayout('현재 입력에 저장된 배치 없음 · 현재 화면 유지');return false;}
+    const saved=decodeSavedLayout(raw,GRAPHS); // validate all before replacing any state
+    for(const m of LAYOUT_MODES){manualOffsets[m].clear();for(const [id,p] of saved.offsets[m])manualOffsets[m].set(id,p);}
+    collapsedRegions.clear();for(const id of saved.collapsed)collapsedRegions.add(id);
+    if(!initial)render();
+    reportLayout('저장 배치 복원 완료 · 현재 입력 지문 일치'+(saved.networkMigrated?' · 부착/정책 배치 변경으로 이전 네트워크 이동 좌표 초기화 (접기·참조 배치 유지)':'')+(layoutRejected?' · 현재 화면에서 적용 불가한 이동 '+layoutRejected+'개는 자동 위치 사용':''));return true;
+  }catch(e){reportLayout('배치 복원 실패 · 기존 화면 상태 유지 · '+String(e.message||e),true);return false;}
+}
+function resetAllLayout(){
+  if(!layoutKey||nodeDrag||!confirm('현재 입력의 두 구조도 배치와 접기 상태 및 저장 배치를 초기화할까요?'))return;
+  try{localStorage.removeItem(layoutKey);}catch(e){reportLayout('저장 배치 삭제 실패 · 화면 상태 유지 · '+String(e.message||e),true);return;}
+  for(const m of LAYOUT_MODES)manualOffsets[m].clear();collapsedRegions.clear();render();reportLayout('현재 입력 저장 배치 삭제 및 전체 자동 배치 복원 완료');
+}
+function attachNodeDrag(element){
+  element.addEventListener('pointerdown',event=>{
+    if(!document.getElementById('node-drag-mode').checked||event.button!==0||!event.isPrimary||nodeDrag)return;
+    hideTraceTooltip();suppressNodeClick=false;const start=domBox(element),base=autoBox(element);
+    nodeDrag={element,pointer:event.pointerId,start,base,x:event.clientX,y:event.clientY,scale:zoom,moved:false,mode,geometry:manualGeometry(element,base)};
+    element.setPointerCapture(event.pointerId);
+  });
+  element.addEventListener('pointermove',event=>{
+    const d=nodeDrag;if(!d||d.element!==element||d.pointer!==event.pointerId)return;
+    const dx=event.clientX-d.x,dy=event.clientY-d.y;
+    if(!d.moved&&Math.hypot(dx,dy)<5)return;
+    d.moved=true;hideTraceTooltip();element.classList.add('node-moving');event.preventDefault();
+    const next={...d.start,x:Math.round(d.start.x+dx/d.scale),y:Math.round(d.start.y+dy/d.scale)};
+    d.next=next;placeNode(element,next); // preview only, commit at pointerup
+  });
+  const finish=(event,cancel=false)=>{
+    const d=nodeDrag;if(!d||d.element!==element||d.pointer!==event.pointerId)return;
+    nodeDrag=null;element.classList.remove('node-moving');if(element.hasPointerCapture(event.pointerId))element.releasePointerCapture(event.pointerId);
+    if(!d.moved)return;
+    suppressNodeClick=true;setTimeout(()=>{suppressNodeClick=false;},0);
+    const g=d.geometry,ok=!cancel&&mode===d.mode&&d.next&&validManualPlacement(d.base,d.next,g.regions,g.obstacles,g.bounds);
+    if(ok){manualOffsets[mode].set(element.dataset.id,{x:d.next.x-d.base.x,y:d.next.y-d.base.y});placeNode(element,d.next);}
+    else placeNode(element,d.start);
+    document.getElementById('node-drag-status').textContent=ok?'배치 변경 · 연결선 재계산 완료 (실제 소속 불변)':'이동 취소 · 영역 경계 또는 다른 리소스/라벨과 겹칩니다.';
+    rerouteAfterPlacement();
+    if(ok)reportLayout('화면 배치 변경됨 · 유지하려면 배치 저장을 누르세요.');
+  };
+  element.addEventListener('pointerup',e=>finish(e));element.addEventListener('pointercancel',e=>finish(e,true));element.addEventListener('lostpointercapture',e=>finish(e,true));
+}
 function render() {
   hideTraceTooltip();
   const graph=GRAPHS[mode];
   if (!graph) return;
   document.getElementById('policy-layer-tools').hidden=mode!=='network_graph';
+  document.getElementById('region-fold-tools').hidden=mode!=='network_graph';
   document.querySelectorAll('.tab').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.mode===mode)));
   document.getElementById('view-title').textContent=mode==='network_graph'?'가상 네트워크 구성도 (라우팅 정책 포함)':'IaC 참조·의존성 그래프 (패킷 경로 아님)';
   document.getElementById('mode-notice').textContent=mode==='network_graph'
-    ? '서브넷 경계는 소속 관계입니다. 단일 Subnet 적용이 확인된 정책은 경계 밖 가까운 위치에, 공유·미확인 정책은 별도 배치합니다. 위치는 실제 통신 순서가 아닙니다.'
+    ? '서브넷 경계는 소속 관계입니다. NACL·Route Table은 Subnet 경계 참조, SG는 적용 객체 옆에 표시합니다. 공유 정책 참조는 동일 리소스이며, 위치는 고정 평가 순서가 아닙니다.'
     : '참조 방향은 Terraform에서 A가 B를 참조하는 A → B 방향입니다. 배치된 상자와 선은 네트워크의 패킷 이동을 뜻하지 않습니다.';
   document.getElementById('graph-legend').textContent=mode==='network_graph'
     ? '구조도: VPC·Subnet 경계는 소속 관계, 정책 오버레이는 적용·라우트 대상 관계 (패킷 홉 아님)'
@@ -1178,16 +1737,16 @@ function render() {
     if(mode==='reference_graph'){document.getElementById('view-title').textContent='Plan ID 관계도 (코드 의존성 아님)';document.getElementById('mode-notice').textContent='확정된 AWS ID로 복원한 관계입니다. 원본 HCL의 참조 표현식이나 패킷 이동 경로가 아닙니다.';document.getElementById('graph-legend').textContent='Plan ID 관계: 확인된 리소스 ID만 연결합니다.';}
     else document.getElementById('mode-notice').textContent='Plan의 알려진 값만 표시합니다. 미확정 관계 및 기본 라우팅은 추정하지 않습니다. 통신 분석 지원 범위는 입력 제한 안내를 확인하세요.';
   }
-  if(String(GRAPHS.input_identity||'').startsWith('sha256-aws-v1:')) {
+  if(/^sha256-aws-v[12]:/.test(String(GRAPHS.input_identity||''))) {
     document.getElementById('view-title').textContent=mode==='network_graph'?'AWS 수집 구성도 (스냅샷)':'AWS ID 관계도 (코드 의존성 아님)';
     document.getElementById('mode-notice').textContent='수집 파일에 기록된 구성 관계입니다. 현재 실시간 상태나 실제 패킷 관측이 아니며 제한된 IPv4 TCP 정적 분석은 Packet Trace에서 실행할 수 있습니다.';
-    document.getElementById('graph-legend').textContent='AWS 구성 관계 · 확인된 연결만 표시 (패킷 홉 아님)';
+    document.getElementById('graph-legend').textContent='AWS 구성 관계 · NACL/Route 경계 참조 · SG 객체 부착 참조 · 실제 검사 순서는 Packet Trace · 공유 참조는 동일 ID';
   }
   document.getElementById('node-count').textContent=graph.nodes.length;
   document.getElementById('edge-count').textContent=graph.edges.length;
   document.getElementById('route-count').textContent=(graph.route_rules||[]).length;
   document.getElementById('issue-count').textContent=(graph.issues||[]).length;
-  const layout=mode==='network_graph'?positionNetwork(graph):positionReference(graph);
+  const layout=mode==='network_graph'?positionNetwork(graph,collapsedRegions,GRAPHS.resource_display||{}):positionReference(graph);
   currentLayout=layout;
   topology.style.width=`${layout.width}px`;
   topology.style.height=`${layout.height}px`;
@@ -1206,29 +1765,76 @@ function render() {
     const element=make('div','region '+(region.kind||''));
     Object.assign(element.style,{left:`${region.x}px`,top:`${region.y}px`,width:`${region.w}px`,height:`${region.h}px`});
     if(region.subnetId)element.dataset.subnetId=region.subnetId;
-    element.append(make('div','region-label',region.name));regionLayer.append(element);
+    const header=make('div','region-label');
+    header.append(make('span','region-fold-name',region.name));
+    const owner=region.vpcId||region.subnetId;
+    if(owner&&mode==='network_graph'){
+      const toggle=make('button','region-fold',region.folded?'펼치기':'접기');toggle.type='button';
+      toggle.setAttribute('aria-expanded',String(!region.folded));toggle.setAttribute('aria-label',`${region.name} ${toggle.textContent}`);
+      toggle.addEventListener('click',()=>{if(collapsedRegions.has(owner))collapsedRegions.delete(owner);else collapsedRegions.add(owner);render();reportLayout('접기 상태 변경됨 · 유지하려면 배치 저장을 누르세요.');});
+      header.append(toggle);
+      if(region.folded){
+        const summary=collapsedEvidenceSummary(layout.hiddenBy,owner,currentCollapseChecks());
+        const note=make('span','fold-summary',`숨김 ${summary.hidden}개 · 예상 차단 ${summary.blocked} · 조건부/독립 차단 ${summary.conditional} · 미확정 ${summary.unknown}`);
+        if(summary.blocked||summary.conditional)note.classList.add('fold-blocked');else if(summary.unknown)note.classList.add('fold-unknown');
+        if(!awsFocus&&!traceOverlay)note.textContent=`숨김 ${summary.hidden}개 · 분석 결과 미선택`;
+        note.title=note.textContent;element.append(note);
+      }
+    }
+    element.append(header);regionLayer.append(element);
   });
   graph.nodes.forEach(node => {
     const p=layout.positions.get(node.id);if(!p)return;
     const type=node.resource_type || node.type || 'resource';
     const element=make('button','node '+type+(node.synthetic?' synthetic':''));
     element.type='button';element.dataset.id=node.id;element.setAttribute('aria-label',node.id);
+    const service=layout.edgeServices?.find(n=>n.id===node.id);
+    if(service){element.classList.add('edge-service');element.dataset.edgeService=service.kind;element.title='경계 서비스 · 소속 '+service.subnetId;}
     Object.assign(element.style,{left:`${p.x}px`,top:`${p.y}px`,width:`${p.w}px`});
-    element.append(make('div','type',type.replaceAll('_',' ')));
+    element.append(make('div','type',service?'NAT GW · 경계 중계':type.replaceAll('_',' ')));
     element.append(make('div','name',node.name||node.id));
+    const gate=layout.gates?.find(g=>g.primary&&g.id===node.id);
+    if(gate){element.dataset.gateTarget=gate.target;element.title='VPC 정책 원본 카드 · '+gate.id+' · 적용 참조 '+gate.target;element.append(make('div','gate-target',`${gate.kind==='sg'?'SG 부착':gate.kind==='acl'?'NACL 경계':'Route 선택'} · ${graph.nodes.find(n=>n.id===gate.target)?.name||gate.target}`));}
     const nodeNote=layout.labels && layout.labels.get(node.id);
-    if (nodeNote) element.append(make('div','node-note',nodeNote));
+    if (nodeNote) {const note=make('div','node-note',nodeNote);note.title=nodeNote;element.append(note);}
     const cidr=displayOf(node.id).cidr_block;
     if (cidr) element.append(make('div','cidr',unresolved(cidr)?'CIDR: 미해결':cidr));
-    element.append(make('div','id',node.id));
+    const integrated=mode==='network_graph'?[...(layout.aliases||[])].filter(([,owner])=>owner===node.id).map(([eni])=>eni):[];
+    if(integrated.length){
+      const d=displayOf(integrated[0]),nat=type==='nat_gateway';
+      element.append(make('div','attachment-summary',`${nat?'AWS 관리형 ENI':'기본 ENI (index 0)'} · ${d.private_ip||'IP 미확인'}${integrated.length>1?' 외 '+(integrated.length-1)+'개':''}`));
+      const addresses=nat?(displayOf(node.id).nat_addresses||[]).filter(a=>a.associated&&a.public_ip).map(a=>({public_ip:a.public_ip,kind:a.allocation_id?'EIP_ASSOCIATION':'PUBLIC_IP_TYPE_UNKNOWN'})):(d.public_addresses||[]);
+      for(const a of addresses.filter(a=>a.kind!=='EIP_ASSOCIATION').slice(0,1))element.append(make('div','attachment-summary',`공인 IP (유형 미확인) · ${a.public_ip}`));
+    }else{
+      if(type==='network_interface'&&mode==='network_graph'&&Number.isInteger(displayOf(node.id).device_index))element.append(make('div','attachment-summary',`ENI index ${displayOf(node.id).device_index}${displayOf(node.id).device_index>0?' · 추가 인터페이스':' · 연결 확인 필요'}`));
+      element.append(make('div','id',node.id));
+    }
     element.addEventListener('pointerenter',()=>showTraceTooltip(element,node.id));
     element.addEventListener('pointerleave',hideTraceTooltip);
     element.addEventListener('focus',()=>showTraceTooltip(element,node.id));
     element.addEventListener('blur',hideTraceTooltip);
-    element.addEventListener('click',()=>{hideTraceTooltip();selectNode(node.id,true);});
+    attachNodeDrag(element);
+    element.addEventListener('click',()=>{if(suppressNodeClick)return;hideTraceTooltip();selectNode(node.id,true);});
     nodeLayer.append(element);
   });
+  for(const g of layout.gates||[]){
+    if(g.primary)continue;
+    const n=graph.nodes.find(n=>n.id===g.id),t=graph.nodes.find(n=>n.id===g.target);
+    const e=make('button','policy-ref');e.type='button';e.dataset.policyId=g.id;e.dataset.gateTarget=g.target;
+    Object.assign(e.style,{left:`${g.x}px`,top:`${g.y}px`,width:`${g.w}px`,height:`${g.h}px`});
+    e.append(make('div','',`${g.kind==='sg'?'SG 부착':g.kind==='acl'?'NACL 경계':'Route 선택'} · 공유 참조`),make('div','name',n?.name||g.id),make('div','gate-target',`적용: ${t?.name||g.target}`),make('div','','동일 VPC 정책 · 별도 리소스 아님'));
+    e.title=`${g.id} → ${g.target} (적용 관계 참조)`;e.setAttribute('aria-label',e.title);e.addEventListener('click',()=>selectNode(g.id,true));nodeLayer.append(e);
+  }
+  for(const a of layout.addressRefs||[]){
+    const e=make('button','address-ref');e.type='button';e.dataset.addressOwner=a.owner;
+    Object.assign(e.style,{left:`${a.x}px`,top:`${a.y}px`,width:`${a.w}px`,height:`${a.h}px`});
+    e.append(make('div','name',`EIP 연결 참조 · ${a.public_ip}`),make('div','',a.allocation_id),make('div','',`별도 할당 주소 · Subnet 소속 아님${a.additional?' · 외 '+a.additional+'개 (상세)':''}`));
+    e.title=`EIP ${a.allocation_id} → ${a.owner} (연결 증거)`;e.addEventListener('click',()=>selectNode(a.owner,true));nodeLayer.append(e);
+  }
+  applyManualOffsets();
   renderLinks(graph,layout);
+  if(layoutRejected)document.getElementById('node-drag-status').textContent=`현재 화면에서 이동 ${layoutRejected}개는 영역/겹침 검증 실패로 자동 위치 사용`;
+  if(layout.hiddenBy?.has(selectedId)){selectedId=layout.hiddenBy.get(selectedId);focusActive=false;}
   if (!selectedId || !graph.nodes.some(node=>node.id===selectedId)) {
     selectedId=graph.nodes.length ? graph.nodes[0].id : null;
     focusActive=false;
@@ -1245,6 +1851,10 @@ function render() {
   fitView();
 }
 // Interactive controls
+ document.getElementById('node-drag-mode').addEventListener('change',event=>{topology.classList.toggle('node-drag-mode',event.target.checked);hideTraceTooltip();});
+ document.getElementById('node-drag-reset').addEventListener('click',()=>{manualOffsets[mode].clear();render();reportLayout('현재 탭 배치 변경됨 · 저장 배치는 배치 저장 전까지 유지됩니다.');document.getElementById('node-drag-status').textContent='현재 탭의 자동 배치를 복원했습니다.';});
+ document.getElementById('fold-all').addEventListener('click',()=>{for(const n of GRAPHS.network_graph.nodes)if(['vpc','subnet'].includes(n.resource_type))collapsedRegions.add(n.id);render();reportLayout('접기 상태 변경됨 · 유지하려면 배치 저장을 누르세요.');});
+ document.getElementById('unfold-all').addEventListener('click',()=>{collapsedRegions.clear();render();reportLayout('접기 상태 변경됨 · 유지하려면 배치 저장을 누르세요.');});
 for (const button of document.querySelectorAll('.tab[data-mode]')) {
   button.addEventListener('click',()=>{document.getElementById('packet-trace-view').hidden=true;document.getElementById('graph-view').hidden=false;mode=button.dataset.mode;render();});
 }
@@ -1254,6 +1864,7 @@ document.getElementById('zoom-fit').addEventListener('click',fitView);
 document.getElementById('zoom-reset').addEventListener('click',()=>setZoom(1));
 viewport.addEventListener('wheel',event=>{
   if (!event.ctrlKey || !currentLayout) return;
+  if(nodeDrag){event.preventDefault();return;}
   event.preventDefault();
   hideTraceTooltip();
   const bounds=viewport.getBoundingClientRect();
@@ -1290,7 +1901,12 @@ viewport.addEventListener('keydown',event=>{
   if (event.key==='-') {event.preventDefault();setZoom(zoom/1.2);}
   if (event.key==='0') {event.preventDefault();fitView();}
 });
-render();
+for(const id of ['layout-save','layout-restore','layout-clear'])document.getElementById(id).disabled=!layoutKey;
+document.getElementById('layout-save').addEventListener('click',saveLayout);
+document.getElementById('layout-restore').addEventListener('click',()=>restoreLayout());
+document.getElementById('layout-clear').addEventListener('click',resetAllLayout);
+if(layoutKey){const restored=restoreLayout(true);render();if(restored&&layoutRejected)reportLayout('저장 배치 복원 · 현재 화면에서 적용 불가한 이동 '+layoutRejected+'개는 자동 위치 사용');}
+else {render();reportLayout('입력 지문 없음 · 배치 저장 및 복원 미지원');}
   </script>
 
   <script>
@@ -1300,6 +1916,47 @@ render();
     const entries=[], controls=['trace-play','trace-next','trace-reset'];
     let data=null, timeline=[], cursor=-1, timer=null, active=null, awsData=null;
     const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e;};
+    // FILE_DROP_BEGIN
+    function isFileDrag(event){
+      const dt=event.dataTransfer;
+      return !!dt&&(Array.from(dt.types||[]).includes('Files')||Array.from(dt.items||[]).some(item=>item.kind==='file')||!!dt.files?.length);
+    }
+    function installFileDrop(input,hint,isLocked=()=>false){
+      const zone=el('div',undefined,'file-drop-zone');zone.dataset.fileDropFor=input.id;
+      const description=el('div',hint,'file-drop-hint');description.id=input.id+'-drop-hint';
+      const error=el('div','','file-drop-error');error.setAttribute('role','alert');
+      input.parentNode.insertBefore(zone,input);zone.append(description,input,error);
+      input.setAttribute('aria-describedby',[input.getAttribute('aria-describedby'),description.id].filter(Boolean).join(' '));
+      const locked=()=>input.disabled||isLocked();
+      input.addEventListener('change',()=>{error.textContent='';});
+      for(const type of ['dragenter','dragover'])zone.addEventListener(type,event=>{
+        if(!isFileDrag(event))return;event.preventDefault();event.stopPropagation();
+        zone.dataset.dragActive=String(!locked());event.dataTransfer.dropEffect=locked()?'none':'copy';
+      });
+      zone.addEventListener('dragleave',event=>{if(!zone.contains(event.relatedTarget))delete zone.dataset.dragActive;});
+      zone.addEventListener('drop',event=>{
+        if(!isFileDrag(event))return;event.preventDefault();event.stopPropagation();delete zone.dataset.dragActive;
+        if(locked()){error.textContent='현재 처리 중이거나 입력이 제한되어 있습니다. 기존 선택은 유지됩니다.';return;}
+        const files=Array.from(event.dataTransfer.files||[]);
+        if(!files.length){error.textContent='파일만 놓아 주세요. 기존 선택은 유지됩니다.';return;}
+        if(!input.multiple&&files.length!==1){
+          input.value='';input.dispatchEvent(new Event('change',{bubbles:true}));
+          error.textContent='이 영역에는 파일 한 개만 놓을 수 있습니다. 선택을 초기화했습니다.';return;
+        }
+        // Copy real File objects into the native input. All consumers keep their existing change/submit handlers.
+        try{
+          const transfer=new DataTransfer();for(const file of files)transfer.items.add(file);
+          input.files=transfer.files;
+        }catch(err){error.textContent='이 브라우저에서 파일 놓기를 처리할 수 없습니다. 파일 선택 버튼을 사용하세요.';return;}
+        input.dispatchEvent(new Event('change',{bubbles:true}));
+      });
+      return ()=>{error.textContent='';delete zone.dataset.dragActive;};
+    }
+    function preventUnassignedFileDrop(event){
+      if(!isFileDrag(event))return;
+      event.preventDefault();event.dataTransfer.dropEffect='none';
+    }
+    // FILE_DROP_END
     const show=(v)=>v===null||v===undefined?'미확인':String(v);
     const obj=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
     const states=new Set(['PASS','BLOCKED','UNKNOWN','WARNING','NOT_APPLICABLE','NOT_EVALUATED']);
@@ -1313,7 +1970,7 @@ render();
       if(!Array.isArray(d.conditional_blockers)||d.conditional_blockers.some(x=>!findingIds.has(x)))throw Error('조건부 차단 근거 참조 오류');
       return d;
     }
-    function add(name,d){const why=traceJsonError(d);if(why)throw Error(why);if(d?.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION')validateAwsResult(d);else validate(d);const index=entries.length;entries.push({name,d});const opt=el('option',name);opt.value=String(index);select.append(opt);}
+    function add(name,d){const why=traceJsonError(d);if(why)throw Error(why);if(d?.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION')validateAwsResult(d);else if(d?.analysis_type==='STATIC_AWS_INTERNET_EGRESS_TCP_CONSTRAINTS')validateEgressResult(d);else validate(d);const index=entries.length;entries.push({name,d});const opt=el('option',name);opt.value=String(index);select.append(opt);}
     function stop(){if(timer!==null){clearInterval(timer);timer=null;}$('trace-play').textContent='재생';if(active)active.removeAttribute('data-playing');}
     function reset(){stop();cursor=-1;active=null;for(const e of view.querySelectorAll('[aria-current]'))e.removeAttribute('aria-current');$('trace-play-status').textContent='재생 전 · 논리적 예상 검사 단계 (실제 패킷 이동 아님)';$('trace-detail').textContent='단계를 선택하세요.';if(awsData&&$('aws-replay-status'))$('aws-replay-status').textContent='요청 예상 검사 재생 전 · 실제 관측 아님';}
     function inspect(step,button){if(active){active.removeAttribute('aria-current');active.removeAttribute('data-playing');}active=button;active.setAttribute('aria-current','step');const f=data.findings.find(x=>x.id===step.finding_id), box=$('trace-detail');box.replaceChildren(el('strong',`${step.id} · ${step.stage} · ${step.status}`),el('p',`${show(step.resource)} | ${show(step.evaluation_mode)} | ${show(step.finding_id)}`),el('p',show(step.reason)));const explanation=explainTraceStep(data,step);const summary=el('div',undefined,'trace-natural');summary.append(el('strong',explanation.message),el('p',`${explanation.flow} · ${explanation.direction}`));if(explanation.conditional)summary.append(el('p','조건부 검사: 선행 경로가 성립한다고 가정한 판정입니다.'));for(const fact of explanation.facts)summary.append(el('div',fact,'trace-small'));const raw=el('details');raw.append(el('summary','원본 JSON 판정 근거 펼치기'),el('pre',JSON.stringify(f||{},null,2),'trace-evidence'));box.append(summary,raw);const jump=el('button','이 단계의 리소스를 구조도에서 보기');jump.type='button';jump.disabled=Boolean(overlayCompatibility(data));jump.addEventListener('click',()=>{stop();openTraceOverlay(data,entries[Number(select.value)].name,step.id.startsWith('RET')?'response':'request',step);});box.append(jump);}
@@ -1322,20 +1979,68 @@ render();
       container.append(el('div',l.status==='PASS'?'↓':'┊ 미도달/미확정','trace-arrow'),el('div',`${show(dst)} · ${show(tuple.destination_ip)}:${show(tuple.destination_port)} · ${l.status==='PASS'?'모델상 허용':'도달/응답 미확정 또는 차단'}`,'trace-endpoint'));
       const f=forward?data.forwarding:l.forwarding;const details=el('details');details.append(el('summary','전달 후보 (정책 제외)'),el('pre',JSON.stringify({status:f?.status,hops:f?.hops||[],path_kind:f?.path_kind},null,2),'trace-evidence'));container.append(details);return container;
     }
-    function render(){$('aws-static-result').hidden=true;clearOverlay();reset();timeline=[];awsData=null;const e=entries[Number(select.value)];if(e?.d.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION'){renderAws(e.d,e.name);return;}data=e?.d||null;result.hidden=!data;controls.forEach(id=>$(id).disabled=!data);if(!data)return;const t=data.session_trace;const box=$('trace-overall');box.replaceChildren(el('h2',`종합 판정: ${data.predicted_connectivity}`),el('p',`최초 차단: ${data.first_blocker_step??'없음/미확정'} · 근거 ${data.first_blocker??'없음'} · 후속 조건부 장애: ${data.conditional_blockers.join(', ')||'없음'}`),el('p',`지원 범위: ${show(t.scope)} · 지원 여부: ${show(t.scope_supported)}`));$('trace-lanes').replaceChildren(lane('request'),lane('response'));$('trace-coverage').textContent=JSON.stringify({scenario:data.scenario,assumptions:t.assumptions,limitations:t.limitations,coverage:data.coverage},null,2);$('trace-message').textContent=`${e.name} · JSON 기반 표시 (재계산 없음)`;const why=overlayCompatibility(data);box.append(el('p',why||'입력 파일 지문 일치 · 구조도 연동 가능 (결과 진위 검증 아님)'));for(const key of ['request','response']){const b=el('button',`${key==='request'?'요청':'응답'} 전달 후보를 구조도에서 보기`);b.type='button';b.disabled=Boolean(why);b.addEventListener('click',()=>{stop();openTraceOverlay(data,e.name,key,null);});box.append(b);}}
+    function render(){$('aws-static-result').hidden=true;clearOverlay();reset();timeline=[];awsData=null;const e=entries[Number(select.value)];if(e?.d.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION'){renderAws(e.d,e.name);return;}if(e?.d.analysis_type==='STATIC_AWS_INTERNET_EGRESS_TCP_CONSTRAINTS'){renderEgress(e.d,e.name);return;}data=e?.d||null;result.hidden=!data;controls.forEach(id=>$(id).disabled=!data);if(!data)return;const t=data.session_trace;const box=$('trace-overall');box.replaceChildren(el('h2',`종합 판정: ${data.predicted_connectivity}`),el('p',`최초 차단: ${data.first_blocker_step??'없음/미확정'} · 근거 ${data.first_blocker??'없음'} · 후속 조건부 장애: ${data.conditional_blockers.join(', ')||'없음'}`),el('p',`지원 범위: ${show(t.scope)} · 지원 여부: ${show(t.scope_supported)}`));$('trace-lanes').replaceChildren(lane('request'),lane('response'));$('trace-coverage').textContent=JSON.stringify({scenario:data.scenario,assumptions:t.assumptions,limitations:t.limitations,coverage:data.coverage},null,2);$('trace-message').textContent=`${e.name} · JSON 기반 표시 (재계산 없음)`;const why=overlayCompatibility(data);box.append(el('p',why||'입력 파일 지문 일치 · 구조도 연동 가능 (결과 진위 검증 아님)'));for(const key of ['request','response']){const b=el('button',`${key==='request'?'요청':'응답'} 전달 후보를 구조도에서 보기`);b.type='button';b.disabled=Boolean(why);b.addEventListener('click',()=>{stop();openTraceOverlay(data,e.name,key,null);});box.append(b);}}
     function advance(){if(awsData){
       const next=timeline[cursor+1],status=$('aws-replay-status');
       if(!next){stop();status.textContent='요청 예상 검사 종료 · 응답 및 독립 검사는 별도 확인';return false;}
       if(active){active.removeAttribute('aria-current');active.removeAttribute('data-playing');}
       cursor++;active=next.b;active.setAttribute('aria-current','step');active.dataset.playing='true';
       status.textContent=`요청 ${next.f.stage} · ${next.f.status}`;
-      if(next.f.status!=='PASS'){stop();status.textContent+=' · 재생 중단';return false;}return true;
+      if(!['PASS','ALLOW_CANDIDATE'].includes(next.f.status)){stop();status.textContent+=' · 재생 중단';return false;}return true;
     }if(!data)return false;const next=timeline[cursor+1];if(!next||next.step.evaluation_mode!=='PREDICTED_PATH'){stop();$('trace-play-status').textContent='예상 경로 재생 종료 · 조건부/미확인 단계는 클릭하여 확인';return false;}cursor++;inspect(next.step,next.b);next.b.dataset.playing='true';$('trace-play-status').textContent=`${next.key==='request'?'요청':'응답'} · ${next.step.id} · ${next.step.status}`;if(next.step.status!=='PASS'){stop();$('trace-play-status').textContent+=' · 재생 중단';return false;}return true;}
     $('trace-play').addEventListener('click',()=>{if(timer!==null){stop();return;}if(cursor>=0)reset();if(advance()){$('trace-play').textContent='정지';timer=setInterval(()=>{advance();},850);}});
     $('trace-next').addEventListener('click',()=>{stop();advance();});$('trace-reset').addEventListener('click',reset);select.addEventListener('change',()=>{render();$('live-result-notice').textContent='저장/이전 분석 결과 선택됨 · 현재 입력값을 재계산하려면 분석 실행을 누르세요.';});
+    installFileDrop($('upload-files'),'구성 파일을 여기에 놓거나 파일 선택 · 선택 후 구성 분석 및 교체 실행',()=>$('upload-run').disabled);
+    installFileDrop($('trace-file'),'결과 JSON을 여기에 놓거나 파일 선택 · 선택 즉시 결과 추가 (재분석 없음)');
+    document.addEventListener('dragover',preventUnassignedFileDrop);
+    document.addEventListener('drop',preventUnassignedFileDrop);
     $('trace-file').addEventListener('change',async e=>{let n=0;const errors=[];for(const f of e.target.files){try{if(f.size>5*1024*1024)throw Error('5 MiB 초과');add(f.name,JSON.parse(await f.text()));n++;}catch(err){errors.push(`${f.name}: ${err.message}`);}}if(n){select.value=String(entries.length-1);render();}if(errors.length)$('trace-message').textContent=errors.join(' | ')+' · 구성 및 구조도는 변경되지 않습니다.';e.target.value='';});
     // Phase 5-3: local API only; offline HTML retains original viewer behavior.
     let liveContext=null, liveResult=null, liveCount=0;
+    const freshAwsRequests=new WeakMap();
+    function appendExternalEvidence(panel,d){
+      const section=el('section',undefined,'trace-lane');section.id='aws-external-evidence';
+      section.append(el('h3','외부 진단 증거 · Phase 6-3'),el('p','Reachability Analyzer는 정적 분석, Flow Logs는 업로드된 인터페이스 관측 기록입니다. 원래 판정을 변경하지 않습니다.'));
+      panel.append(section);
+      const saved=freshAwsRequests.get(d);
+      if(!saved||saved.revision!==inputRevision||!liveContext||!sameLiveScenario(d,saved.body,liveContext)){
+        section.append(el('p','현재 구성에서 통신 분석을 새로 실행한 결과에만 외부 증거를 연결할 수 있습니다.'));return;
+      }
+      const inputs={}, resetDropHints=[];
+      for(const [role,label,accept] of [['paths','Reachability Path JSON','.json'],['analyses','Reachability Analysis JSON','.json'],['logs','Flow Logs v2 텍스트','.txt,.log']]){
+        const row=el('div'),lab=el('label',label+' '),file=el('input');file.type='file';file.accept=accept;file.id='aws-evidence-'+role;lab.htmlFor=file.id;row.append(lab,file);section.append(row);inputs[role]=file;resetDropHints.push(installFileDrop(file,role==='logs'?'Flow Logs 텍스트 1개를 여기에 놓거나 파일 선택':'해당 JSON 1개를 여기에 놓거나 파일 선택'));
+      }
+      section.append(el('p','Reachability는 JSON 두 개를 함께 선택하세요. Flow Logs만 단독 비교도 가능합니다. 파일 합계 5 MiB 이하.'));
+      const run=el('button','외부 증거 비교');run.type='button';run.id='aws-evidence-run';
+      const clear=el('button','증거 초기화');clear.type='button';
+      const status=el('p','증거 미선택');status.id='aws-evidence-status';status.setAttribute('role','status');
+      const output=el('div');output.id='aws-evidence-output';section.append(run,clear,status,output);
+      let generation=0;
+      const current=()=>section.isConnected&&awsData===d&&saved.revision===inputRevision&&document.body.dataset.configError!=='true';
+      function invalidate(){generation++;output.replaceChildren();status.textContent='증거 선택 변경 · 다시 비교하세요.';run.disabled=!current();}
+      for(const file of Object.values(inputs))file.addEventListener('change',invalidate);
+      clear.addEventListener('click',()=>{for(const file of Object.values(inputs))file.value='';for(const resetHint of resetDropHints)resetHint();invalidate();status.textContent='증거 초기화 완료';});
+      run.addEventListener('click',async()=>{
+        if(!current())return;const g=++generation;output.replaceChildren();run.disabled=true;status.textContent='비교 중…';
+        try{
+          const files=Object.entries(inputs).filter(([,f])=>f.files.length).map(([k,f])=>[k,f.files[0]]);
+          const roles=new Set(files.map(([k])=>k));
+          if(!files.length||roles.has('paths')!==roles.has('analyses')||files.some(([,f])=>!f.size)||files.reduce((n,[,f])=>n+f.size,0)>5*1024*1024)throw Error('증거 파일 역할 및 합계 5 MiB 제한을 확인하세요.');
+          const encoded={};for(const [k,f] of files){const bytes=new Uint8Array(await f.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));encoded[k]=btoa(binary);}
+          if(g!==generation||!current())return;
+          const r=await fetch('/api/aws-evidence',{method:'POST',headers:{'Content-Type':'application/json','X-CloudPath-Token':liveContext.token},body:JSON.stringify({scenario:saved.body,files:encoded})});
+          const x=await r.json();if(g!==generation||!current())return;
+          if(!r.ok)throw Error(x.error||'비교 실패');
+          if(x.analysis_type!=='AWS_EXTERNAL_EVIDENCE_COMPARISON'||!sameLiveScenario(x,saved.body,liveContext)||x.cloudpath_predicted!==d.predicted_connectivity||x.cloudpath_conditional!==d.conditional_connectivity||x.live_observation!==false)throw Error('분석 결과와 증거의 입력 또는 판정이 일치하지 않습니다.');
+          output.append(el('h4',`CloudPath 원래 판정: ${x.cloudpath_predicted} · 조건부 ${x.cloudpath_conditional}`));
+          if(x.reachability){const a=x.reachability;output.append(el('h4','Reachability Analyzer · 외부 정적 분석'),el('p',`비교: ${a.comparison} · AWS 경로 발견: ${show(a.aws_network_path_found)}`),el('p',`분석 ID: ${a.analysis_id} · 수집 시차: ${a.time_gap_seconds}초`),el('p',`비교 제한 사유: ${(a.reasons||[]).join(', ')||'없음'}`));}
+          if(x.flow_logs){const f=x.flow_logs;output.append(el('h4','Flow Logs · 업로드 관측 기록'),el('p',`${f.observation} · 일치 레코드 ${f.matched_records}건 (패킷 수 아님)`));for(const row of f.per_interface||[])output.append(el('p',`${row.direction==='request'?'요청':'역방향'} · ${row.eni_id} · ${row.action} · ${row.record_count}건`));output.append(el('p',`수집 경고: ${JSON.stringify(f.coverage_warnings)} · 비교 제한 사유: ${(f.reasons||[]).join(', ')||'없음'}`));}
+          output.append(el('p','실제 통신 성공, 완전한 전달 경로 및 증거 진위는 검증되지 않았습니다.'));const detail=el('details');detail.append(el('summary','외부 증거 비교 JSON 및 제한'),el('pre',JSON.stringify(x,null,2),'trace-evidence'));output.append(detail);
+          const save=el('button','외부 증거 비교 JSON 저장');save.type='button';save.addEventListener('click',()=>{if(!current()||g!==generation)return;const url=URL.createObjectURL(new Blob([JSON.stringify(x,null,2)],{type:'application/json'}));const a=el('a');a.href=url;a.download='aws_external_evidence.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});output.append(save);status.textContent='비교 완료 · 기존 정적 판정 유지';
+        }catch(err){if(g===generation&&current()){status.textContent='외부 증거 비교 실패: '+String(err.message||err);output.replaceChildren();}}
+        finally{if(g===generation)run.disabled=!current();}
+      });
+    }
     const liveFlags=['complete_config','complete_nacl_config','complete_routing_config','assume_direct_private','assume_tracked_response','assume_unmodified_default_nacl'];
     function renderAws(d,name){
       validateAwsResult(d);reset();clearOverlay();data=null;awsData=d;timeline=[];result.hidden=true;controls.forEach(id=>$(id).disabled=false);
@@ -1344,6 +2049,14 @@ render();
       const replayStatus=el('p','요청 예상 검사 재생 전 · 실제 관측 아님');replayStatus.id='aws-replay-status';replayStatus.setAttribute('role','status');panel.append(replayStatus);
       const same=d.input_identity===GRAPHS.input_identity;
       panel.append(el('p',same?'입력 파일 지문 일치 · 결과 진위는 별도 검증 필요':'입력 파일 지문 불일치 · 구조도 연동 불가'));
+      if(same){
+        const first=d.findings.find(f=>f.id===d.request.trace[0]);
+        if(first){awsFocus={data:d,finding:first,ids:awsEvidenceIds(d,first,GRAPHS.input_identity,new Set(GRAPHS.network_graph.nodes.map(n=>n.id)))};overlayDirection.value='request';}
+        for(const key of ['request','response']){
+          const f=d.findings.find(f=>f.id===d[key].trace[0]);const button=el('button',key==='request'?'전체 내부 요청 경로 보기':'전체 조건부 응답 경로 보기');button.type='button';button.disabled=!f;button.addEventListener('click',()=>{if(f){stop();openAwsFocus(d,f);}});panel.append(button);
+        }
+      }
+
       const grid=el('div',undefined,'trace-grid');const cards=new Map();
       const findingCard=f=>{
         const card=el('div',undefined,'trace-step');card.dataset.status=f.status;card.dataset.mode=f.evaluation_mode==='PREDICTED_PATH'?'PREDICTED_PATH':'CONDITIONAL';card.dataset.finding=f.id;cards.set(f.id,card);
@@ -1368,9 +2081,47 @@ render();
       panel.append(grid,el('h3','독립 검사 · 실제 전달 경로 아님'));
       for(const f of d.findings.filter(f=>f.evaluation_mode==='INDEPENDENT_CHECK'))panel.append(findingCard(f));
       const detail=el('details');detail.append(el('summary','지원 범위 · 가정 · 제한'),el('pre',JSON.stringify({coverage:d.coverage,assumptions:d.assumptions,limitations:d.limitations},null,2)));panel.append(detail);
+      appendExternalEvidence(panel,d);
       timeline=awsRequestReplay(d).map(f=>({f,b:cards.get(f.id)}));
       $('trace-message').textContent=`${name||'AWS 분석'} · ${d.scenario.source_ip}:${d.scenario.source_port} → ${d.scenario.destination_ip}:${d.scenario.destination_port} · 선택된 결과 표시 (재계산 없음)`;
     }
+    function renderEgress(d,name){
+      validateEgressResult(d);data=null;awsData=d;timeline=[];result.hidden=true;controls.forEach(id=>$(id).disabled=false);
+      const panel=$('aws-static-result');panel.hidden=false;
+      panel.replaceChildren(el('h2','AWS Inventory · 인터넷 방향 정적 TCP 검사'),el('p',`세션 ${d.session_status} · 요청 ${d.request_status} · 응답 ${d.response_status} · 실제 인터넷 통신 미검증`),el('p',`${d.scenario.source_ip}:${d.scenario.source_port} → ${d.scenario.destination_ip}:${d.scenario.destination_port} · 최초 요청 중단: ${d.first_request_stop??'없음'}`),el('p','응답 검사는 가정에 따른 독립·조건부 검사입니다. IAM, 외부 호스트 및 실제 연결 상태 미검증.'));
+      const replay=el('p','요청 예상 검사 재생 전 · 실제 관측 아님');replay.id='aws-replay-status';replay.setAttribute('role','status');panel.append(replay);
+      const t=d.route.translation||{};
+      if(d.input_identity===GRAPHS.input_identity&&d.request.length){const row=d.request[0],ids=egressEvidenceIds(d,row,GRAPHS.input_identity,new Set(GRAPHS.network_graph.nodes.map(n=>n.id)));awsFocus={data:d,finding:{...row,direction:'request',web_resource_ids:ids},ids};overlayDirection.value='request';}
+      const hops=d.route.hops||[];
+      if(hops.length)panel.append(el('h3','구성상 요청 경로 후보 · 실제 전달 아님'),el('p',hops.map(h=>h.stage==='SOURCE_ENDPOINT'?'EC2 (기본 ENI) '+h.resource_id:h.stage==='PUBLIC_NAT_GATEWAY'?'Public NAT '+h.resource_id:h.stage==='INTERNET_GATEWAY'?'IGW '+h.resource_id:h.stage==='ROUTE_LOOKUP'?'Route Table '+h.resource_id:h.stage+' '+h.resource_id).join(' → ')),el('p','NAT 경유 응답은 기존 NAT 세션이 있을 때만 조건부 가능 · 외부 신규 연결 경로 아님.'));
+      panel.append(el('h3','주소 변환 구성 후보'),el('p',`${t.state??'NOT_EVALUATED'} · 원본 ${t.original_source_ip??'미확정'} ${t.kind==='PUBLIC_NAT_THEN_IGW'?'→ NAT 사설 '+(t.translated_private_ip??'미확정')+' ':''}→ 공인 ${t.translated_public_ip??'미확정'} · 변환 포트 ${t.translated_source_port??'미확정'}`));
+      const grid=el('div',undefined,'trace-grid'), independent=el('section');independent.append(el('h3','독립 검사 · 전달 경로 아님'));
+      for(const direction of ['request','response']){
+        const lane=el('section',undefined,'trace-lane');lane.append(el('h3',direction==='request'?'요청 예상 검사':'응답 조건부 검사'));
+        for(const row of d[direction]){
+          const card=el('div',undefined,'trace-step');card.dataset.status=row.status==='ALLOW_CANDIDATE'?'PASS':row.status;card.dataset.mode=row.evaluation_mode==='PREDICTED_PATH'?'PREDICTED_PATH':'CONDITIONAL';
+          card.append(el('strong',`${row.stage} · ${row.status}`),el('p',explainEgressRow(row)),el('p',row.evaluation_mode==='INDEPENDENT_CHECK'?'독립 검사 · 전달 미검증':row.evaluation_mode==='CONDITIONAL_CHECK'?'조건부 검사':'예상 검사'));
+          const detail=el('details');detail.append(el('summary','원본 JSON 판정 근거'),el('pre',JSON.stringify(row,null,2),'trace-evidence'));card.append(detail);
+          const known=new Set(GRAPHS.network_graph.nodes.map(n=>n.id)), ids=egressEvidenceIds(d,row,GRAPHS.input_identity,known);
+          const f={...row,direction,web_resource_ids:ids};const jump=el('button','구조도에서 보기');jump.type='button';jump.disabled=!ids.length;jump.addEventListener('click',()=>{stop();openAwsFocus(d,f);});card.append(jump);
+          (row.evaluation_mode==='INDEPENDENT_CHECK'?independent:lane).append(card);
+          if(direction==='request'&&row.evaluation_mode==='PREDICTED_PATH')timeline.push({f,b:card});
+        }grid.append(lane);
+      }
+      panel.append(grid,independent);const detail=el('details');detail.append(el('summary','지원 범위 · 경로 후보 · 제한'),el('pre',JSON.stringify({route:d.route,limitations:d.limitations},null,2)));panel.append(detail);
+      panel.append(el('p','구조도 강조는 기존 구성 관계만 표시하며 실제 패킷 경로가 아닙니다. 외부 증거 비교는 내부 세션에서만 지원합니다. 저장 결과는 진위를 검증하지 않습니다.'));
+      $('trace-message').textContent=`${name} · 입력 지문 ${d.input_identity===GRAPHS.input_identity?'일치':'불일치'} · 정적 결과 조회`;
+    }
+    let liveBusy=false;
+    function syncLiveScope(){
+      if(!liveContext)return;
+      const snap=liveContext.snapshot||{}, ext=Boolean(snap.aws_egress_available)&&$('live-scope').value==='egress';
+      $('live-destination-label').hidden=ext;$('live-destination').disabled=ext;
+      $('live-external-label').hidden=!ext;$('live-external-ip').disabled=!ext;
+      $('live-run').disabled=liveBusy||liveContext.endpoints.length<(ext?1:2)||(snap.analysis_restricted&&!snap.aws_static_session_available);
+      $('live-description').textContent=ext?'AWS EC2 → IGW 또는 Public NAT → IGW · IPv4 TCP 정적 검사 (외부 패킷 전송 없음).':snap.aws_static_session_available?'AWS Inventory 기반 동일 VPC·서로 다른 Subnet·단일 ENI EC2 IPv4 TCP 정적 검사. 실제 패킷 전송 없음.':'현재 Terraform 입력 구성의 명시적 IPv4 주소만 선택 가능합니다. 실제 패킷을 보내지 않습니다.';
+    }
+    $('live-scope').addEventListener('change',syncLiveScope);
     async function initLive(){
       if(location.protocol!=='http:'||!['localhost','127.0.0.1'].includes(location.hostname)||location.pathname!=='/')return;
       try{
@@ -1384,12 +2135,13 @@ render();
         if(snap.input_type==='TERRAFORM_PLAN_JSON'){$('snapshot-info').append(el('p','Plan JSON · ID 기반 관계도 (코드 의존성 아님) · '+(snap.analysis_restricted?'통신 판정 제한':'제한된 직접 IPv4 통신 분석 지원')));const tab=document.querySelector('[data-mode=reference_graph]');if(tab)tab.textContent='Plan ID 관계';}
         if(snap.input_type==='AWS_INVENTORY_JSON'){$('snapshot-info').append(el('p',`AWS Inventory · ${snap.region} · ${snap.vpc_id} · 수집 시각 ${snap.collected_at} · 정적 TCP 분석 지원 여부: ${snap.aws_static_session_available?'제한적 지원':'미지원'}`));const tab=document.querySelector('[data-mode=reference_graph]');if(tab)tab.textContent='AWS ID 관계';}
         if(Array.isArray(snap.expression_reference_hints)&&snap.expression_reference_hints.length){$('snapshot-warnings').append(el('li','표현식 참조 후보 (실제 연결 아님): '+snap.expression_reference_hints.length+'개'));for(const h of snap.expression_reference_hints)$('snapshot-warnings').append(el('li',`${h.source}.${h.field} → ${h.target} · 참조 후보`));}
-        const aws=Boolean(snap.aws_static_session_available);
+        const aws=Boolean(snap.aws_static_session_available);$('live-scope-label').hidden=!snap.aws_egress_available;
         if(aws){$('live-description').textContent='AWS Inventory 기반 동일 VPC·서로 다른 Subnet·단일 ENI EC2 IPv4 TCP 정적 검사. 실제 패킷 전송 없음.';$('live-assumptions').hidden=true;$('live-protocol').replaceChildren(el('option','TCP'));$('live-protocol').options[0].value='tcp';}
         if(snap.analysis_restricted)$('snapshot-info').append(el('p',aws?'기존 IaC 분석 제한 유지 · AWS 전용 정적 분석만 지원.':'부분 구조도만 제공, 통신 분석 제한.'));
         for(const id of ['live-source','live-destination'])c.endpoints.forEach((e,i)=>{const o=el('option',`${e.resource} · ${e.ip}`);o.value=String(i);$(id).append(o);});
         if(c.endpoints.length>=2&&(!snap.analysis_restricted||aws)){$('live-destination').selectedIndex=1;$('live-run').disabled=false;}
         else $('live-status').textContent=snap.input_type==='AWS_INVENTORY_JSON'?'AWS 전용 분석에 서로 다른 EC2 IPv4 엔드포인트 2개 이상이 필요합니다.':snap.analysis_restricted?'미지원 구성으로 종합 통신 분석이 제한됩니다.':'분석 가능한 명시적 IPv4 엔드포인트가 2개 이상 필요합니다.';
+        if(snap.aws_egress_available&&c.endpoints.length===1){$('live-scope').value='egress';$('live-status').textContent='단일 EC2 · 인터넷 방향 분석 선택';}syncLiveScope();
       }catch(e){/* offline viewer */}
     }
     // UPLOAD_ERROR_STATE_BEGIN
@@ -1432,22 +2184,25 @@ render();
       }catch(err){showUploadFailure(files,String(err.message||err));}finally{$('upload-run').disabled=false;}
     });
     let inputRevision=0;
-    $('live-form').addEventListener('input',()=>{inputRevision++;liveResult=null;$('live-save').disabled=true;$('live-result-notice').textContent='입력값 변경됨 · 아래 결과는 이전 분석입니다. 분석 실행을 눌러 다시 계산하세요.';});
+    $('live-form').addEventListener('input',()=>{inputRevision++;clearOverlay();const evidence=$('aws-external-evidence');if(evidence){evidence.replaceChildren(el('p','통신 입력 변경 · 새 분석 후 외부 증거를 비교하세요.'));}liveResult=null;$('live-save').disabled=true;$('live-result-notice').textContent='입력값 변경됨 · 아래 결과는 이전 분석입니다. 분석 실행을 눌러 다시 계산하세요.';});
     $('live-form').addEventListener('submit',async e=>{
       e.preventDefault();if(!liveContext||$('live-run').disabled)return;
       const body={source:Number($('live-source').value),destination:Number($('live-destination').value),protocol:$('live-protocol').value,source_port:Number($('live-sport').value),destination_port:Number($('live-dport').value),input_identity:GRAPHS.input_identity};
-      const revision=inputRevision;
+      const revision=++inputRevision;clearOverlay();
+      const egress=Boolean(liveContext.snapshot?.aws_egress_available)&&$('live-scope').value==='egress';
+      if(egress){delete body.destination;body.destination_ip=$('live-external-ip').value.trim();}
       const aws=Boolean(liveContext.snapshot?.aws_static_session_available);
       if(!aws)for(const k of liveFlags)body[k]=$('live-'+k).checked;
+      const evidence=$('aws-external-evidence');if(evidence)evidence.replaceChildren(el('p','새 분석 중 · 외부 증거 비교 대기'));
       stop();
-      $('live-run').disabled=true;$('live-save').disabled=true;liveResult=null;$('live-status').textContent='분석 중…';$('live-result-notice').textContent='재계산 중 · 아래 결과는 이전 분석입니다.';
+      liveBusy=true;$('live-run').disabled=true;$('live-save').disabled=true;liveResult=null;$('live-status').textContent='분석 중…';$('live-result-notice').textContent='재계산 중 · 아래 결과는 이전 분석입니다.';
       try{
-        const r=await fetch(aws?'/api/aws-analyze':'/api/analyze',{method:'POST',headers:{'Content-Type':'application/json','X-CloudPath-Token':liveContext.token},body:JSON.stringify(body)});
-        const d=await r.json();if(!r.ok)throw Error(d.error||'분석 실패');if(d.input_identity!==GRAPHS.input_identity)throw Error('입력 구성 불일치');if(!sameLiveScenario(d,body,liveContext))throw Error('요청과 응답의 통신 시나리오 불일치');
-        if(aws){validateAwsResult(d);add(`AWS 웹 분석 ${++liveCount} · TCP ${d.scenario.source_port} → ${d.scenario.destination_port}`,d);select.value=String(entries.length-1);render();}else{add(`웹 분석 ${++liveCount} · ${d.scenario.protocol.toUpperCase()} ${d.scenario.source_port} → ${d.scenario.destination_port}`,d);select.value=String(entries.length-1);render();}liveResult=revision===inputRevision?d:null;$('live-save').disabled=!liveResult;$('live-status').textContent='분석 완료 · '+d.predicted_connectivity;$('live-result-notice').textContent=liveResult?`새 분석 #${liveCount} · ${d.scenario.source_ip}:${d.scenario.source_port} → ${d.scenario.destination_ip}:${d.scenario.destination_port} · ${d.input_identity}`:'분석 중 입력값이 변경되었습니다. 표시된 결과는 이전 요청에 대한 결과입니다. 다시 분석하세요.';
-      }catch(err){$('live-status').textContent=String(err.message||err);$('live-result-notice').textContent='새 분석 실패 · 아래 결과는 이전 분석입니다.';}finally{$('live-run').disabled=false;}
+        const r=await fetch(egress?'/api/aws-egress':aws?'/api/aws-analyze':'/api/analyze',{method:'POST',headers:{'Content-Type':'application/json','X-CloudPath-Token':liveContext.token},body:JSON.stringify(body)});
+        const d=await r.json();if(!r.ok)throw Error(d.error||'분석 실패');if(d.input_identity!==GRAPHS.input_identity)throw Error('입력 구성 불일치');if(!(egress?sameEgressScenario(d,body,liveContext):sameLiveScenario(d,body,liveContext)))throw Error('요청과 응답의 통신 시나리오 불일치');
+        if(egress){validateEgressResult(d);add(`AWS 인터넷 방향 ${++liveCount} · TCP ${d.scenario.source_port} → ${d.scenario.destination_port}`,d);select.value=String(entries.length-1);render();}else if(aws){validateAwsResult(d);freshAwsRequests.set(d,{body,revision});add(`AWS 웹 분석 ${++liveCount} · TCP ${d.scenario.source_port} → ${d.scenario.destination_port}`,d);select.value=String(entries.length-1);render();}else{add(`웹 분석 ${++liveCount} · ${d.scenario.protocol.toUpperCase()} ${d.scenario.source_port} → ${d.scenario.destination_port}`,d);select.value=String(entries.length-1);render();}liveResult=revision===inputRevision?d:null;if(!liveResult)clearOverlay();$('live-save').disabled=!liveResult;$('live-status').textContent='분석 완료 · '+(egress?d.session_status:d.predicted_connectivity);$('live-result-notice').textContent=liveResult?`새 분석 #${liveCount} · ${d.scenario.source_ip}:${d.scenario.source_port} → ${d.scenario.destination_ip}:${d.scenario.destination_port} · ${d.input_identity}`:'분석 중 입력값이 변경되었습니다. 표시된 결과는 이전 요청에 대한 결과입니다. 다시 분석하세요.';
+      }catch(err){$('live-status').textContent=String(err.message||err);$('live-result-notice').textContent='새 분석 실패 · 아래 결과는 이전 분석입니다.';}finally{liveBusy=false;syncLiveScope();}
     });
-    $('live-save').addEventListener('click',()=>{if(!liveResult)return;const url=URL.createObjectURL(new Blob([JSON.stringify(liveResult,null,2)],{type:'application/json'}));const a=el('a');a.href=url;a.download=liveResult.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION'?'aws_static_session.json':'communication_web.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+    $('live-save').addEventListener('click',()=>{if(!liveResult)return;const url=URL.createObjectURL(new Blob([JSON.stringify(liveResult,null,2)],{type:'application/json'}));const a=el('a');a.href=url;a.download=liveResult.analysis_type==='STATIC_AWS_INTERNET_EGRESS_TCP_CONSTRAINTS'?'aws_internet_egress.json':liveResult.analysis_type==='STATIC_AWS_INVENTORY_PREDICTION'?'aws_static_session.json':'communication_web.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
     initLive();
     for(const entry of (GRAPHS.packet_traces||[])){try{add(entry.name,entry.result);}catch(err){$('trace-message').textContent=err.message;}}
     if(entries.length){select.value='0';render();}

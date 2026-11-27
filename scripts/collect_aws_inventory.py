@@ -9,10 +9,10 @@ import subprocess
 import sys
 from datetime import datetime,timezone
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from backend.aws.snapshot import FORMAT, OPERATIONS, sanitize_inventory, load_aws_snapshot, _id
+from backend.aws.snapshot import FORMAT, FORMAT_V2, OPERATIONS, sanitize_inventory, load_aws_snapshot, _id
 
 
-def collect(region,vpc_id,profile=None,*,run=subprocess.run):
+def collect(region,vpc_id,profile=None,*,run=subprocess.run,address_evidence=False):
     _id(vpc_id,'vpc')
     if not re.fullmatch(r'[a-z]{2}(?:-[a-z0-9]+)+-\d+',region):raise ValueError('Invalid AWS region')
     if profile is not None and not re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9_.@-]{0,127}',profile):raise ValueError('Invalid CLI profile')
@@ -29,7 +29,8 @@ def collect(region,vpc_id,profile=None,*,run=subprocess.run):
             data[key]=response[key]
         except FileNotFoundError as exc:raise ValueError('AWS CLI v2 not found; install/configure through your authorized environment') from exc
         except (subprocess.CalledProcessError,subprocess.TimeoutExpired,UnicodeError,json.JSONDecodeError) as exc:raise ValueError(f'{op} failed; check authorized profile, region, permissions and connectivity') from exc
-    doc={'format':FORMAT,'region':region,'vpc_id':vpc_id,'collected_at':datetime.now(timezone.utc).isoformat(),'inventory':sanitize_inventory(data)}
+    version=FORMAT_V2 if address_evidence else FORMAT
+    doc={'format':version,'region':region,'vpc_id':vpc_id,'collected_at':datetime.now(timezone.utc).isoformat(),'inventory':sanitize_inventory(data,version=version)}
     raw=json.dumps(doc,ensure_ascii=False,indent=2,allow_nan=False).encode('utf-8')
     if len(raw)>5*1024*1024:raise ValueError('Inventory exceeds 5 MiB')
     load_aws_snapshot(raw)
@@ -39,10 +40,11 @@ def collect(region,vpc_id,profile=None,*,run=subprocess.run):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--region',required=True);p.add_argument('--vpc-id',required=True);p.add_argument('--profile');p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--address-evidence',action='store_true',help='Opt in to v2: retain public IPv4 association and NAT address evidence; keep private locally')
     a=p.parse_args()
     if a.output.suffix!='.json' or a.output.exists():p.error('Choose a new .json output path; existing files never overwritten')
     try:
-        raw=collect(a.region,a.vpc_id,a.profile)
+        raw=collect(a.region,a.vpc_id,a.profile,address_evidence=a.address_evidence)
         # Exclusive creation and private mode (Linux; Windows filesystem permissions may differ).
         fd=os.open(a.output,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
         try:

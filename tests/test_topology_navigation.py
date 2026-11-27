@@ -76,7 +76,8 @@ def test_node_highlighting_and_reference_mode_stay_separate(tmp_path):
     html = render_topology_html(graphs,tmp_path / "viewer.html").read_text(encoding="utf-8")
     assert "function updateFocus()" in html
     assert "function positionReference(graph)" in html
-    assert "function positionNetwork(graph)" in html
+    assert "function positionNetwork(graph, collapsed = new Set(), display={})" in html
+    assert "positionNetwork(graph,collapsedRegions,GRAPHS.resource_display||{})" in html
     assert "packet_traversable" in html
     assert "실제 패킷 이동 경로가 아닙니다" in html
 

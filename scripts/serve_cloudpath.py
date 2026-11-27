@@ -55,7 +55,7 @@ class AnalysisApp:
         self.endpoints.sort(key=lambda x:(x['resource'], x['ip']))
         if self._aws_raw is not None:
             self.endpoints = [e for e in self.endpoints if e['resource'].startswith('aws_instance.')]
-            self.snapshot = {**self.snapshot, 'aws_static_session_available': True}
+            self.snapshot = {**self.snapshot, 'aws_static_session_available': True, 'aws_egress_available': True}
         with tempfile.TemporaryDirectory() as tmp:
             graphs = analyze_graphs(resources)
             if self.snapshot.get('input_type') in ('TERRAFORM_PLAN_JSON','AWS_INVENTORY_JSON'):
@@ -165,6 +165,67 @@ class AnalysisApp:
         return result
 
 
+    def analyze_aws_egress(self, data):
+        from ipaddress import IPv4Address
+        from backend.aws.egress_session_evidence import analyze_internet_egress_session
+        if self._aws_raw is None:
+            raise ValueError('AWS snapshot required')
+        fields = {'source','destination_ip','protocol','source_port','destination_port','input_identity'}
+        if not isinstance(data, dict) or set(data) != fields or data['input_identity'] != self.identity or data['protocol'] != 'tcp':
+            raise ValueError('Invalid egress request')
+        if type(data['source']) is not int or not 0 <= data['source'] < len(self.endpoints):
+            raise ValueError('Invalid endpoint selection')
+        dst = data['destination_ip']
+        if not isinstance(dst, str) or str(IPv4Address(dst)) != dst:
+            raise ValueError('Expected IPv4 address')
+        for k in ('source_port','destination_port'):
+            if type(data[k]) is not int or not 1 <= data[k] <= 65535:
+                raise ValueError('Invalid TCP port')
+        result = analyze_internet_egress_session(self._aws_raw,self.endpoints[data['source']]['ip'],dst,data['source_port'],data['destination_port'])
+        if result['input_identity'] != self.identity:
+            raise ValueError('Result identity mismatch')
+        return result
+
+    def compare_aws_evidence(self, data):
+        """Compare uploaded evidence against the current server snapshot and TCP tuple."""
+        if not isinstance(data, dict) or set(data) != {'scenario', 'files'}:
+            raise ValueError('Invalid evidence request')
+        scenario, files = data['scenario'], data['files']
+        if not isinstance(files, dict) or not files or set(files) - {'paths','analyses','logs'}:
+            raise ValueError('Invalid evidence file roles')
+        if ('paths' in files) != ('analyses' in files):
+            raise ValueError('Reachability requires both path and analysis JSON')
+        decoded = {}
+        total = 0
+        for role, value in files.items():
+            if not isinstance(value, str) or len(value) > ((MAX_BYTES+2)//3)*4:
+                raise ValueError('Evidence exceeds size limit')
+            raw = base64.b64decode(value, validate=True)
+            total += len(raw)
+            if not raw or total > MAX_BYTES:
+                raise ValueError('Evidence files must be nonempty, combined maximum 5 MiB')
+            decoded[role] = raw
+        static = self.analyze_aws(scenario)
+        sc = static['scenario']
+        args = (sc['source_ip'], sc['destination_ip'], sc['source_port'], sc['destination_port'])
+        result = dict(analysis_type='AWS_EXTERNAL_EVIDENCE_COMPARISON', input_identity=self.identity,
+                      scenario=sc, cloudpath_predicted=static['predicted_connectivity'],
+                      cloudpath_conditional=static['conditional_connectivity'],
+                      reachability=None, flow_logs=None, live_observation=False)
+        if 'paths' in decoded:
+            from backend.aws.reachability_evidence import compare_reachability
+            result['reachability'] = compare_reachability(self._aws_raw, decoded['paths'], decoded['analyses'], *args)
+        if 'logs' in decoded:
+            from backend.aws.flow_log_evidence import correlate_flow_logs
+            result['flow_logs'] = correlate_flow_logs(self._aws_raw, decoded['logs'], *args)
+        for item in (result['reachability'], result['flow_logs']):
+            if item is not None and (item['input_identity'] != self.identity or item['scenario'] != sc or
+                    item['cloudpath_predicted'] != result['cloudpath_predicted'] or
+                    item['cloudpath_conditional'] != result['cloudpath_conditional']):
+                raise ValueError('Evidence comparison mismatch')
+        return result
+
+
 def load_web_app(files):
     resources, identity, snapshot = load_snapshot(files)
     raw = validate_files(files, allow_plan=True)[0][1] if snapshot.get('input_type') == 'AWS_INVENTORY_JSON' else None
@@ -196,6 +257,10 @@ def create_server(app, port=8001):
                 return self.reply(403, {'error':'Invalid Host'})
             if urlsplit(self.path).path == '/':
                 return self.reply(200, app.html, 'text/html; charset=utf-8')
+            if urlsplit(self.path).path == '/peering':
+                return self.reply(200, (ROOT/'frontend/static/peering_viewer.html').read_bytes(), 'text/html; charset=utf-8')
+            if urlsplit(self.path).path == '/tgw':
+                return self.reply(200, (ROOT/'frontend/static/tgw_viewer.html').read_bytes(), 'text/html; charset=utf-8')
             if urlsplit(self.path).path == '/api/context':
                 return self.reply(200, app.context())
             return self.reply(404, {'error':'Not found'})
@@ -204,11 +269,11 @@ def create_server(app, port=8001):
             if not self.host_ok() or self.headers.get('Origin') != 'http://' + self.headers.get('Host','') or not secrets.compare_digest(self.headers.get('X-CloudPath-Token',''),app.token):
                 return self.reply(403, {'error':'Local origin/token required'})
             path = urlsplit(self.path).path
-            if path not in ('/api/analyze', '/api/aws-analyze', '/api/upload'):
+            if path not in ('/api/analyze', '/api/aws-analyze', '/api/aws-egress', '/api/aws-evidence', '/api/upload', '/api/aws-peering', '/api/aws-tgw'):
                 return self.reply(404, {'error':'Not found'})
             try:
                 length = int(self.headers.get('Content-Length','0'))
-                limit = MAX_BODY if path == '/api/upload' else 16384
+                limit = MAX_BODY if path in ('/api/upload','/api/aws-evidence','/api/aws-peering','/api/aws-tgw') else 16384
                 if not 0 < length <= limit or self.headers.get_content_type() != 'application/json' or self.headers.get('Transfer-Encoding'):
                     raise ValueError('JSON body required within size limit')
                 body = json.loads(self.rfile.read(length))
@@ -221,11 +286,23 @@ def create_server(app, port=8001):
                     result = app.context()
                 elif path == '/api/aws-analyze':
                     result = app.analyze_aws(body)
+                elif path == '/api/aws-egress':
+                    result = app.analyze_aws_egress(body)
+                elif path == '/api/aws-peering':
+                    from backend.aws.peering_web import analyze_peering_upload
+                    result = analyze_peering_upload(body, app.identity)
+                elif path == '/api/aws-tgw':
+                    from backend.aws.tgw_web import analyze_tgw_upload
+                    result = analyze_tgw_upload(body, app.identity)
+                elif path == '/api/aws-evidence':
+                    result = app.compare_aws_evidence(body)
                 else:
                     result = app.analyze(body)
             except (ValueError, TypeError, UnicodeError, TimeoutError) as exc:
                 if path == '/api/upload':
                     return self.reply(400, {'error':str(exc) if isinstance(exc, ValueError) else 'Invalid upload'})
+                if path == '/api/aws-evidence':
+                    return self.reply(400, {'error':'Invalid evidence format, size, current input or TCP scenario; verify file roles.'})
                 return self.reply(400, {'error':'Invalid request, input identity, endpoint, port or assumption'})
             except Exception:
                 return self.reply(500, {'error':'Analysis failed; no result generated'})

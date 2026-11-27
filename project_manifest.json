@@ -490,16 +490,19 @@
       "policy_overlays",
       "adaptive_layout",
       "bounded_aws_inventory_static_tcp_session",
-      "aws_static_session_web_api_and_result_contract"
+      "aws_static_session_web_api_and_result_contract",
+      "bounded_aws_session_web_feedback_and_upload_error_screen",
+      "vpc_subnet_collapse_expand",
+      "bounded_visual_drag_and_edge_recalculation",
+      "policy_detail_inspection",
+      "fingerprint_scoped_browser_layout_persistence",
+      "offline_reachability_and_flow_logs_comparison",
+      "unified_external_evidence_web_panel",
+      "file_drop_zones"
     ],
-    "verified_tests": 435,
-    "verification_basis": "user_environment_full_pytest_2026_11_26_phase_6_2_g_followup",
+    "verified_tests": 555,
+    "verification_basis": "user_environment_full_pytest_2026_11_27_phase_6_3_c_file_drop",
     "next": [
-      "phase_6_2_aws_configuration_communication_analysis",
-      "phase_6_2_1_collapse_expand",
-      "phase_6_2_2_drag_and_edge_recalculation",
-      "phase_6_2_3_layout_persistence",
-      "phase_6_3_aws_evidence_integration",
       "phase_7_complex_aws_analysis",
       "phase_8_web_hardening_release_qa"
     ],
@@ -507,21 +510,22 @@
       "full_end_to_end_complex_aws_packet_path_analysis",
       "unresolved_plan_id_and_complex_module_relationship_resolution",
       "full_iam_cors_policy_analysis",
-      "topology_drag_collapse_and_layout_persistence",
-      "reachability_analyzer_and_flow_logs_integration",
       "v1_web_security_performance_and_release_acceptance",
       "verified_final_ui_theme",
       "broader_aws_inventory_integrated_analysis_and_live_validation"
     ],
-    "verified_phase": "6-2_G_followup_automated_regression",
-    "latest_script_provided_phase": "6-2_H_acceptance_preparation",
-    "latest_full_test_target": 443,
+    "verified_phase": "6-3_C_file_drop_automated_regression",
+    "latest_script_provided_phase": "6-3_D_acceptance",
+    "latest_full_test_target": 558,
     "latest_full_test_target_verified": false,
     "verification_notes": [
       "Historical: Phase 6-1-3 initial and first fix rolled back after 283 PASS / 1 FAIL; later visual output reported.",
       "Phase 6-1-4 baseline: user environment 288 passed in 2.12s; archive commit 09f1184118232c44b7cb469439f08f379b8a55be matches environment log.",
       "Independent full regression remains unverified because python-hcl2 is absent; GitHub remote and live AWS/browser E2E unverified.",
-      "User G follow-up: 435 passed in 2.61s; H target 443; browser E2E and live AWS remain pending."
+      "User G follow-up: 435 passed in 2.61s; H target 443; browser E2E and live AWS remain pending.",
+      "User 463 passed 2026-11-26; CP-6.2-UI-001 unresolved intermittent upload/refresh inconsistency.",
+      "User 482, 504, 533 and 555 passed; 555 in 4.81s 2026-11-27. CLI comparison outputs and unified evidence screen confirmed.",
+      "D target 558, browser layout persistence/drop and real AWS export acceptance pending. Phase 7 entry does not mean release acceptance."
     ],
     "baseline_commit": "09f1184118232c44b7cb469439f08f379b8a55be",
     "baseline_archive_sha256": "83eba76197df0525df524bf72b8239e5af3cebd2192920924f0a3aea3c639644",
@@ -533,13 +537,22 @@
       "design": "docs/PHASE_6_2_DESIGN.md"
     },
     "phase_6_2_acceptance": {
-      "status": "H_in_progress",
-      "user_verified_tests": 435,
-      "target_tests": 443,
+      "status": "bounded_implementation_user_regression_verified_open_ui_defect",
+      "user_verified_tests": 463,
+      "target_tests": 463,
       "browser_e2e_verified": false,
       "live_aws_verified": false,
       "legacy_iac_aws_restriction_preserved": true,
       "guide": "docs/PHASE_6_2_ACCEPTANCE.md"
+    },
+    "phase_6_3_acceptance": {
+      "status": "implementation_complete_d_regression_pending",
+      "user_verified_tests": 555,
+      "target_tests": 558,
+      "actual_aws_export_verified": false,
+      "browser_e2e_verified": false,
+      "known_issue": "CP-6.2-UI-001",
+      "guide": "docs/PHASE_6_3_ACCEPTANCE.md"
     }
   },
   "roadmap": [
@@ -685,7 +698,7 @@
     {
       "phase": 6,
       "name": "aws_analysis_and_topology_editing",
-      "status": "in_progress",
+      "status": "bounded_implementation_complete_acceptance_pending",
       "subphases": [
         {
           "id": "6-1",
@@ -720,34 +733,34 @@
         {
           "id": "6-2",
           "name": "aws_configuration_communication_analysis",
-          "status": "A_G_user_435_pass_H_acceptance_pending"
+          "status": "user_463_pass_open_ui_defect"
         },
         {
           "id": "6-2-1",
           "name": "vpc_subnet_collapse_expand",
-          "status": "planned"
+          "status": "implemented_user_visual_confirmation"
         },
         {
           "id": "6-2-2",
           "name": "drag_and_edge_recalculation",
-          "status": "planned"
+          "status": "implemented_user_visual_confirmation"
         },
         {
           "id": "6-2-3",
           "name": "layout_save_restore_reset",
-          "status": "planned"
+          "status": "implemented_482_pass_browser_acceptance_pending"
         },
         {
           "id": "6-3",
           "name": "reachability_analyzer_flow_logs",
-          "status": "planned"
+          "status": "implemented_555_pass_d_target_558"
         }
       ]
     },
     {
       "phase": 7,
       "name": "complex_aws_infrastructure_and_policy_analysis",
-      "status": "planned"
+      "status": "next_after_phase_6_d_regression"
     },
     {
       "phase": 8,

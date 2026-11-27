@@ -1,0 +1,23 @@
+{
+  "NetworkInsightsPaths": [
+    {
+      "NetworkInsightsPathId": "nip-12345678",
+      "NetworkInsightsPathArn": "arn:aws:ec2:ap-northeast-2:000000000000:network-insights-path/nip-12345678",
+      "Source": "i-12345678",
+      "Destination": "i-87654321",
+      "Protocol": "tcp",
+      "DestinationIp": "10.0.2.10",
+      "FilterAtSource": {
+        "SourceAddress": "10.0.1.10/32",
+        "SourcePortRange": {
+          "FromPort": 50000,
+          "ToPort": 50000
+        },
+        "DestinationPortRange": {
+          "FromPort": 443,
+          "ToPort": 443
+        }
+      }
+    }
+  ]
+}

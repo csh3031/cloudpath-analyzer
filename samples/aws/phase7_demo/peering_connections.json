@@ -1,0 +1,21 @@
+{
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "VpcPeeringConnections": [
+    {
+      "VpcPeeringConnectionId": "pcx-abcdef12",
+      "Status": {
+        "Code": "active"
+      },
+      "RequesterVpcInfo": {
+        "VpcId": "vpc-12345678",
+        "Region": "ap-northeast-2",
+        "CidrBlock": "10.0.0.0/16"
+      },
+      "AccepterVpcInfo": {
+        "VpcId": "vpc-aaaaaaaa",
+        "Region": "ap-northeast-2",
+        "CidrBlock": "10.1.0.0/16"
+      }
+    }
+  ]
+}

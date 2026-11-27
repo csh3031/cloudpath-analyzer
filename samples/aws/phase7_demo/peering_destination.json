@@ -1,0 +1,248 @@
+{
+  "format": "cloudpath-aws-inventory-v1",
+  "region": "ap-northeast-2",
+  "vpc_id": "vpc-aaaaaaaa",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "inventory": {
+    "Vpcs": [
+      {
+        "VpcId": "vpc-aaaaaaaa",
+        "CidrBlock": "10.1.0.0/16",
+        "State": "available"
+      }
+    ],
+    "Subnets": [
+      {
+        "SubnetId": "subnet-aaaaaaaa",
+        "VpcId": "vpc-aaaaaaaa",
+        "CidrBlock": "10.1.1.0/24",
+        "AvailabilityZone": "ap-northeast-2a",
+        "State": "available"
+      },
+      {
+        "SubnetId": "subnet-bbbbbbbb",
+        "VpcId": "vpc-aaaaaaaa",
+        "CidrBlock": "10.1.2.0/24",
+        "State": "available"
+      }
+    ],
+    "RouteTables": [
+      {
+        "RouteTableId": "rtb-aaaaaaaa",
+        "VpcId": "vpc-aaaaaaaa",
+        "Associations": [
+          {
+            "RouteTableAssociationId": "rtbassoc-aaaaaaaa",
+            "Main": true,
+            "AssociationState": {
+              "State": "associated"
+            }
+          }
+        ],
+        "Routes": [
+          {
+            "DestinationCidrBlock": "10.1.0.0/16",
+            "GatewayId": "local",
+            "State": "active"
+          },
+          {
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "GatewayId": "igw-aaaaaaaa",
+            "State": "active"
+          },
+          {
+            "DestinationCidrBlock": "10.0.0.0/16",
+            "VpcPeeringConnectionId": "pcx-abcdef12",
+            "State": "active"
+          }
+        ]
+      }
+    ],
+    "InternetGateways": [
+      {
+        "InternetGatewayId": "igw-aaaaaaaa",
+        "Attachments": [
+          {
+            "VpcId": "vpc-aaaaaaaa",
+            "State": "available"
+          }
+        ]
+      }
+    ],
+    "NatGateways": [],
+    "SecurityGroups": [
+      {
+        "GroupId": "sg-aaaaaaaa",
+        "VpcId": "vpc-aaaaaaaa",
+        "IpPermissions": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "IpRanges": [
+              {
+                "CidrIp": "10.1.0.0/16"
+              }
+            ]
+          }
+        ],
+        "IpPermissionsEgress": [
+          {
+            "IpProtocol": "-1",
+            "IpRanges": [
+              {
+                "CidrIp": "0.0.0.0/0"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "NetworkAcls": [
+      {
+        "NetworkAclId": "acl-aaaaaaaa",
+        "VpcId": "vpc-aaaaaaaa",
+        "Associations": [
+          {
+            "SubnetId": "subnet-aaaaaaaa",
+            "NetworkAclAssociationId": "aclassoc-aaaaaaaa"
+          },
+          {
+            "SubnetId": "subnet-bbbbbbbb",
+            "NetworkAclAssociationId": "aclassoc-bbbbbbbb"
+          }
+        ],
+        "Entries": [
+          {
+            "RuleNumber": 100,
+            "Protocol": "6",
+            "RuleAction": "allow",
+            "Egress": true,
+            "CidrBlock": "10.1.0.0/16",
+            "PortRange": {
+              "From": 1,
+              "To": 65535
+            }
+          },
+          {
+            "RuleNumber": 100,
+            "Protocol": "6",
+            "RuleAction": "allow",
+            "Egress": false,
+            "CidrBlock": "10.1.0.0/16",
+            "PortRange": {
+              "From": 1,
+              "To": 65535
+            }
+          },
+          {
+            "RuleNumber": 32767,
+            "Protocol": "-1",
+            "RuleAction": "deny",
+            "Egress": true,
+            "CidrBlock": "0.0.0.0/0"
+          },
+          {
+            "RuleNumber": 32767,
+            "Protocol": "-1",
+            "RuleAction": "deny",
+            "Egress": false,
+            "CidrBlock": "0.0.0.0/0"
+          }
+        ]
+      }
+    ],
+    "Reservations": [
+      {
+        "Instances": [
+          {
+            "InstanceId": "i-aaaaaaaa",
+            "VpcId": "vpc-aaaaaaaa",
+            "SubnetId": "subnet-aaaaaaaa",
+            "PrivateIpAddress": "10.1.1.10",
+            "State": {
+              "Name": "running"
+            },
+            "SecurityGroups": [
+              {
+                "GroupId": "sg-aaaaaaaa"
+              }
+            ],
+            "NetworkInterfaces": [
+              {
+                "NetworkInterfaceId": "eni-aaaaaaaa"
+              }
+            ]
+          },
+          {
+            "InstanceId": "i-bbbbbbbb",
+            "VpcId": "vpc-aaaaaaaa",
+            "SubnetId": "subnet-bbbbbbbb",
+            "PrivateIpAddress": "10.1.2.10",
+            "State": {
+              "Name": "running"
+            },
+            "SecurityGroups": [
+              {
+                "GroupId": "sg-aaaaaaaa"
+              }
+            ],
+            "NetworkInterfaces": [
+              {
+                "NetworkInterfaceId": "eni-bbbbbbbb"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "NetworkInterfaces": [
+      {
+        "NetworkInterfaceId": "eni-aaaaaaaa",
+        "VpcId": "vpc-aaaaaaaa",
+        "SubnetId": "subnet-aaaaaaaa",
+        "PrivateIpAddress": "10.1.1.10",
+        "PrivateIpAddresses": [
+          {
+            "PrivateIpAddress": "10.1.1.10"
+          }
+        ],
+        "Groups": [
+          {
+            "GroupId": "sg-aaaaaaaa"
+          }
+        ],
+        "Attachment": {
+          "InstanceId": "i-aaaaaaaa",
+          "DeviceIndex": 0
+        },
+        "Status": "in-use",
+        "InterfaceType": "interface",
+        "RequesterManaged": false
+      },
+      {
+        "NetworkInterfaceId": "eni-bbbbbbbb",
+        "VpcId": "vpc-aaaaaaaa",
+        "SubnetId": "subnet-bbbbbbbb",
+        "PrivateIpAddress": "10.1.2.10",
+        "PrivateIpAddresses": [
+          {
+            "PrivateIpAddress": "10.1.2.10"
+          }
+        ],
+        "Groups": [
+          {
+            "GroupId": "sg-aaaaaaaa"
+          }
+        ],
+        "Attachment": {
+          "InstanceId": "i-bbbbbbbb",
+          "DeviceIndex": 0
+        },
+        "Status": "in-use",
+        "InterfaceType": "interface",
+        "RequesterManaged": false
+      }
+    ]
+  }
+}

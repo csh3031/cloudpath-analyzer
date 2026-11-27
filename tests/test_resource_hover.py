@@ -20,7 +20,10 @@ def test_hover_policy_counts_only():
     r = InfrastructureResource('aws_security_group.a', 'aws', 'security', 'security_group', 'a', {
         'ingress': [{'description': 'DO_NOT_EXPORT', 'from_port': 443}], 'egress': [], 'observed_state': 'DO_NOT_EXPORT',
     })
-    assert build_resource_display([r])[r.id] == {'ingress_inline_count': 1, 'egress_inline_count': 0}
+    d=build_resource_display([r])[r.id]
+    assert d['ingress_inline_count']==1 and d['egress_inline_count']==0
+    assert 'DO_NOT_EXPORT' not in json.dumps(d)
+    assert d['policy_details']['sections']['ingress']['rows'][0]['fields']=={'from_port':443}
 
 
 def test_aws_hover_metadata_in_rendered_page():

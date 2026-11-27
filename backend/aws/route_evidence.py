@@ -69,6 +69,32 @@ def lookup_observed_route(raw: bytes, source_subnet_id: str, destination_ip: str
     if source_net.overlaps(dest_net):
         return unknown('OVERLAPPING_SUBNETS')
 
+    selection = select_subnet_ipv4_route(inventory, source_subnet_id, dst)
+    result.update({key: selection[key] for key in ('route_table_id', 'association_type', 'selected_route')})
+    if selection['status'] != 'ACTIVE_ROUTE_CANDIDATE':
+        return finish(selection['status'], selection['reason'])
+    route = selection['selected_route']
+    targets = [k for k in ('GatewayId', 'NatGatewayId', 'TransitGatewayId',
+        'VpcPeeringConnectionId', 'NetworkInterfaceId', 'InstanceId',
+        'EgressOnlyInternetGatewayId', 'LocalGatewayId', 'CarrierGatewayId',
+        'CoreNetworkArn', 'VpcEndpointId') if k in route]
+    if targets != ['GatewayId'] or route['GatewayId'] != 'local':
+        return unknown('SELECTED_ROUTE_TARGET_OUT_OF_SCOPE')
+    if IPv4Network(route['DestinationCidrBlock']) != primary:
+        return unknown('LOCAL_ROUTE_CIDR_NOT_PRIMARY_VPC')
+    return finish('LOCAL_CANDIDATE', 'OBSERVED_ACTIVE_LOCAL_ROUTE')
+
+
+def select_subnet_ipv4_route(inventory, source_subnet_id, dst):
+    """Shared selection only; caller verifies scope, endpoint and target semantics."""
+    result = dict(route_table_id=None, association_type=None, selected_route=None)
+
+    def finish(status, reason):
+        return dict(result, status=status, reason=reason)
+
+    def unknown(reason):
+        return finish('UNKNOWN', reason)
+
     # Preserve non-associated records as uncertainty rather than dropping them
     # and silently falling back to a main table.
     explicit, main = [], []
@@ -120,12 +146,4 @@ def lookup_observed_route(raw: bytes, source_subnet_id: str, destination_ip: str
         return finish('BLOCKED', 'SELECTED_ROUTE_BLACKHOLE')
     if route.get('State') != 'active':
         return unknown('SELECTED_ROUTE_STATE_UNCONFIRMED')
-    targets = [k for k in ('GatewayId', 'NatGatewayId', 'TransitGatewayId',
-        'VpcPeeringConnectionId', 'NetworkInterfaceId', 'InstanceId',
-        'EgressOnlyInternetGatewayId', 'LocalGatewayId', 'CarrierGatewayId',
-        'CoreNetworkArn', 'VpcEndpointId') if k in route]
-    if targets != ['GatewayId'] or route['GatewayId'] != 'local':
-        return unknown('SELECTED_ROUTE_TARGET_OUT_OF_SCOPE')
-    if IPv4Network(route['DestinationCidrBlock']) != primary:
-        return unknown('LOCAL_ROUTE_CIDR_NOT_PRIMARY_VPC')
-    return finish('LOCAL_CANDIDATE', 'OBSERVED_ACTIVE_LOCAL_ROUTE')
+    return finish('ACTIVE_ROUTE_CANDIDATE', 'OBSERVED_ACTIVE_ROUTE')
