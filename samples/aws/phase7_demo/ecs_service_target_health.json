@@ -1,0 +1,36 @@
+{
+  "format": "cloudpath-elb-target-health-v1",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "complete": true,
+  "elbv2_input_identity": "sha256-elbv2-v1:004159cef5756997edd29446f0e82e8e5f983eec72b587a6b39d4c8e1314c122",
+  "target_groups": [
+    {
+      "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-api/7777777777777777",
+      "TargetHealthDescriptions": [
+        {
+          "Target": {
+            "Id": "10.0.1.60",
+            "Port": 8081
+          },
+          "TargetHealth": {
+            "State": "healthy"
+          }
+        }
+      ]
+    },
+    {
+      "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-net/6666666666666666",
+      "TargetHealthDescriptions": [
+        {
+          "Target": {
+            "Id": "10.0.2.60",
+            "Port": 8080
+          },
+          "TargetHealth": {
+            "State": "healthy"
+          }
+        }
+      ]
+    }
+  ]
+}

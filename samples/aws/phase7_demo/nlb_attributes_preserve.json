@@ -1,0 +1,29 @@
+{
+  "format": "cloudpath-nlb-attributes-v1",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "elbv2_input_identity": "sha256-elbv2-v1:3862b12df12f9fd63b0ee778ed52d65b516a70f50159bdd82a990e57691ee3f8",
+  "LoadBalancerArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:loadbalancer/net/demo-net/2222222222222222",
+  "ListenerArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:listener/net/demo-net/2222222222222222/4444444444444444",
+  "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-net/6666666666666666",
+  "default_only_asserted": true,
+  "LoadBalancerAttributes": [
+    {
+      "Key": "load_balancing.cross_zone.enabled",
+      "Value": "false"
+    }
+  ],
+  "TargetGroupAttributes": [
+    {
+      "Key": "preserve_client_ip.enabled",
+      "Value": "true"
+    },
+    {
+      "Key": "load_balancing.cross_zone.enabled",
+      "Value": "use_load_balancer_configuration"
+    },
+    {
+      "Key": "proxy_protocol_v2.enabled",
+      "Value": "false"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "format": "cloudpath-elb-path-v1",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "elbv2_input_identity": "sha256-elbv2-v1:cac211353cfe907ec1a5b07510f179f1096458b9d7665a42ad4e8a094e09eca8",
+  "complete": true,
+  "load_balancer_arn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:loadbalancer/app/demo-app/1111111111111111",
+  "security_group_ids": [
+    "sg-12345678"
+  ],
+  "health_checks": [
+    {
+      "target_group_arn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-app/5555555555555555",
+      "enabled": true,
+      "protocol": "HTTP",
+      "port": 443,
+      "path": "/health"
+    },
+    {
+      "target_group_arn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-api/7777777777777777",
+      "enabled": true,
+      "protocol": "HTTP",
+      "port": 443,
+      "path": "/health"
+    }
+  ]
+}

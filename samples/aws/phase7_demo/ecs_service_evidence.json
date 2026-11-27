@@ -1,0 +1,44 @@
+{
+  "format": "cloudpath-ecs-service-evidence-v1",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "complete": true,
+  "ecs_input_identity": "sha256-ecs-task-v1:ad2ec6584d8ec39cf9f5214564586062b0e00211250bff5056ce0ef27560a89c",
+  "services": [
+    {
+      "serviceArn": "arn:aws:ecs:ap-northeast-2:000000000000:service/demo/demo-api",
+      "serviceName": "demo-api",
+      "clusterArn": "arn:aws:ecs:ap-northeast-2:000000000000:cluster/demo",
+      "status": "ACTIVE",
+      "deploymentController": {
+        "type": "ECS"
+      },
+      "schedulingStrategy": "REPLICA",
+      "taskDefinition": "arn:aws:ecs:ap-northeast-2:000000000000:task-definition/demo-fargate:1",
+      "loadBalancers": [
+        {
+          "targetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-api/7777777777777777",
+          "containerName": "app",
+          "containerPort": 8081
+        }
+      ]
+    },
+    {
+      "serviceArn": "arn:aws:ecs:ap-northeast-2:000000000000:service/demo/demo-tcp",
+      "serviceName": "demo-tcp",
+      "clusterArn": "arn:aws:ecs:ap-northeast-2:000000000000:cluster/demo",
+      "status": "ACTIVE",
+      "deploymentController": {
+        "type": "ECS"
+      },
+      "schedulingStrategy": "REPLICA",
+      "taskDefinition": "arn:aws:ecs:ap-northeast-2:000000000000:task-definition/demo-ec2:1",
+      "loadBalancers": [
+        {
+          "targetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-net/6666666666666666",
+          "containerName": "app",
+          "containerPort": 8080
+        }
+      ]
+    }
+  ]
+}

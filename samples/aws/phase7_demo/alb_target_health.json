@@ -1,0 +1,56 @@
+{
+  "format": "cloudpath-elb-target-health-v1",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "elbv2_input_identity": "sha256-elbv2-v1:cac211353cfe907ec1a5b07510f179f1096458b9d7665a42ad4e8a094e09eca8",
+  "complete": true,
+  "target_groups": [
+    {
+      "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-app/5555555555555555",
+      "TargetHealthDescriptions": [
+        {
+          "Target": {
+            "Id": "i-87654321",
+            "Port": 8080
+          },
+          "TargetHealth": {
+            "State": "healthy"
+          }
+        },
+        {
+          "Target": {
+            "Id": "i-12345678",
+            "Port": 8090
+          },
+          "TargetHealth": {
+            "State": "unhealthy",
+            "Reason": "Target.FailedHealthChecks"
+          }
+        }
+      ]
+    },
+    {
+      "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-2:000000000000:targetgroup/demo-api/7777777777777777",
+      "TargetHealthDescriptions": [
+        {
+          "Target": {
+            "Id": "i-87654321",
+            "Port": 8081
+          },
+          "TargetHealth": {
+            "State": "healthy"
+          }
+        },
+        {
+          "Target": {
+            "Id": "i-12345678",
+            "Port": 8091
+          },
+          "TargetHealth": {
+            "State": "unhealthy",
+            "Reason": "Target.FailedHealthChecks"
+          }
+        }
+      ]
+    }
+  ]
+}

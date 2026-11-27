@@ -1,0 +1,74 @@
+{
+  "format": "cloudpath-ecs-task-evidence-v1",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "tasks": [
+    {
+      "taskArn": "arn:aws:ecs:ap-northeast-2:000000000000:task/demo/11111111111111111111111111111111",
+      "clusterArn": "arn:aws:ecs:ap-northeast-2:000000000000:cluster/demo",
+      "taskDefinitionArn": "arn:aws:ecs:ap-northeast-2:000000000000:task-definition/demo-fargate:1",
+      "launchType": "FARGATE",
+      "lastStatus": "RUNNING",
+      "desiredStatus": "RUNNING",
+      "availabilityZone": "ap-northeast-2a",
+      "attachments": [
+        {
+          "type": "ElasticNetworkInterface",
+          "status": "ATTACHED",
+          "details": [
+            {
+              "name": "networkInterfaceId",
+              "value": "eni-33333333"
+            },
+            {
+              "name": "subnetId",
+              "value": "subnet-12345678"
+            },
+            {
+              "name": "privateIPv4Address",
+              "value": "10.0.1.60"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskArn": "arn:aws:ecs:ap-northeast-2:000000000000:task/demo/22222222222222222222222222222222",
+      "clusterArn": "arn:aws:ecs:ap-northeast-2:000000000000:cluster/demo",
+      "taskDefinitionArn": "arn:aws:ecs:ap-northeast-2:000000000000:task-definition/demo-ec2:1",
+      "launchType": "EC2",
+      "lastStatus": "RUNNING",
+      "desiredStatus": "RUNNING",
+      "availabilityZone": "ap-northeast-2c",
+      "attachments": [
+        {
+          "type": "ElasticNetworkInterface",
+          "status": "ATTACHED",
+          "details": [
+            {
+              "name": "networkInterfaceId",
+              "value": "eni-44444444"
+            },
+            {
+              "name": "subnetId",
+              "value": "subnet-87654321"
+            },
+            {
+              "name": "privateIPv4Address",
+              "value": "10.0.2.60"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "taskDefinitions": [
+    {
+      "taskDefinitionArn": "arn:aws:ecs:ap-northeast-2:000000000000:task-definition/demo-fargate:1",
+      "networkMode": "awsvpc"
+    },
+    {
+      "taskDefinitionArn": "arn:aws:ecs:ap-northeast-2:000000000000:task-definition/demo-ec2:1",
+      "networkMode": "awsvpc"
+    }
+  ]
+}
