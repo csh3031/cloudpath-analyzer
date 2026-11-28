@@ -4,6 +4,7 @@ No IaC fallback, implicit local route, packet transmission or session verdict.
 """
 from ipaddress import IPv4Address, IPv4Network
 
+from backend.aws.local_delivery_evidence import same_subnet_delivery
 from backend.aws.endpoint_evidence import lookup_observed_endpoint
 from backend.aws.route_evidence import lookup_observed_route
 from backend.aws.snapshot import load_aws_snapshot, sanitize_inventory
@@ -61,7 +62,12 @@ def trace_observed_forwarding(raw: bytes, source_ip: str, destination_ip: str) -
         if start['eni_id'] == end['eni_id'] or start['private_ip'] == end['private_ip']:
             return finish('UNKNOWN', 'SAME_ENDPOINT_NOT_IN_SCOPE')
         if start['subnet_id'] == end['subnet_id']:
-            return finish('UNKNOWN', 'SAME_SUBNET_FORWARDING_NOT_IN_SCOPE')
+            local=same_subnet_delivery(inv,start,end)
+            result['local_delivery']=local
+            if local['status']!='ALLOW_CANDIDATE': return finish('UNKNOWN',local['reason'])
+            add('SAME_SUBNET_DIRECT',start['subnet_id'],conditional_delivery=True)
+            add('DESTINATION_ENDPOINT',end['eni_id'],ip=end['private_ip'],subnet_id=end['subnet_id'],instance_id=end['instance_id'])
+            return finish('FORWARDING_CANDIDATE',local['reason'])
         route = lookup_observed_route(raw, start['subnet_id'], end['private_ip'])
         result['route_lookup'] = route
         table_id = route['route_table_id']
@@ -96,6 +102,6 @@ def trace_observed_forwarding(raw: bytes, source_ip: str, destination_ip: str) -
                     'Candidate paths are not observed packets or session success.',
                     'Response is a hypothetical independent reverse-path lookup, not a transmitted reply.',
                     'SG, NACL, protocol/ports and host firewall/application state are not evaluated.',
-                    'Cross-subnet primary private IPv4 EC2 only; same-subnet and propagated routing are out of scope.',
+                    'Primary private IPv4 EC2; same-subnet direct delivery conditional on normal local configuration; propagated and middlebox routing unresolved.',
                     'Uploaded sequential inventory is unauthenticated; freshness, completeness and atomicity are not established.',
                 ])

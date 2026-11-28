@@ -1,0 +1,186 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CloudPath · VPC Endpoint Analysis</title><style>
+:root{color-scheme:light;--ink:#172c41;--muted:#52657a;--line:#d0dbe5;--teal:#087f72;--red:#b42318;--amber:#97620b;--bg:#f3f6fa}*{box-sizing:border-box}body{margin:0;font:14px/1.55 system-ui,sans-serif;color:var(--ink);background:var(--bg)}header{background:#10283e;color:white;padding:18px 30px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}header a{color:#bfe9ef;text-decoration:none;margin-left:16px}header h1{font-size:20px;margin:0}main{max-width:1320px;margin:auto;padding:20px}section{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px}h2{font-size:17px;margin:0 0 12px}h3{font-size:14px;margin:8px 0}p{margin:6px 0}.muted{color:var(--muted);font-size:12px}.fields,.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:12px;margin:12px 0}label{display:flex;flex-direction:column;gap:5px;font-weight:600}input,select,button{font:inherit;padding:9px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);min-width:0}input[type=file]{width:100%;font-size:12px}.primary{background:#087f72;color:white;border-color:#087f72;font-weight:600}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}.drop{border:1px dashed #9cb4c5;padding:10px;border-radius:8px}.over{background:#e1f5ef}button+button{margin-left:6px}.card,.stage{border:1px solid var(--line);border-radius:8px;padding:12px;overflow-wrap:anywhere}.good{border-left:4px solid var(--teal)}.blocked{border-left:4px solid var(--red);background:#fff7f6}.unknown{border-left:4px solid var(--amber);background:#fffbef}.independent{border-style:dashed}.inactive{color:var(--muted)}.arrow{color:var(--teal);font-weight:bold;text-align:center;font-size:22px;line-height:24px}.arrow.response{color:var(--amber)}.endpoint{background:#eaf0f7;font-weight:600;padding:12px;border-radius:8px;overflow-wrap:anywhere}.flow{max-width:780px;margin:auto}.status{font-weight:700;overflow-wrap:anywhere}#diagnosis-summary .card,#path-diagnosis .card{margin:8px 0}#diagnosis-summary ul,#path-diagnosis ul{margin:5px 0;padding-left:22px}.note{background:#eaf0f7;padding:10px;border-radius:6px}.error{color:var(--red)}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:480px;overflow:auto;font-size:12px;background:#f3f6fa;padding:10px;border-radius:6px}summary{cursor:pointer}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.toolbar label{flex:1;min-width:180px}.badge{font-size:12px;color:var(--muted)}[hidden]{display:none!important}@media(max-width:600px){main{padding:10px}header{padding:15px}section{padding:12px}}
+</style></head><body><header><h1>CloudPath Analyzer <span class="badge" style="color:#c0d5e4">/ VPC Endpoint</span></h1><nav><a href="/">Topology</a><a href="/rds">RDS</a><a href="/workloads">ECS / EKS</a><a href="/elb">ALB / NLB</a><a href="/peering">Peering</a><a href="/tgw">TGW</a></nav></header><main>
+<section><h2>01 · 분석 대상 및 증거 입력</h2><p class="note">VPC Endpoint / AWS / Kubernetes 스냅샷 전용 진단 화면 · 배포 전 Terraform 가상 분석은 기존 Topology에서 이용합니다. 이 페이지는 실제 패킷 전송, AWS API 호출, 실제 대상 선택을 수행하지 않습니다. 네트워크 후보와 Endpoint Policy·IAM·TLS·API 성공은 별개입니다.</p><label>분석 모드<select id="mode"></select></label><p class="muted">예제 경로: samples/aws/phase7_demo/ · 표시된 시나리오 값은 합성 데이터 예시입니다. 실제 분석은 입력 증거와 일치하도록 수정하세요.</p><div id="files" class="fields"></div><div id="params" class="fields"></div><button class="primary" id="run">분석 실행</button><button id="clear">파일 초기화</button><p id="status" role="status" aria-live="polite"></p><p class="muted">JSON 파일 선택 또는 드래그앤드롭 · 전체 5 MiB 이하 · 기존 Topology 입력 유지</p></section>
+<div id="output" hidden><section><h2>02 · 결과 요약 및 구성 관계</h2><div id="summary" class="cards"></div><div id="diagnosis-summary" aria-live="polite"></div><p class="muted">아래 리소스 및 등록 관계는 입력 증거에서 확인된 구성 후보이며 실제 전달 경로가 아닙니다.</p><div id="relations" class="cards"></div></section>
+<section id="paths" hidden><h2>03 · Packet Trace / 구간별 제약 검사</h2><div class="toolbar"><label>검사 구간<select id="leg"></select></label><label>방향<select id="direction"><option value="request">요청</option><option value="response">조건부 응답</option></select></label></div><p id="path-note" class="note"></p><div id="path-diagnosis" aria-live="polite"></div><div id="diagram" class="flow"></div></section>
+<section id="observations" hidden><h2>04 · DNS 및 경로 선택 근거</h2><p class="note">제출된 DNS 및 선택 경로 근거입니다. 대체 경로는 선택 후보일 뿐 전체 통신은 미평가입니다.</p><div id="comparisons" class="cards"></div></section>
+<section><h2>분석 근거 / 제한 사항</h2><ul id="limitations"></ul><details><summary>전체 결과 JSON</summary><pre id="raw"></pre></details><button id="save">결과 JSON 저장</button></section></div></main>
+<script>
+'use strict';const $=id=>document.getElementById(id),configs={"interface": {"label": "Interface · 구성 조회", "files": ["inventory", "endpoints"], "optional": [], "params": {"endpoint_id": "vpce-11111111"}, "samples": {"inventory": "vpc_endpoint_inventory.json", "endpoints": "vpc_endpoint_configuration.json"}}, "interface_ec2": {"label": "EC2 → Interface · TCP 443", "files": ["inventory", "endpoints"], "optional": ["observation", "prefix_list"], "params": {"endpoint_id": "vpce-11111111", "source_port": 50000, "client_ip": "10.0.1.10"}, "samples": {"inventory": "interface_path_ecs_inventory.json", "endpoints": "interface_path_ecs_configuration.json", "observation": "interface_path_ec2_observation.json"}}, "interface_ecs": {"label": "ECS → Interface · TCP 443", "files": ["inventory", "endpoints", "ecs"], "optional": ["observation", "prefix_list"], "params": {"endpoint_id": "vpce-11111111", "source_port": 50000, "task_id": "22222222222222222222222222222222"}, "samples": {"inventory": "interface_path_ecs_inventory.json", "endpoints": "interface_path_ecs_configuration.json", "observation": "interface_path_ecs_observation.json", "ecs": "ecs_task_evidence.json"}}, "interface_eks": {"label": "EKS → Interface · TCP 443", "files": ["inventory", "endpoints", "eks", "policy"], "optional": ["observation", "prefix_list"], "params": {"endpoint_id": "vpce-11111111", "source_port": 50000, "namespace": "demo", "pod_name": "app-2"}, "samples": {"inventory": "interface_path_eks_inventory.json", "endpoints": "interface_path_eks_configuration.json", "observation": "interface_path_eks_observation.json", "eks": "interface_path_eks_pods.json", "policy": "interface_path_eks_policy.json"}}, "gateway": {"label": "Gateway · 구성 조회", "files": ["inventory", "endpoints"], "optional": [], "params": {"endpoint_id": "vpce-22222222"}, "samples": {"inventory": "vpc_endpoint_inventory.json", "endpoints": "vpc_endpoint_configuration.json"}}, "gateway_ec2": {"label": "EC2 → Gateway · TCP 443", "files": ["inventory", "endpoints"], "optional": ["observation", "prefix_list"], "params": {"endpoint_id": "vpce-22222222", "source_port": 50000, "client_ip": "10.0.1.10"}, "samples": {"inventory": "gateway_path_ecs_inventory.json", "endpoints": "gateway_path_ecs_configuration.json", "observation": "gateway_path_ec2_observation.json", "prefix_list": "gateway_path_ecs_prefix_lists.json"}}, "gateway_ecs": {"label": "ECS → Gateway · TCP 443", "files": ["inventory", "endpoints", "ecs"], "optional": ["observation", "prefix_list"], "params": {"endpoint_id": "vpce-22222222", "source_port": 50000, "task_id": "22222222222222222222222222222222"}, "samples": {"inventory": "gateway_path_ecs_inventory.json", "endpoints": "gateway_path_ecs_configuration.json", "observation": "gateway_path_ecs_observation.json", "ecs": "ecs_task_evidence.json", "prefix_list": "gateway_path_ecs_prefix_lists.json"}}, "gateway_eks": {"label": "EKS → Gateway · TCP 443", "files": ["inventory", "endpoints", "eks", "policy"], "optional": ["observation", "prefix_list"], "params": {"endpoint_id": "vpce-22222222", "source_port": 50000, "namespace": "demo", "pod_name": "app-2"}, "samples": {"inventory": "gateway_path_eks_inventory.json", "endpoints": "gateway_path_eks_configuration.json", "observation": "gateway_path_eks_observation.json", "eks": "gateway_path_eks_pods.json", "policy": "gateway_path_eks_policy.json", "prefix_list": "gateway_path_eks_prefix_lists.json"}}},ports=new Set(["source_port"]),MAX=5*1024*1024;let version=0,current=null,legs=[];
+function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(cls)n.className=cls;return n;}
+function option(v,t){const n=el('option',t);n.value=v;return n;}
+function reset(){version++;current=null;legs=[];$('output').hidden=true;$('status').textContent='';$('status').className='';$('run').disabled=false;}
+function err(s){$('status').textContent=s;$('status').className='error';}
+function fileLabel(role){return ({inventory:'AWS Inventory',endpoints:'VPC Endpoint 구성',ecs:'ECS Task 증거',eks:'EKS Pod 증거',policy:'NetworkPolicy',observation:'DNS · 경로 증거',prefix_list:'Prefix List 증거'})[role]||role;}
+function setup(){reset();const c=configs[$('mode').value];$('files').replaceChildren();$('params').replaceChildren();for(const role of [...c.files,...c.optional]){const wrap=el('label',fileLabel(role)+(c.optional.includes(role)?' (선택)':''),'drop');const f=el('input');f.type='file';f.accept='.json,application/json';f.id='file_'+role;f.onchange=reset;wrap.append(f,el('span',c.samples[role]||'선택적 Prefix List 증거 (Gateway 분석에는 필요)','muted'));wrap.ondragover=e=>{e.preventDefault();wrap.classList.add('over');};wrap.ondragleave=()=>wrap.classList.remove('over');wrap.ondrop=e=>{e.preventDefault();wrap.classList.remove('over');reset();if(e.dataTransfer.files.length!==1||!e.dataTransfer.files[0].name.endsWith('.json')){f.value='';err('한 영역에 JSON 파일 하나를 선택하세요.');return;}f.files=e.dataTransfer.files;};$('files').append(wrap);}for(const [k,v] of Object.entries(c.params)){const l=el('label',k.replaceAll('_',' '));const n=el(k==='endpoint_kind'?'select':'input');n.id='param_'+k;if(k==='endpoint_kind'){for(const v of ['INSTANCE','WRITER','READER'])n.append(option(v,v));}else n.type=ports.has(k)?'number':'text';if(ports.has(k)){n.min=1;n.max=65535;}n.value=v;n.oninput=reset;n.onchange=reset;l.append(n);$('params').append(l);}if($('mode').value.includes('_'))$('params').append(el('p','DNS 증거가 없으면 미확정입니다. Gateway는 AWS-managed Prefix List 증거가 필요합니다.','muted'));}
+
+for(const [k,c] of Object.entries(configs))$('mode').append(option(k,c.label));$('mode').onchange=setup;setup();$('clear').onclick=()=>{for(const f of $('files').querySelectorAll('input'))f.value='';reset();};for(const e of ['dragover','drop'])document.addEventListener(e,x=>{if(x.dataTransfer&&Array.from(x.dataTransfer.types).includes('Files'))x.preventDefault();});
+function b64(f){return new Promise((resolve,reject)=>{const r=new FileReader();r.onerror=()=>reject(Error('파일 읽기 실패'));r.onload=()=>resolve({name:f.name,content_base64:String(r.result).split(',')[1]});r.readAsDataURL(f);});}
+$('run').onclick=async()=>{reset();const ticket=version,mode=$('mode').value,c=configs[mode];try{const fs=[...c.files,...c.optional].map(k=>[k,$('file_'+k).files[0]]);if(fs.some(([k,f])=>c.files.includes(k)&&!f)||fs.some(([k,f])=>f&&!f.name.endsWith('.json'))||fs.reduce((s,[k,f])=>s+(f?.size||0),0)>MAX)throw Error('필수 JSON 역할 및 총 5 MiB 제한을 확인하세요.');const params=Object.fromEntries(Object.keys(c.params).map(k=>[k,ports.has(k)?Number($('param_'+k).value):$('param_'+k).value.trim()]));if(Object.entries(params).some(([k,v])=>ports.has(k)?!Number.isInteger(v)||v<1||v>65535:!v))throw Error('시나리오 값을 확인하세요.');$('run').disabled=true;$('status').textContent='분석 중';const ctx=await fetch('/api/context',{cache:'no-store'});if(!ctx.ok)throw Error('서버 연결 실패');const context=await ctx.json();const files=Object.fromEntries(await Promise.all(fs.filter(([k,f])=>f).map(async([k,f])=>[k,await b64(f)])));if(ticket!==version)return;const res=await fetch('/api/aws-endpoint',{method:'POST',headers:{'Content-Type':'application/json','X-CloudPath-Token':context.token},body:JSON.stringify({input_identity:context.input_identity,mode,files,params})});if(!res.ok)throw Error('입력 증거 또는 시나리오 검증 실패 ('+res.status+'). 파일 역할과 값을 확인하세요.');const p=await res.json();if(ticket!==version)return;current=p.result;render();$('output').hidden=false;$('status').textContent='분석 완료 · 실제 통신 미검증';}catch(e){if(ticket===version)err(e.message);}finally{if(ticket===version)$('run').disabled=false;}};
+function cls(s){return s==='BLOCKED'||String(s).includes('BLOCK_CANDIDATE')||String(s).includes('DISCREPANCY')?'blocked':s==='UNKNOWN'||String(s).includes('UNRESOLVED')?'unknown':String(s).includes('CANDIDATE')?'good':'';}
+function card(title,lines,status){const n=el('div',undefined,'card '+cls(status));n.append(el('h3',title));for(const l of lines.filter(x=>x!==undefined&&x!==null&&x!==''))n.append(el('p',l));return n;}
+function endpoint(title,ep,extra=[]){if(!ep)return;const e=ep.endpoint||ep;if(!e.private_ip&&!e.ip&&!e.eni_id)return;$('relations').append(card(title,[e.kind,e.private_ip||e.ip,e.eni_id,e.subnet_id,e.availability_zone,e.hostname,...(e.security_group_ids||e.eni_security_group_ids||[]),...extra]));}
+function epText(e,port){const v=e?.endpoint||e;const ip=v?.private_ip||v?.ip;return ip?`${ip}${port?':'+port:''}`:'Endpoint 미확인';}
+function cfgCards(c){if(!c)return;const rel=$('relations');rel.append(card('Endpoint · '+c.endpoint_id,[c.endpoint_type,c.service_name,c.vpc_id,c.region,c.private_dns_enabled==null?null:'Private DNS 구성: '+c.private_dns_enabled,c.endpoint_policy_present==null?null:'Endpoint Policy 존재: '+c.endpoint_policy_present,'정책 허용 여부 미평가'],c.status));
+if(c.status==='UNKNOWN')rel.append(card('구성 미확정',[explainReason(c)],'UNKNOWN'));
+for(const e of c.network_interfaces||[])endpoint('Interface ENI · 구성 후보',e);
+for(const n of c.dns_entries||[])rel.append(card('DNS 이름 · 구성 후보',[n,'실제 DNS 선택 미검증']));
+for(const t of c.route_tables||[])rel.append(card('Gateway Route Table · 구성 후보',[t.route_table_id,t.destination_prefix_list_id,'Target: '+t.target_endpoint_id,'Prefix List IP 일치 미평가']));}
+function evidenceCards(r){const root=$('comparisons');root.replaceChildren();const d=r.dns_evidence;if(d)root.append(card('DNS 증거',[d.status,d.hostname,d.ip,d.eni_id,d.prefix_list_id,d.resolved_at,d.ttl_seconds==null?null:'TTL: '+d.ttl_seconds+'초','실제 DNS 조회 미수행'],d.status));
+const p=r.prefix_list_evidence;if(p){root.append(card('Prefix List 수집 증거',[p.status,p.reason,p.input_identity],p.status));for(const l of p.lists||[])root.append(card('Prefix List · '+l.id,[l.kind,l.name,l.status,l.reason,l.version==null?'버전 미제공':'Version: '+l.version],l.status));}
+const q=r.route_selection;if(q){const t=q.selected_route||{};const target=Object.entries(t).filter(([k])=>['GatewayId','VpcEndpointId','NatGatewayId','TransitGatewayId','VpcPeeringConnectionId','NetworkInterfaceId','InstanceId','EgressOnlyInternetGatewayId','LocalGatewayId','CarrierGatewayId','CoreNetworkArn'].includes(k)).map(([k,v])=>k+': '+v);root.append(card('선택 경로 후보',[q.status,explainReason(q),q.route_table_id,q.association_type,q.matched_cidr?'일치 CIDR: '+q.matched_cidr:null,t.DestinationPrefixListId,t.DestinationCidrBlock,...target,q.selected_route?'선택 근거: 가장 구체적인 CIDR 및 지원되는 경로 우선순위. 전체 대체 경로 미평가.':'경로 선택 미확정'],q.status));}
+$('observations').hidden=!root.childElementCount;}
+function render(){const r=current,s=$('summary'),rel=$('relations');s.replaceChildren();rel.replaceChildren();legs=[];for(const k of ['status','reason','request_status','response_status','session_status','authorization_status','endpoint_policy_status','tls_status','path_kind'])if(r[k]!=null)s.append(card(k,[r[k]],r[k]));s.append(card('실제 관측 여부',['false · 정적 구성 분석','Endpoint Policy · IAM · TLS · API 성공 미검증']));cfgCards(r.endpoint_configuration||r);if(r.endpoint_configuration){endpoint('출발지 후보',r.source_endpoint);endpoint(r.destination_endpoint?.kind==='AWS_SERVICE_IPV4'?'AWS 서비스 논리 주소 · ENI 없음':'Interface ENI · DNS 대조 후보',r.destination_endpoint);legs.push({label:'Endpoint TCP',f:r,reason:r.reason,src:epText(r.source_endpoint,r.scenario?.source_port),dst:epText(r.destination_endpoint,r.scenario?.destination_port)});}
+$('paths').hidden=!legs.length;$('leg').replaceChildren(...legs.map((l,i)=>option(String(i),l.label)));$('direction').value='request';renderDiagnostics(r);renderPath();evidenceCards(r);$('limitations').replaceChildren(...[...new Set([...(r.limitations||[]),...(r.endpoint_configuration?.limitations||[])])].map(l=>el('li',l)));$('raw').textContent=JSON.stringify(r,null,2);}
+// BEGIN LOCAL_DIAGNOSTICS (pure presentation; no change to engine verdicts)
+const stageLabels={ENDPOINT_SCOPE:'Endpoint 증거 및 지원 범위',GATEWAY_ROUTE:'Gateway Route Table 경로 선택',GATEWAY_RETURN:'Gateway 서비스 조건부 응답',SOURCE_NETWORK_POLICY_EGRESS:'출발지 NetworkPolicy Egress',DESTINATION_NETWORK_POLICY_INGRESS:'목적지 NetworkPolicy Ingress',SOURCE_SG_EGRESS:'출발지 Security Group Egress',DESTINATION_SG_INGRESS:'목적지 Security Group Ingress',SOURCE_NACL_EGRESS:'출발지 NACL Egress',DESTINATION_NACL_INGRESS:'목적지 NACL Ingress',LOCAL_ROUTE:'VPC Local Route',LOCAL_DELIVERY:'로컬 전달'};
+const reasonLabels={
+"ENDPOINT_DNS_ENI_MISMATCH":"DNS 응답 주소와 Endpoint ENI의 주소가 일치하지 않습니다.",
+"ENDPOINT_SOURCE_DESTINATION_OVERLAP":"출발지와 목적지 IP 또는 ENI가 중복됩니다.",
+"ENDPOINT_ENI_OWNERSHIP_CONFLICT":"Endpoint ENI의 소유 관계에 충돌이 있습니다.",
+"SUBNET_MISSING_OR_AMBIGUOUS":"IP와 Subnet의 연결을 유일하게 확인할 수 없습니다.",
+"ENDPOINT_SUBNET_ADDRESS_OUT_OF_SCOPE":"Subnet 주소가 지원되는 범위 밖입니다.",
+"GATEWAY_EXTERNAL_SERVICE_ADDRESS_REQUIRED":"외부 서비스 IPv4 주소 조건을 충족하지 않습니다.",
+"ENDPOINT_INVENTORY_SCOPE_MISMATCH":"Endpoint와 Inventory의 리전 또는 입력 식별자가 일치하지 않습니다.",
+"ENDPOINT_EVIDENCE_INCOMPLETE":"Endpoint 구성 증거가 불완전합니다.",
+"ENDPOINT_VPC_OR_REGION_MISMATCH":"Endpoint VPC 또는 리전이 일치하지 않습니다.",
+"ENDPOINT_STATE_UNCONFIRMED":"Endpoint의 available 상태를 확인할 수 없습니다.",
+"ENDPOINT_TYPE_UNSUPPORTED":"지원되지 않는 Endpoint 유형입니다.",
+"ENDPOINT_SERVICE_SCOPE_UNSUPPORTED":"지원되는 동일 리전 AWS 서비스 범위 밖입니다.",
+"ENDPOINT_IPV4_PROFILE_UNCONFIRMED":"지원되는 IPv4 VPC 구성 조건이 확인되지 않습니다.",
+"INTERFACE_RELATIONSHIPS_UNCONFIRMED":"Interface ENI·Subnet·SG 구성 관계가 확인되지 않습니다.",
+"INTERFACE_DNS_CONFIGURATION_UNCONFIRMED":"Interface DNS 구성 정보가 확인되지 않습니다.",
+"INTERFACE_SECURITY_GROUP_UNCONFIRMED":"Interface SG 구성 증거가 확인되지 않습니다.",
+"INTERFACE_ENI_OWNERSHIP_CONFLICT":"Interface ENI 소유 관계가 충돌합니다.",
+"INTERFACE_ENI_UNCONFIRMED":"Interface ENI를 유일하게 확인할 수 없습니다.",
+"INTERFACE_ENI_PROFILE_UNCONFIRMED":"Interface ENI의 지원 프로파일이 확인되지 않습니다.",
+"INTERFACE_ENI_IP_UNCONFIRMED":"Interface ENI의 IPv4 주소가 확인되지 않습니다.",
+"INTERFACE_SUBNET_UNCONFIRMED":"Interface ENI의 Subnet 또는 AZ 관계가 확인되지 않습니다.",
+"INTERFACE_SECURITY_GROUP_CONFLICT":"Endpoint와 ENI의 SG 구성이 일치하지 않습니다.",
+"GATEWAY_RELATIONSHIPS_UNCONFIRMED":"Gateway Endpoint 구성 관계가 확인되지 않습니다.",
+"GATEWAY_ROUTE_TABLE_CONFLICT":"Gateway Endpoint의 Route Table 연결 관계가 충돌합니다.",
+"GATEWAY_ROUTE_UNCONFIRMED":"Gateway Endpoint를 향한 활성 Prefix List 경로가 확인되지 않습니다.",
+"PREFIX_LIST_INVENTORY_IDENTITY_MISMATCH":"Prefix List와 Inventory의 입력 식별자가 일치하지 않습니다.",
+"PREFIX_LIST_REGION_MISMATCH":"Prefix List의 리전이 일치하지 않습니다.",
+"PREFIX_LIST_SNAPSHOT_TIME_GAP":"Prefix List 수집 시점 차이가 허용 범위를 초과합니다.",
+"PREFIX_LIST_PROFILE_UNSUPPORTED":"지원되는 Prefix List 유형 또는 주소 체계가 아닙니다.",
+"PREFIX_LIST_STATE_UNCONFIRMED":"Prefix List 상태가 확인되지 않습니다.",
+"AWS_MANAGED_PREFIX_LIST_IDENTITY_UNCONFIRMED":"AWS 관리형 목록의 소유자·서비스 또는 반복 수집 근거가 확인되지 않습니다.",
+"PREFIX_LIST_VERSION_UNCONFIRMED":"고객 관리형 Prefix List 버전의 일관성이 확인되지 않습니다.",
+"PREFIX_LIST_ENTRIES_INCOMPLETE":"Prefix List의 주소 범위 수집이 불완전합니다.",
+"PREFIX_LIST_CIDRS_INVALID":"Prefix List CIDR 형식 또는 중복 여부를 확인하세요.",
+"PREFIX_LIST_REFERENCE_UNCONFIRMED":"Prefix List 참조 조건을 확인할 수 없습니다.",
+"ROUTE_DESTINATION_UNRESOLVED":"경로의 목적지 범위가 명확하지 않습니다.",
+"INCONSISTENT_ROUTE_ASSOCIATION":"Route Table 연결 관계가 충돌합니다.",
+"UNRESOLVED_ROUTE_ASSOCIATION":"Route Table 연결 관계가 확인되지 않습니다.",
+"ROUTE_ASSOCIATION_NOT_CONFIRMED":"Route Table 연결 상태가 확인되지 않습니다.",
+"LOCAL_ROUTE_CIDR_NOT_PRIMARY_VPC":"local 경로가 기본 VPC CIDR과 일치하지 않습니다.",
+
+"VPC_ENDPOINT_MISSING":"해당 Endpoint ID가 구성 증거에 없습니다.",
+"ENDPOINT_CONFIGURATION_UNCONFIRMED":"Endpoint 구성 관계가 확인되지 않습니다. 구성 및 Inventory 증거를 확인하세요.",
+"ENDPOINT_SOURCE_UNCONFIRMED":"출발지 IP·ENI 연결 증거가 확인되지 않습니다.",
+"INTERFACE_ENDPOINT_REQUIRED":"Interface Endpoint 구성이 필요합니다.",
+"GATEWAY_ENDPOINT_REQUIRED":"Gateway Endpoint 구성이 필요합니다.",
+"ENDPOINT_DNS_ENI_EVIDENCE_MISSING":"Endpoint 전용 DNS 응답과 ENI 연결 증거가 없습니다.",
+"GATEWAY_DNS_EVIDENCE_MISSING":"서비스 DNS 응답 증거가 없습니다.",
+"ENDPOINT_PATH_EVIDENCE_IDENTITY_MISMATCH":"DNS 증거와 Inventory·Endpoint·출발지의 식별자가 일치하지 않습니다.",
+"ENDPOINT_PATH_PROFILE_UNCONFIRMED":"출발지 DNS 관점 또는 직접 IPv4 무변환 조건이 미확정입니다.",
+"GATEWAY_PATH_PROFILE_UNCONFIRMED":"출발지 DNS 관점 또는 서비스 주소에 대한 무변환 조건이 미확정입니다.",
+"ENDPOINT_EXPLICIT_DNS_NAME_UNCONFIRMED":"지원되는 Endpoint 전용 DNS 이름이 아닙니다. 일반 Private DNS는 미지원입니다.",
+"GATEWAY_REGIONAL_DNS_NAME_UNCONFIRMED":"지원되는 리전 서비스 DNS 이름이 확인되지 않습니다.",
+"ENDPOINT_DNS_TIME_SCOPE_UNCONFIRMED":"DNS TTL 또는 수집 시각의 유효 범위가 확인되지 않습니다.",
+"ENDPOINT_DNS_SINGLE_IPV4_UNCONFIRMED":"단일 IPv4 DNS 응답 조건이 확인되지 않습니다.",
+"GATEWAY_SERVICE_PREFIX_LIST_UNCONFIRMED":"해당 AWS 서비스의 관리형 Prefix List 수집 증거를 확인할 수 없습니다.",
+"GATEWAY_DNS_ADDRESS_NOT_IN_SERVICE_PREFIX_LIST":"DNS 응답 IP가 제출된 서비스 Prefix List 범위에 속하지 않습니다.",
+"MATCHING_GATEWAY_ENDPOINT_ROUTE":"선택된 Route Table 경로가 요청된 Gateway Endpoint 및 서비스 Prefix List와 일치합니다.",
+"ALTERNATE_ROUTE_NOT_COMPOSED":"다른 경로가 선택된 후보입니다. NAT/IGW 등 대체 경로 전체 통신은 평가하지 않았습니다.",
+"SELECTED_ROUTE_BLACKHOLE":"선택된 경로가 blackhole 상태입니다.",
+"PREFIX_LIST_ROUTE_EVIDENCE_UNRESOLVED":"경로의 Prefix List 주소 범위를 확인할 증거가 부족합니다.",
+"OVERLAPPING_PREFIX_LIST_ROUTE_PRIORITY_UNCONFIRMED":"중첩된 Prefix List 경로의 AWS 선택 우선순위를 확인할 수 없습니다.",
+"EQUAL_PREFIX_ROUTE_PRIORITY_UNSUPPORTED":"동일 Prefix 길이 경로의 우선순위를 확정할 수 없습니다.",
+"REQUIRES_SERVICE_RETURN_TO_SOURCE":"서비스의 응답 전달을 가정합니다. 서비스 측 경로는 미검증입니다.",
+"MATCHED_INTERFACE_ENDPOINT_ENI_CONFIGURATION":"Interface Endpoint의 ENI·Subnet·SG 구성 관계가 일치합니다.",
+"MATCHED_GATEWAY_ENDPOINT_ROUTE_CONFIGURATION":"Gateway Endpoint와 Route Table·Prefix List ID 연결 관계가 일치합니다.",
+"OBSERVED_ACTIVE_ROUTE":"제공된 구성에서 활성 경로가 선택된 후보입니다.",
+"CONDITIONAL_SAME_SUBNET_DIRECT_DELIVERY":"동일 Subnet 직접 전달 조건을 가정한 후보입니다.",
+"GATEWAY_ROUTE_PROPAGATION_UNCONFIRMED":"전파 경로의 전체 영향이 확인되지 않습니다.",
+"PROPAGATION_UNCONFIRMED":"전파 경로의 영향이 미확정입니다.",
+"PREFIX_LIST_CONTENTS_NOT_COLLECTED":"Prefix List 주소 범위 증거가 없습니다.",
+"SELECTED_ROUTE_STATE_UNCONFIRMED":"선택 경로의 활성 상태가 확인되지 않습니다.",
+"NO_EXPLICIT_MATCHING_ROUTE":"일치하는 명시적 경로가 확인되지 않습니다.",
+"SELECTED_ROUTE_TARGET_OUT_OF_SCOPE":"선택된 경로 대상이 현재 직접 전달 지원 범위 밖입니다.",
+"ROUTE_TABLE_MISSING_OR_AMBIGUOUS":"출발지 Subnet의 Route Table을 유일하게 확인할 수 없습니다.",
+"STATIC_GATEWAY_ROUTE_AND_SOURCE_POLICY_CHECKS":"Gateway 경로 및 출발지 정책의 정적 검사 결과입니다.",
+"STATIC_INTERFACE_ENDPOINT_ENI_ROUTE_AND_POLICY_CHECKS":"Interface ENI 경로 및 정책의 정적 검사 결과입니다.",
+CNI_POLICY_APPLICABILITY_UNCONFIRMED:"출발지 Pod의 CNI 및 NetworkPolicy 적용 조건이 확인되지 않습니다.",
+POLICY_SYNTAX_UNSUPPORTED:"NetworkPolicy 규칙이 현재 지원 범위를 벗어납니다.",
+ ISOLATED_NO_MATCHING_ALLOW:'격리 정책이 적용되지만 해당 통신과 일치하는 허용 규칙이 없습니다. 적용된 정책의 대상 선택자와 통신 상대·포트 조건을 확인하세요.',
+ NO_MATCHING_SG_ALLOW:'해당 통신과 일치하는 Security Group 허용 규칙이 없습니다. 해당 방향의 출발지·목적지 조건 및 프로토콜·포트를 확인하세요.',
+ SG_RULE_UNRESOLVED:'일부 SG 규칙을 해석할 증거가 부족합니다. 참조 SG, Prefix List 및 프로토콜·포트 정보를 확인하세요.',
+ PREFIX_LIST_EVIDENCE_MISSING:'Prefix List 목록 수집 증거가 제공되지 않았습니다.',
+ POLICY_RULE_UNRESOLVED:'NetworkPolicy 규칙을 평가할 정보가 부족하거나 지원 범위 밖입니다.',
+ OBSERVED_ACTIVE_LOCAL_ROUTE:'제공된 스냅샷에서 활성 local 경로가 확인되었습니다.',
+ MATCHING_IPV4_SG_RULE:'IPv4 Security Group 허용 규칙이 일치합니다.',
+ MATCHING_DIRECT_PEER_SG_REFERENCE:'직접 통신의 상대 ENI에 연결된 참조 SG가 일치합니다.',
+ MATCHING_IPV4_PREFIX_LIST_RULE:'제출된 Prefix List 증거의 CIDR과 일치합니다.',
+ ADDITIVE_POLICY_ALLOW_MATCH:'적용되는 NetworkPolicy 중 통신과 일치하는 허용 규칙이 있습니다.',
+ NO_POLICY_ISOLATION:'이 방향에 대한 격리 정책이 확인되지 않았습니다.',
+ REPLY_TO_ALLOWED_CONNECTION_ASSUMED:'허용된 요청의 응답이라는 가정 아래 조건부 평가합니다.',
+ REQUIRES_ESTABLISHED_TRACKED_REQUEST:'요청 전달 및 연결 추적이 성립해야 하는 조건부 응답입니다.',
+ DIRECT_SAME_SUBNET_NO_NACL_BOUNDARY:'직접 동일 Subnet 전달 가정에서는 NACL 경계를 통과하지 않습니다.',
+ DIRECT_ON_LINK_DELIVERY_NO_MIDDLEBOX:'중간 장비 없는 동일 Subnet 직접 전달을 가정합니다.',
+ CONDITIONAL_NODE_LOCAL_NO_VPC_BOUNDARY:'지원되는 CNI 프로파일의 Node 내부 직접 전달 가정에서는 VPC 경계 정책이 적용되지 않습니다.',
+ NODE_LOCAL_DIRECT_VETH_ROUTING_ASSUMED:'Node 내부 전달을 가정합니다. 실제 호스트 경로는 확인되지 않았습니다.',
+ SAME_SUBNET_NORMAL_LOCAL_CONFIGURATION_UNCONFIRMED:'정상적인 동일 Subnet 직접 전달 구성을 확인하지 못했습니다.',
+ ACL_ASSOCIATION_MISSING_OR_AMBIGUOUS:'Subnet과 연결된 NACL을 유일하게 확인하지 못했습니다.',
+ ACL_ASSOCIATION_UNCONFIRMED:'NACL 연결 증거가 확인되지 않았습니다.',
+ ACL_RULE_ORDER_UNCONFIRMED:'NACL 규칙 순서를 확인하지 못했습니다.',
+ ACL_FIRST_POSSIBLE_RULE_UNRESOLVED:'먼저 적용될 수 있는 NACL 규칙의 조건이 불명확합니다.',
+ ACL_NO_EXPLICIT_MATCH_OR_DEFAULT:'일치 규칙 또는 기본 규칙을 확인할 수 없습니다.',
+ NLB_PRESERVED_CLIENT_PATH_NOT_COMPOSED:'Client IP 보존 경로는 아직 전체 전달 모델이 지원되지 않습니다.',
+ CROSS_ZONE_ELIGIBILITY_UNCONFIRMED:'Cross-Zone 설정에 따른 대상 적격성을 확인하지 못했습니다.',
+ CROSS_NODE_SUBNET_REQUIRED:'이 Service 변환 시나리오의 Node 배치 조건이 지원 범위 밖입니다.',
+ VPC_CNI_SERVICE_CONTAINER_PORT_MISMATCH:'Service 변환 포트와 컨테이너 포트가 일치하지 않아 현재 CNI 모델로 판정할 수 없습니다.',
+ VPC_CNI_NAMED_PORT_MISMATCH:'Service의 이름 기반 포트 매핑을 확인하지 못했습니다.',
+ TRANSLATION_PROFILE_UNCONFIRMED:'Service 주소 변환의 가정 또는 증거가 확인되지 않았습니다.',
+ BACKEND_LEG_UNRESOLVED:'Backend 경로에 미확정 조건이 남아 있습니다.',
+ DECLARATION_EVENT_MATCH:'선언 정책과 제공된 과거 이벤트가 일치하는 후보입니다. 현재 적용 여부는 미확인입니다.',
+ DECLARATION_EVENT_MISMATCH:'선언 정책과 제공된 과거 이벤트가 불일치하는 후보입니다. 수집 시점과 정책 적용 증거를 확인하세요.',
+ NO_MATCHING_HISTORICAL_EVENT:'일치하는 과거 이벤트가 없어 정책 적용 여부를 판단할 수 없습니다.',
+ CONFLICTING_HISTORICAL_EVENTS:'상충하는 과거 이벤트가 있어 판단할 수 없습니다.',
+ EVIDENCE_IDENTITY_MISMATCH:'증거 파일의 입력 식별자가 일치하지 않습니다.',
+ SNAPSHOT_TIME_GAP:'수집 시각의 차이가 허용 범위를 초과합니다.',
+ EVIDENCE_INCOMPLETE:'제공된 증거의 완전성을 확인하지 못했습니다.'
+};
+function labelStage(s){return Object.hasOwn(stageLabels,s)?stageLabels[s]:String(s||'검사 위치 미확인');}
+function explainReason(x){
+ const code=x?.reason,status=x?.status;
+ if(code==='MATCHING_ACL_RULE')return `NACL ${x.acl_id||'ID 미확인'}의 규칙 ${x.rule_number??'번호 미확인'}이 ${status==='BLOCKED'?'차단':status==='ALLOW_CANDIDATE'?'허용 후보':'미확정'}로 평가되었습니다.`;
+ if(Object.hasOwn(reasonLabels,code))return reasonLabels[code];
+ return `상세 설명이 아직 등록되지 않은 판정입니다 (${code||'사유 코드 없음'}). 원본 검사 근거와 지원 범위를 확인하세요.`;
+}
+function describeStage(x){
+ const ids=[...(Array.isArray(x.group_ids)?x.group_ids:[]),x.group_id,x.eni_id,x.subnet_id,x.acl_id,x.prefix_list_id,...(Array.isArray(x.selected_policies)?x.selected_policies:[])].filter(v=>typeof v==='string'&&v);
+ const evidence=[...new Set(ids)].join(', '); const cidr=x.matched_cidr||x.route_evidence?.matched_cidr;
+ const extra=(x.unresolved_prefix_lists||[]).map(y=>explainReason(y)).join(' ');
+ return explainReason(x)+(evidence?' 관련 대상: '+evidence+'.':'')+(cidr?' 일치 CIDR: '+cidr+'.':'')+(extra?' '+extra:'');
+}
+function legDiagnosis(l,rev){
+ const f=l.f;if(!f)return {status:'UNKNOWN',title:'분석 미확정',body:explainReason({reason:l.reason}),additional:[]};
+ const status=f[rev?'response_status':'request_status']||'UNKNOWN';
+ const rows=f[rev?'response':'request']||[];
+ const stop=f[rev?'conditional_first_response_stop':'first_request_stop'];
+ const hit=stop&&rows.find(x=>x.stage===stop&&x.evaluation_mode!=='INDEPENDENT_CHECK');
+ const additional=rows.filter(x=>x.evaluation_mode==='INDEPENDENT_CHECK'&&['BLOCKED','UNKNOWN'].includes(x.status)).map(x=>`${labelStage(x.stage)} (${x.status==='BLOCKED'?'차단 요인':'미확정'}): ${describeStage(x)}`);
+ if(rev&&f.request_status!=='CONDITIONAL_CANDIDATE')return {status,title:'응답 경로 미평가',body:'요청 전달이 확인되지 않아 응답 경로를 성립한 것으로 평가하지 않습니다. 아래 독립 검사는 실제 도달을 의미하지 않습니다.',additional};
+ if(hit&&['BLOCKED','UNKNOWN'].includes(status))return {status,title:(status==='BLOCKED'?'최초 차단: ':'최초 미확정: ')+labelStage(stop),body:describeStage(hit),additional};
+ if(status==='CONDITIONAL_CANDIDATE')return {status,title:'정적 검사상 차단 요인 없음',body:(rev?'요청 전달 및 연결 추적이 성립한다는 가정에서 ':'입력 구성 및 지원 범위에서 ')+'검사 대상 정책과 전달 조건을 통과할 후보입니다. 실제 TCP 연결, Endpoint Policy, IAM, TLS 및 AWS API 성공은 미검증입니다.',additional};
+ return {status,title:status==='BLOCKED'?'차단 판정 (위치 미확인)':status==='NOT_EVALUATED'?'경로 미평가':'분석 미확정',body:explainReason({reason:l.reason}),additional};
+}
+// END LOCAL_DIAGNOSTICS
+function diagnosisCard(l,rev){const x=legDiagnosis(l,rev);const f=l.f,src=l.src||(f?.source_ip?f.source_ip+':'+f.source_port:null),dst=l.dst||(f?.destination_ip?f.destination_ip+':'+f.destination_port:null);const tuple=src&&dst?(rev?dst+' → '+src:src+' → '+dst):null;const n=card(x.title,[tuple,x.body],x.status);if(x.additional.length){n.append(el('h3','추가 독립 검사 · 실제 도달 아님'));const ul=el('ul');for(const a of x.additional)ul.append(el('li',a));n.append(ul);}return n;}
+function renderDiagnostics(r){const root=$('diagnosis-summary');root.replaceChildren(el('h3','진단 요약 · 정적 구성 기준'));for(const l of legs){const n=diagnosisCard(l,false);n.prepend(el('p',l.label,'muted'));root.append(n);if(l.f?.request_status==='CONDITIONAL_CANDIDATE'&&['BLOCKED','UNKNOWN'].includes(l.f?.response_status)){const reply=diagnosisCard(l,true);reply.prepend(el('p',l.label+' · 조건부 응답','muted'));root.append(reply);}}if(!legs.length)root.append(card(r.status==='UNKNOWN'?'구성 분석 미확정':'구성 관계 검사',[r.status==='UNKNOWN'?explainReason(r):'구성 관계 분석 결과입니다. 통신 성공 또는 차단 여부를 평가한 결과는 아닙니다.'],r.status));for(const c of r.comparisons||[])root.append(card('과거 CNI 증거 · '+labelStage(c.stage),[explainReason(c)],c.status));}
+function renderPath(){const d=$('diagram');d.replaceChildren();const l=legs[Number($('leg').value)];$('path-diagnosis').replaceChildren();if(!l)return;const f=l.f,rev=$('direction').value==='response';$('path-diagnosis').append(diagnosisCard(l,rev));if(!f){$('path-note').textContent='미지원 또는 미확정 · '+(l.reason||'UNKNOWN');return;}const rows=f[rev?'response':'request']||[];let active=(!rev||f.request_status==='CONDITIONAL_CANDIDATE')&&rows.length>0;const src=l.src||(f.source_ip?f.source_ip+':'+f.source_port:'Source 미확인'),dst=l.dst||(f.destination_ip?f.destination_ip+':'+f.destination_port:'Destination 미확인');$('path-note').textContent=(f[rev?'response_status':'request_status']||'UNKNOWN')+' · '+(rev?'응답은 요청 전달 및 연결 추적 가정. ':'조건부 독립 구간. ')+'실제 전달 및 서비스 접근 미검증.';d.append(el('div',rev?dst:src,'endpoint'));const arrow=()=>{const n=el('div',rev?'┊ ↓':'↓','arrow'+(rev?' response':''));n.dataset.path='true';d.append(n);};for(const x of rows){const independent=x.evaluation_mode==='INDEPENDENT_CHECK';if(independent)active=false;const skip=x.status==='NOT_APPLICABLE';if(active&&!skip)arrow();const n=el('div',undefined,'stage '+cls(x.status)+(independent?' independent':'')+(skip?' inactive':''));n.dataset.stage=x.stage;n.dataset.status=x.status;n.dataset.mode=x.evaluation_mode;n.append(el('strong',labelStage(x.stage)),el('p',x.status+' · '+x.reason),el('p',describeStage(x)),el('p',skip?'미적용 · 통과 경로 아님':active?'조건부 경로 검사':'후속 독립 검사 · 연결선 없음','muted'));const det=el('details');det.append(el('summary','검사 근거'),el('pre',JSON.stringify(x,null,2)));n.append(det);d.append(n);if(!['ALLOW_CANDIDATE','CONDITIONAL','NOT_APPLICABLE'].includes(x.status))active=false;}if(active)arrow();d.append(el('div',(rev?src:dst)+(active?' · 조건부 후보':' · 도달 미확정'),'endpoint'+(!active?' inactive':'')));}
+$('leg').onchange=renderPath;$('direction').onchange=renderPath;$('save').onclick=()=>{if(!current)return;const u=URL.createObjectURL(new Blob([JSON.stringify(current,null,2)],{type:'application/json'}));const a=el('a');a.href=u;a.download='cloudpath-endpoint-result.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};
+</script></body></html>

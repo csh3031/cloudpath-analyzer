@@ -1,0 +1,19 @@
+{
+  "format": "cloudpath-rds-instance-path-v1",
+  "inventory_identity": "sha256-aws-v2:da33324a4e782d615275f4fb766b39709321a33f4dde7392da6701b2703c6ab8",
+  "rds_input_identity": "sha256-rds-config-v1:9c6d2dce21c628f69a0181d854f3b683fdf3d00483c146ba657fcf012ac62435",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "complete": true,
+  "identifier": "demo-mysql",
+  "hostname": "demo-mysql.example.ap-northeast-2.rds.amazonaws.com",
+  "source_ip": "10.0.1.10",
+  "source_eni_id": "eni-12345678",
+  "resolver_scope": "SOURCE_VPC_VIEW",
+  "resolved_at": "2026-11-25T11:00:00+00:00",
+  "ttl_seconds": 60,
+  "answers": [
+    "10.0.1.80"
+  ],
+  "eni_id": "eni-99999999",
+  "direct_private_ipv4_no_translation": true
+}

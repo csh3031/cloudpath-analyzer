@@ -1,0 +1,104 @@
+{
+  "format": "cloudpath-eks-network-policy-v1",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "eks_input_identity": "sha256-eks-pod-v1:7ad5cb3e23ed7ec7dfb81d2aadf1fd9f1af00ab98be74b19610e8a915270bb41",
+  "complete": true,
+  "profile": {
+    "plugin": "aws-vpc-cni",
+    "network_policy_enabled": true,
+    "enforcing_mode": "standard",
+    "settled": true,
+    "standard_policies_only": true,
+    "primary_interface_only": true,
+    "no_other_policy_engine": true,
+    "controller_limits_verified": true,
+    "direct_pod_ip_no_translation": true
+  },
+  "networkPolicies": [
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "source-egress",
+        "namespace": "demo",
+        "uid": "00000000-0000-0000-0000-000000000041"
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "role": "frontend"
+          }
+        },
+        "policyTypes": [
+          "Egress"
+        ],
+        "egress": [
+          {
+            "to": [
+              {
+                "podSelector": {
+                  "matchLabels": {
+                    "role": "backend"
+                  }
+                }
+              }
+            ],
+            "ports": [
+              {
+                "port": 443
+              },
+              {
+                "port": 8443
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "destination-ingress",
+        "namespace": "demo",
+        "uid": "00000000-0000-0000-0000-000000000042"
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "role": "backend"
+          }
+        },
+        "policyTypes": [
+          "Ingress"
+        ],
+        "ingress": [
+          {
+            "from": [
+              {
+                "namespaceSelector": {
+                  "matchLabels": {
+                    "team": "demo"
+                  }
+                },
+                "podSelector": {
+                  "matchLabels": {
+                    "role": "frontend"
+                  }
+                }
+              }
+            ],
+            "ports": [
+              {
+                "port": 443
+              },
+              {
+                "port": 8443
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "cloudpath-s3-access-binding-v1",
+  "network_result_identity": "sha256-s3-network-result-v1:c109ff6721bc5901f5452a5cfeba46c2c96e6245d1bbdf923116eccda2ec3505",
+  "authorization_input_identity": "sha256-s3-authz-v1:a291a4dc87e6b78c64b39e1d84f63e40c207352b4039113c61b24875ee973d22",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "same_hypothetical_request": true
+}

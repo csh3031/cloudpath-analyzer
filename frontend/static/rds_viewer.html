@@ -1,0 +1,148 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CloudPath · RDS Analysis</title><style>
+:root{color-scheme:light;--ink:#172c41;--muted:#52657a;--line:#d0dbe5;--teal:#087f72;--red:#b42318;--amber:#97620b;--bg:#f3f6fa}*{box-sizing:border-box}body{margin:0;font:14px/1.55 system-ui,sans-serif;color:var(--ink);background:var(--bg)}header{background:#10283e;color:white;padding:18px 30px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}header a{color:#bfe9ef;text-decoration:none;margin-left:16px}header h1{font-size:20px;margin:0}main{max-width:1320px;margin:auto;padding:20px}section{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px}h2{font-size:17px;margin:0 0 12px}h3{font-size:14px;margin:8px 0}p{margin:6px 0}.muted{color:var(--muted);font-size:12px}.fields,.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:12px;margin:12px 0}label{display:flex;flex-direction:column;gap:5px;font-weight:600}input,select,button{font:inherit;padding:9px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);min-width:0}input[type=file]{width:100%;font-size:12px}.primary{background:#087f72;color:white;border-color:#087f72;font-weight:600}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}.drop{border:1px dashed #9cb4c5;padding:10px;border-radius:8px}.over{background:#e1f5ef}button+button{margin-left:6px}.card,.stage{border:1px solid var(--line);border-radius:8px;padding:12px;overflow-wrap:anywhere}.good{border-left:4px solid var(--teal)}.blocked{border-left:4px solid var(--red);background:#fff7f6}.unknown{border-left:4px solid var(--amber);background:#fffbef}.independent{border-style:dashed}.inactive{color:var(--muted)}.arrow{color:var(--teal);font-weight:bold;text-align:center;font-size:22px;line-height:24px}.arrow.response{color:var(--amber)}.endpoint{background:#eaf0f7;font-weight:600;padding:12px;border-radius:8px;overflow-wrap:anywhere}.flow{max-width:780px;margin:auto}.status{font-weight:700;overflow-wrap:anywhere}#diagnosis-summary .card,#path-diagnosis .card{margin:8px 0}#diagnosis-summary ul,#path-diagnosis ul{margin:5px 0;padding-left:22px}.note{background:#eaf0f7;padding:10px;border-radius:6px}.error{color:var(--red)}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:480px;overflow:auto;font-size:12px;background:#f3f6fa;padding:10px;border-radius:6px}summary{cursor:pointer}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.toolbar label{flex:1;min-width:180px}.badge{font-size:12px;color:var(--muted)}[hidden]{display:none!important}@media(max-width:600px){main{padding:10px}header{padding:15px}section{padding:12px}}
+</style></head><body><header><h1>CloudPath Analyzer <span class="badge" style="color:#c0d5e4">/ RDS</span></h1><nav><a href="/">Topology</a><a href="/workloads">ECS / EKS</a><a href="/elb">ALB / NLB</a><a href="/peering">Peering</a><a href="/tgw">TGW</a></nav></header><main>
+<section><h2>01 · 분석 대상 및 증거 입력</h2><p class="note">RDS / AWS / Kubernetes 스냅샷 전용 진단 화면 · 배포 전 Terraform 가상 분석은 기존 Topology에서 이용합니다. 이 페이지는 실제 패킷 전송, AWS API 호출, 실제 대상 선택을 수행하지 않습니다.</p><label>분석 모드<select id="mode"></select></label><p class="muted">예제 경로: samples/aws/phase7_demo/ · 표시된 시나리오 값은 합성 데이터 예시입니다. 실제 분석은 입력 증거와 일치하도록 수정하세요.</p><div id="files" class="fields"></div><div id="params" class="fields"></div><button class="primary" id="run">분석 실행</button><button id="clear">파일 초기화</button><p id="status" role="status" aria-live="polite"></p><p class="muted">JSON 파일 선택 또는 드래그앤드롭 · 전체 5 MiB 이하 · 기존 Topology 입력 유지</p></section>
+<div id="output" hidden><section><h2>02 · 결과 요약 및 구성 관계</h2><div id="summary" class="cards"></div><div id="diagnosis-summary" aria-live="polite"></div><p class="muted">아래 리소스 및 등록 관계는 입력 증거에서 확인된 구성 후보이며 실제 전달 경로가 아닙니다.</p><div id="relations" class="cards"></div></section>
+<section id="paths" hidden><h2>03 · Packet Trace / 구간별 제약 검사</h2><div class="toolbar"><label>검사 구간<select id="leg"></select></label><label>방향<select id="direction"><option value="request">요청</option><option value="response">조건부 응답</option></select></label></div><p id="path-note" class="note"></p><div id="path-diagnosis" aria-live="polite"></div><div id="diagram" class="flow"></div></section>
+<section id="observations" hidden><h2>04 · 전후 스냅샷 비교</h2><p class="note">두 시점의 구성 비교입니다. 실제 Failover 발생, 원인, 복구 성공을 증명하지 않습니다.</p><div id="comparisons" class="cards"></div></section>
+<section><h2>분석 근거 / 제한 사항</h2><ul id="limitations"></ul><details><summary>전체 결과 JSON</summary><pre id="raw"></pre></details><button id="save">결과 JSON 저장</button></section></div></main>
+<script>
+'use strict';const $=id=>document.getElementById(id),configs={"instance": {"label": "RDS · instance 구성", "files": ["inventory", "rds"], "optional": [], "params": {"identifier": "demo-mysql"}, "samples": {"inventory": "ecs_task_inventory.json", "rds": "rds_configuration.json"}}, "cluster": {"label": "RDS · cluster 구성", "files": ["inventory", "rds"], "optional": [], "params": {"identifier": "demo-aurora"}, "samples": {"inventory": "ecs_task_inventory.json", "rds": "rds_configuration.json"}}, "session_ec2": {"label": "EC2 → RDS · TCP", "files": ["inventory", "rds"], "optional": ["observation", "prefix_list"], "params": {"identifier": "demo-mysql", "source_port": 50000, "endpoint_kind": "INSTANCE", "client_ip": "10.0.1.10"}, "samples": {"inventory": "rds_path_ecs_inventory.json", "rds": "rds_path_ecs_configuration.json", "observation": "rds_path_ec2_observation.json"}}, "session_ecs": {"label": "ECS → RDS · TCP", "files": ["inventory", "rds", "ecs"], "optional": ["observation", "prefix_list"], "params": {"identifier": "demo-mysql", "source_port": 50000, "endpoint_kind": "INSTANCE", "task_id": "22222222222222222222222222222222"}, "samples": {"inventory": "rds_path_ecs_inventory.json", "rds": "rds_path_ecs_configuration.json", "observation": "rds_path_ecs_observation.json", "ecs": "ecs_task_evidence.json"}}, "session_eks": {"label": "EKS → RDS · TCP", "files": ["inventory", "rds", "eks", "policy"], "optional": ["observation", "prefix_list"], "params": {"identifier": "demo-mysql", "source_port": 50000, "endpoint_kind": "INSTANCE", "namespace": "demo", "pod_name": "app-2"}, "samples": {"inventory": "rds_path_eks_inventory.json", "rds": "rds_path_eks_configuration.json", "observation": "rds_path_eks_observation.json", "eks": "rds_path_eks_pods.json", "policy": "rds_path_eks_policy.json"}}, "compare_instance": {"label": "RDS · instance 전후 비교", "files": ["before_inventory", "before_rds", "before_observation", "after_inventory", "after_rds", "after_observation"], "optional": [], "params": {"identifier": "demo-mysql", "client_ip": "10.0.1.10", "source_port": 50000}, "samples": {"before_inventory": "rds_transition_before_inventory.json", "before_rds": "rds_transition_before_configuration.json", "before_observation": "rds_transition_before_instance.json", "after_inventory": "rds_transition_after_inventory.json", "after_rds": "rds_transition_after_configuration.json", "after_observation": "rds_transition_after_instance.json"}}, "compare_cluster": {"label": "RDS · cluster 전후 비교", "files": ["before_inventory", "before_rds", "before_observation", "after_inventory", "after_rds", "after_observation"], "optional": [], "params": {"identifier": "demo-aurora", "client_ip": "10.0.1.10", "source_port": 50000}, "samples": {"before_inventory": "rds_transition_before_inventory.json", "before_rds": "rds_transition_before_configuration.json", "before_observation": "rds_transition_before_writer.json", "after_inventory": "rds_transition_after_inventory.json", "after_rds": "rds_transition_after_configuration.json", "after_observation": "rds_transition_after_writer.json"}}},ports=new Set(["source_port"]),MAX=5*1024*1024;let version=0,current=null,legs=[];
+function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(cls)n.className=cls;return n;}
+function option(v,t){const n=el('option',t);n.value=v;return n;}
+function reset(){version++;current=null;legs=[];$('output').hidden=true;$('status').textContent='';$('status').className='';$('run').disabled=false;}
+function err(s){$('status').textContent=s;$('status').className='error';}
+function fileLabel(role){return ({inventory:'AWS Inventory',ecs:'ECS Task 증거',eks:'EKS Pod 증거',service:'Service 증거',elbv2:'ELBv2 구성',health:'Target Health',rules:'ALB Listener Rules',attributes:'NLB Attributes',node:'LB Node ENI 증거',policy:'NetworkPolicy',translation:'Service Translation 가정',observation:'RDS DNS · ENI 증거',rds:'RDS 구성',before_inventory:'Before AWS Inventory',before_rds:'Before RDS 구성',before_observation:'Before DNS · ENI',after_inventory:'After AWS Inventory',after_rds:'After RDS 구성',after_observation:'After DNS · ENI',prefix_list:'Prefix List 증거'})[role]||role;}
+function setup(){reset();const c=configs[$('mode').value];$('files').replaceChildren();$('params').replaceChildren();for(const role of [...c.files,...c.optional]){const wrap=el('label',fileLabel(role)+(c.optional.includes(role)?' (선택)':''),'drop');const f=el('input');f.type='file';f.accept='.json,application/json';f.id='file_'+role;f.onchange=reset;wrap.append(f,el('span',c.samples[role]||'선택적 버전 결합 증거','muted'));wrap.ondragover=e=>{e.preventDefault();wrap.classList.add('over');};wrap.ondragleave=()=>wrap.classList.remove('over');wrap.ondrop=e=>{e.preventDefault();wrap.classList.remove('over');reset();if(e.dataTransfer.files.length!==1||!e.dataTransfer.files[0].name.endsWith('.json')){f.value='';err('한 영역에 JSON 파일 하나를 선택하세요.');return;}f.files=e.dataTransfer.files;};$('files').append(wrap);}for(const [k,v] of Object.entries(c.params)){const l=el('label',k.replaceAll('_',' '));const n=el(k==='endpoint_kind'?'select':'input');n.id='param_'+k;if(k==='endpoint_kind'){for(const v of ['INSTANCE','WRITER','READER'])n.append(option(v,v));}else n.type=ports.has(k)?'number':'text';if(ports.has(k)){n.min=1;n.max=65535;}n.value=v;n.oninput=reset;n.onchange=reset;l.append(n);$('params').append(l);}if($('mode').value==='session_ec2')$('params').append(el('p','Writer/Reader 예제: demo-aurora, rds_transition_before_inventory.json, rds_transition_before_configuration.json, rds_transition_before_writer.json 또는 rds_transition_before_reader.json. Endpoint 종류도 함께 변경하세요.','muted'));if($('mode').value.startsWith('session_'))$('params').append(el('p','DNS · ENI 증거를 생략하면 미확정입니다. Cluster는 해당 출발지와 Endpoint에 결합된 별도 증거가 필요합니다.','muted'));}
+for(const [k,c] of Object.entries(configs))$('mode').append(option(k,c.label));$('mode').onchange=setup;setup();$('clear').onclick=()=>{for(const f of $('files').querySelectorAll('input'))f.value='';reset();};for(const e of ['dragover','drop'])document.addEventListener(e,x=>{if(x.dataTransfer&&Array.from(x.dataTransfer.types).includes('Files'))x.preventDefault();});
+function b64(f){return new Promise((resolve,reject)=>{const r=new FileReader();r.onerror=()=>reject(Error('파일 읽기 실패'));r.onload=()=>resolve({name:f.name,content_base64:String(r.result).split(',')[1]});r.readAsDataURL(f);});}
+$('run').onclick=async()=>{reset();const ticket=version,mode=$('mode').value,c=configs[mode];try{const fs=[...c.files,...c.optional].map(k=>[k,$('file_'+k).files[0]]);if(fs.some(([k,f])=>c.files.includes(k)&&!f)||fs.some(([k,f])=>f&&!f.name.endsWith('.json'))||fs.reduce((s,[k,f])=>s+(f?.size||0),0)>MAX)throw Error('필수 JSON 역할 및 총 5 MiB 제한을 확인하세요.');const params=Object.fromEntries(Object.keys(c.params).map(k=>[k,ports.has(k)?Number($('param_'+k).value):$('param_'+k).value.trim()]));if(Object.entries(params).some(([k,v])=>ports.has(k)?!Number.isInteger(v)||v<1||v>65535:!v))throw Error('시나리오 값을 확인하세요.');$('run').disabled=true;$('status').textContent='분석 중';const ctx=await fetch('/api/context',{cache:'no-store'});if(!ctx.ok)throw Error('서버 연결 실패');const context=await ctx.json();const files=Object.fromEntries(await Promise.all(fs.filter(([k,f])=>f).map(async([k,f])=>[k,await b64(f)])));if(ticket!==version)return;const res=await fetch('/api/aws-rds',{method:'POST',headers:{'Content-Type':'application/json','X-CloudPath-Token':context.token},body:JSON.stringify({input_identity:context.input_identity,mode,files,params})});if(!res.ok)throw Error('입력 증거 또는 시나리오 검증 실패 ('+res.status+'). 파일 역할과 값을 확인하세요.');const p=await res.json();if(ticket!==version)return;current=p.result;render();$('output').hidden=false;$('status').textContent='분석 완료 · 실제 통신 미검증';}catch(e){if(ticket===version)err(e.message);}finally{if(ticket===version)$('run').disabled=false;}};
+function cls(s){return s==='BLOCKED'||String(s).includes('BLOCK_CANDIDATE')||String(s).includes('DISCREPANCY')?'blocked':s==='UNKNOWN'||String(s).includes('UNRESOLVED')?'unknown':String(s).includes('CANDIDATE')?'good':'';}
+function card(title,lines,status){const n=el('div',undefined,'card '+cls(status));n.append(el('h3',title));for(const l of lines.filter(x=>x!==undefined&&x!==null&&x!==''))n.append(el('p',l));return n;}
+function endpoint(title,ep,extra=[]){if(!ep)return;const e=ep.endpoint||ep;if(!e.private_ip&&!e.eni_id)return;$('relations').append(card(title,[e.kind,e.private_ip,e.eni_id,e.subnet_id,e.availability_zone,e.node_instance_id,...(e.security_group_ids||e.eni_security_group_ids||[]),...extra]));}
+function addLeg(label,f,reason,src,dst){legs.push({label,f,reason,src,dst});}
+function epText(e,port){const v=e?.endpoint||e;return v?.private_ip?`${v.private_ip}${port?':'+port:''}`:'Endpoint 미확인';}
+function direct(label,r){if(!r||!Array.isArray(r.request))return;addLeg(label,r,r.reason,epText(r.source_endpoint,r.scenario?.source_port),epText(r.destination_endpoint,r.scenario?.destination_port));}
+function cfgCards(c,prefix){if(!c)return;const rel=$('relations'),v=c.configuration;if(!v){rel.append(card(prefix+' 구성 미확정',[explainReason(c)],'UNKNOWN'));return;}
+rel.append(card(prefix+' · '+c.identifier,[v.engine,'DB Subnet Group: '+v.subnet_group,...(v.security_group_ids||[]),v.availability_zone,v.multi_az===undefined?null:'Multi-AZ: '+v.multi_az],c.status));
+for(const e of c.endpoints||[])rel.append(card(prefix+' · '+e.kind+' Endpoint',[e.hostname+':'+e.port,'논리 구성 · IP/ENI 미확정']));
+for(const sub of v.subnets||[])rel.append(card(prefix+' · Subnet Group 소속',[sub.subnet_id,sub.availability_zone,'정확한 DB 배치 증거 아님']));
+for(const m of c.members||[])rel.append(card(prefix+' · '+m.role+' '+m.identifier,[m.availability_zone,m.endpoint.hostname+':'+m.endpoint.port,...m.security_group_ids,'실제 선택 미검증']));}
+function showSession(r,label){cfgCards(r.rds_configuration,label);endpoint(label+' Source',r.source_endpoint);endpoint(label+' RDS DNS/ENI 후보',r.destination_endpoint,[r.destination_endpoint?.hostname,r.destination_endpoint?.identifier]);if(r.member_selection)$('relations').append(card(label+' · DNS Member 후보',[r.member_selection.identifier,r.member_selection.role,r.member_selection.reader_primary_fallback?'Reader 부재 · Primary 후보':'', '실제 대상 선택 미검증']));direct(label,r);}
+function render(){const r=current,s=$('summary'),rel=$('relations');s.replaceChildren();rel.replaceChildren();legs=[];for(const k of ['status','reason','request_status','response_status','session_status','failover_status','authentication_status','tls_status','path_kind'])if(r[k]!=null)s.append(card(k,[r[k]],r[k]));s.append(card('실제 관측 여부',['false · 정적 / 과거 증거 비교','DB 인증·TLS·SQL 실행 미검증']));
+const comparison=!!(r.before&&r.after);if(comparison){showSession(r.before,'Before');showSession(r.after,'After');}else if(r.rds_configuration){showSession(r,'RDS 통신');}else cfgCards(r,'RDS');
+$('paths').hidden=!legs.length;$('leg').replaceChildren(...legs.map((l,i)=>option(String(i),l.label)));$('direction').value='request';renderDiagnostics(r);if(comparison)$('diagnosis-summary').prepend(card('스냅샷 비교 판단',[explainReason(r),'실제 Failover 및 복구 성공은 미확정입니다.'],r.status));renderPath();$('observations').hidden=!comparison;const c=$('comparisons');c.replaceChildren();if(comparison){if(r.changes){const x=r.changes;for(const [label,a,b] of [['DB Member',x.before_member,x.after_member],['AZ',x.before_az,x.after_az],['IP',x.before_ip,x.after_ip],['요청',x.before_request,x.after_request],['응답',x.before_response,x.after_response]])c.append(card(label,['Before: '+a,'After: '+b],b));c.append(card('변경 감지',['IP: '+x.ip_changed,'ENI: '+x.eni_changed,'역할/AZ: '+x.role_or_az_changed]));}else c.append(card('비교 미확정',[explainReason(r)],'UNKNOWN'));}
+$('limitations').replaceChildren(...[...new Set([...(r.limitations||[]),...(r.rds_configuration?.limitations||[]),...(r.before?.limitations||[]),...(r.after?.limitations||[]),...(r.before?.rds_configuration?.limitations||[]),...(r.after?.rds_configuration?.limitations||[])])].map(l=>el('li',l)));$('raw').textContent=JSON.stringify(r,null,2);}
+// BEGIN LOCAL_DIAGNOSTICS (pure presentation; no change to engine verdicts)
+const stageLabels={RDS_SCOPE:'RDS 증거 및 지원 범위',SOURCE_NETWORK_POLICY_EGRESS:'출발지 NetworkPolicy Egress',DESTINATION_NETWORK_POLICY_INGRESS:'목적지 NetworkPolicy Ingress',SOURCE_SG_EGRESS:'출발지 Security Group Egress',DESTINATION_SG_INGRESS:'목적지 Security Group Ingress',SOURCE_NACL_EGRESS:'출발지 NACL Egress',DESTINATION_NACL_INGRESS:'목적지 NACL Ingress',LOCAL_ROUTE:'VPC Local Route',LOCAL_DELIVERY:'로컬 전달'};
+const reasonLabels={
+RDS_DNS_ENI_EVIDENCE_MISSING:"출발지 기준 RDS DNS 응답과 ENI 연결 증거가 없습니다. 같은 스냅샷에 결합된 증거를 제공하세요.",
+RDS_CONFIGURATION_UNCONFIRMED:"RDS 논리 구성을 확인하지 못했습니다. DB 식별자, VPC, Subnet Group 및 SG 증거를 확인하세요.",
+RDS_SOURCE_ENDPOINT_UNCONFIRMED:"출발지 IP와 ENI 연결을 확인하지 못했습니다. EC2/ECS/EKS 출발지 증거를 확인하세요.",
+RDS_PATH_EVIDENCE_IDENTITY_MISMATCH:"DNS/ENI 증거가 입력 스냅샷, Endpoint 또는 출발지와 일치하지 않습니다.",
+RDS_PATH_PROFILE_UNCONFIRMED:"직접 Private IPv4 전달 또는 출발지 DNS 관점이 확인되지 않았습니다.",
+SNAPSHOT_TIME_GAP:"스냅샷 수집 시각 차이가 지원 범위를 초과했습니다. 같은 시점의 자료를 확인하세요.",
+RDS_DNS_TIME_SCOPE_UNCONFIRMED:"DNS 응답 시각과 TTL이 일치하지 않습니다. 유효 시점의 응답 증거가 필요합니다.",
+RDS_DNS_SINGLE_IPV4_UNCONFIRMED:"단일 IPv4 DNS 응답을 확인할 수 없습니다. 실제 응답 주소 후보를 확인하세요.",
+RDS_CLUSTER_MEMBER_EVIDENCE_MISMATCH:"Cluster Member와 제출된 DNS 증거가 일치하지 않습니다.",
+RDS_CLUSTER_ENDPOINT_ROLE_UNCONFIRMED:"선택한 Writer/Reader 역할과 Member 증거가 일치하지 않습니다.",
+RDS_CLUSTER_MEMBER_DNS_MISMATCH:"Cluster DNS 응답과 Member DNS 응답이 일치하지 않습니다.",
+RDS_CLUSTER_MEMBER_DNS_TIME_UNCONFIRMED:"Member DNS 응답의 시각 또는 TTL이 확인되지 않습니다.",
+RDS_ENI_IP_OWNER_UNCONFIRMED:"DNS 주소에 대응하는 ENI를 유일하게 확인하지 못했습니다.",
+RDS_ENI_OWNERSHIP_CONFLICT:"ENI 소유 관계가 충돌합니다. RDS와 ENI 연결 증거를 확인하세요.",
+RDS_ENI_CONFIGURATION_CONFLICT:"ENI의 SG 또는 배치 정보가 RDS 구성과 일치하지 않습니다.",
+RDS_ENI_PROFILE_UNCONFIRMED:"지원하는 RDS ENI 구성인지 확인할 수 없습니다.",
+RDS_PRIMARY_VPC_SCOPE_UNCONFIRMED:"지원하는 단일 VPC 직접 전달 범위를 확인하지 못했습니다.",
+RDS_SUBNET_ADDRESS_OUT_OF_SCOPE:"IP가 제출된 Subnet 주소 범위에 속하지 않습니다.",
+RDS_SOURCE_DESTINATION_OVERLAP:"출발지와 목적지의 주소 또는 ENI가 중복됩니다.",
+RDS_MULTI_AZ_CLUSTER_SCOPE_UNCONFIRMED:"Multi-AZ Cluster의 지원 배치 조건을 확인하지 못했습니다.",
+RDS_INSTANCE_MISSING:"지정한 DB Instance가 구성 증거에 없습니다. 식별자를 확인하세요.",
+RDS_CLUSTER_MISSING:"지정한 DB Cluster가 구성 증거에 없습니다. 식별자를 확인하세요.",
+RDS_INVENTORY_SCOPE_MISMATCH:"RDS 구성과 AWS Inventory의 범위 또는 식별 정보가 일치하지 않습니다.",
+RDS_EVIDENCE_INCOMPLETE:"RDS 구성 증거의 완전성이 확인되지 않았습니다.",
+RDS_SUBNET_GROUP_UNCONFIRMED:"DB Subnet Group과 Inventory의 Subnet 관계를 확인하지 못했습니다.",
+RDS_SUBNET_GROUP_CONFLICT:"DB Subnet Group의 중복 구성 정보가 서로 일치하지 않습니다.",
+RDS_SECURITY_GROUPS_UNCONFIRMED:"DB에 연결된 SG 정보를 확인하지 못했습니다.",
+RDS_ENDPOINT_UNCONFIRMED:"DB Endpoint 주소 또는 포트가 확인되지 않습니다.",
+RDS_WRITER_ROLE_CHANGE_CANDIDATE:"두 시점에서 Writer Member가 변경되었습니다. 정책 변화도 별도로 점검하세요.",
+RDS_PRIMARY_AZ_CHANGE_CANDIDATE:"두 시점에서 Primary AZ가 변경되었습니다. 각 시점의 경로를 별도로 확인하세요.",
+RDS_NO_WRITER_ROLE_CHANGE_OBSERVED:"제출된 두 시점에서 Writer Member 변경이 확인되지 않았습니다.",
+RDS_NO_PRIMARY_AZ_CHANGE_OBSERVED:"제출된 두 시점에서 Primary AZ 변경이 확인되지 않았습니다.",
+RDS_TRANSITION_ENDPOINT_UNCONFIRMED:"두 시점 중 적어도 하나의 Endpoint 연결 증거가 확인되지 않았습니다.",
+RDS_TRANSITION_TIME_ORDER_UNCONFIRMED:"Before/After 수집 시각의 순서를 확인할 수 없습니다.",
+RDS_TRANSITION_SCOPE_MISMATCH:"계정, VPC 또는 출발지 증거가 일치하지 않아 동일 조건 비교가 어렵습니다.",
+RDS_TRANSITION_RESOURCE_ID_UNCONFIRMED:"DB 리소스의 동일성이 확인되지 않습니다. 재생성 여부를 점검하세요.",
+RDS_TRANSITION_LOGICAL_ENDPOINT_CHANGED:"논리 Endpoint, 포트 또는 엔진이 변경되어 동일 조건 비교가 불가능합니다.",
+RDS_TRANSITION_MEMBER_ID_UNCONFIRMED:"Cluster Member 리소스의 동일성을 확인할 수 없습니다.",
+RDS_MULTI_AZ_INSTANCE_SCOPE_UNCONFIRMED:"Multi-AZ Instance 비교 조건이 확인되지 않았습니다.",
+CNI_POLICY_APPLICABILITY_UNCONFIRMED:"출발지 Pod의 CNI 및 NetworkPolicy 적용 조건이 확인되지 않습니다.",
+POLICY_SYNTAX_UNSUPPORTED:"NetworkPolicy 규칙이 현재 지원 범위를 벗어납니다.",
+ ISOLATED_NO_MATCHING_ALLOW:'격리 정책이 적용되지만 해당 통신과 일치하는 허용 규칙이 없습니다. 적용된 정책의 대상 선택자와 통신 상대·포트 조건을 확인하세요.',
+ NO_MATCHING_SG_ALLOW:'해당 통신과 일치하는 Security Group 허용 규칙이 없습니다. 해당 방향의 출발지·목적지 조건 및 프로토콜·포트를 확인하세요.',
+ SG_RULE_UNRESOLVED:'일부 SG 규칙을 해석할 증거가 부족합니다. 참조 SG, Prefix List 및 프로토콜·포트 정보를 확인하세요.',
+ PREFIX_LIST_EVIDENCE_MISSING:'Prefix List 목록·버전 증거가 제공되지 않았습니다.',
+ POLICY_RULE_UNRESOLVED:'NetworkPolicy 규칙을 평가할 정보가 부족하거나 지원 범위 밖입니다.',
+ OBSERVED_ACTIVE_LOCAL_ROUTE:'제공된 스냅샷에서 활성 local 경로가 확인되었습니다.',
+ MATCHING_IPV4_SG_RULE:'IPv4 Security Group 허용 규칙이 일치합니다.',
+ MATCHING_DIRECT_PEER_SG_REFERENCE:'직접 통신의 상대 ENI에 연결된 참조 SG가 일치합니다.',
+ MATCHING_IPV4_PREFIX_LIST_RULE:'버전이 확인된 Prefix List의 CIDR과 일치합니다.',
+ ADDITIVE_POLICY_ALLOW_MATCH:'적용되는 NetworkPolicy 중 통신과 일치하는 허용 규칙이 있습니다.',
+ NO_POLICY_ISOLATION:'이 방향에 대한 격리 정책이 확인되지 않았습니다.',
+ REPLY_TO_ALLOWED_CONNECTION_ASSUMED:'허용된 요청의 응답이라는 가정 아래 조건부 평가합니다.',
+ REQUIRES_ESTABLISHED_TRACKED_REQUEST:'요청 전달 및 연결 추적이 성립해야 하는 조건부 응답입니다.',
+ DIRECT_SAME_SUBNET_NO_NACL_BOUNDARY:'직접 동일 Subnet 전달 가정에서는 NACL 경계를 통과하지 않습니다.',
+ DIRECT_ON_LINK_DELIVERY_NO_MIDDLEBOX:'중간 장비 없는 동일 Subnet 직접 전달을 가정합니다.',
+ CONDITIONAL_NODE_LOCAL_NO_VPC_BOUNDARY:'지원되는 CNI 프로파일의 Node 내부 직접 전달 가정에서는 VPC 경계 정책이 적용되지 않습니다.',
+ NODE_LOCAL_DIRECT_VETH_ROUTING_ASSUMED:'Node 내부 전달을 가정합니다. 실제 호스트 경로는 확인되지 않았습니다.',
+ SAME_SUBNET_NORMAL_LOCAL_CONFIGURATION_UNCONFIRMED:'정상적인 동일 Subnet 직접 전달 구성을 확인하지 못했습니다.',
+ ACL_ASSOCIATION_MISSING_OR_AMBIGUOUS:'Subnet과 연결된 NACL을 유일하게 확인하지 못했습니다.',
+ ACL_ASSOCIATION_UNCONFIRMED:'NACL 연결 증거가 확인되지 않았습니다.',
+ ACL_RULE_ORDER_UNCONFIRMED:'NACL 규칙 순서를 확인하지 못했습니다.',
+ ACL_FIRST_POSSIBLE_RULE_UNRESOLVED:'먼저 적용될 수 있는 NACL 규칙의 조건이 불명확합니다.',
+ ACL_NO_EXPLICIT_MATCH_OR_DEFAULT:'일치 규칙 또는 기본 규칙을 확인할 수 없습니다.',
+ NLB_PRESERVED_CLIENT_PATH_NOT_COMPOSED:'Client IP 보존 경로는 아직 전체 전달 모델이 지원되지 않습니다.',
+ CROSS_ZONE_ELIGIBILITY_UNCONFIRMED:'Cross-Zone 설정에 따른 대상 적격성을 확인하지 못했습니다.',
+ CROSS_NODE_SUBNET_REQUIRED:'이 Service 변환 시나리오의 Node 배치 조건이 지원 범위 밖입니다.',
+ VPC_CNI_SERVICE_CONTAINER_PORT_MISMATCH:'Service 변환 포트와 컨테이너 포트가 일치하지 않아 현재 CNI 모델로 판정할 수 없습니다.',
+ VPC_CNI_NAMED_PORT_MISMATCH:'Service의 이름 기반 포트 매핑을 확인하지 못했습니다.',
+ TRANSLATION_PROFILE_UNCONFIRMED:'Service 주소 변환의 가정 또는 증거가 확인되지 않았습니다.',
+ BACKEND_LEG_UNRESOLVED:'Backend 경로에 미확정 조건이 남아 있습니다.',
+ DECLARATION_EVENT_MATCH:'선언 정책과 제공된 과거 이벤트가 일치하는 후보입니다. 현재 적용 여부는 미확인입니다.',
+ DECLARATION_EVENT_MISMATCH:'선언 정책과 제공된 과거 이벤트가 불일치하는 후보입니다. 수집 시점과 정책 적용 증거를 확인하세요.',
+ NO_MATCHING_HISTORICAL_EVENT:'일치하는 과거 이벤트가 없어 정책 적용 여부를 판단할 수 없습니다.',
+ CONFLICTING_HISTORICAL_EVENTS:'상충하는 과거 이벤트가 있어 판단할 수 없습니다.',
+ EVIDENCE_IDENTITY_MISMATCH:'증거 파일의 입력 식별자가 일치하지 않습니다.',
+ SNAPSHOT_TIME_GAP:'수집 시각의 차이가 허용 범위를 초과합니다.',
+ EVIDENCE_INCOMPLETE:'제공된 증거의 완전성을 확인하지 못했습니다.'
+};
+function labelStage(s){return Object.hasOwn(stageLabels,s)?stageLabels[s]:String(s||'검사 위치 미확인');}
+function explainReason(x){
+ const code=x?.reason,status=x?.status;
+ if(code==='MATCHING_ACL_RULE')return `NACL ${x.acl_id||'ID 미확인'}의 규칙 ${x.rule_number??'번호 미확인'}이 ${status==='BLOCKED'?'차단':status==='ALLOW_CANDIDATE'?'허용 후보':'미확정'}로 평가되었습니다.`;
+ if(Object.hasOwn(reasonLabels,code))return reasonLabels[code];
+ return `상세 설명이 아직 등록되지 않은 판정입니다 (${code||'사유 코드 없음'}). 원본 검사 근거와 지원 범위를 확인하세요.`;
+}
+function describeStage(x){
+ const ids=[...(Array.isArray(x.group_ids)?x.group_ids:[]),x.group_id,x.eni_id,x.subnet_id,x.acl_id,x.prefix_list_id,...(Array.isArray(x.selected_policies)?x.selected_policies:[])].filter(v=>typeof v==='string'&&v);
+ const evidence=[...new Set(ids)].join(', ');
+ const extra=(x.unresolved_prefix_lists||[]).map(y=>explainReason(y)).join(' ');
+ return explainReason(x)+(evidence?' 관련 대상: '+evidence+'.':'')+(extra?' '+extra:'');
+}
+function legDiagnosis(l,rev){
+ const f=l.f;if(!f)return {status:'UNKNOWN',title:'분석 미확정',body:explainReason({reason:l.reason}),additional:[]};
+ const status=f[rev?'response_status':'request_status']||'UNKNOWN';
+ const rows=f[rev?'response':'request']||[];
+ const stop=f[rev?'conditional_first_response_stop':'first_request_stop'];
+ const hit=stop&&rows.find(x=>x.stage===stop&&x.evaluation_mode!=='INDEPENDENT_CHECK');
+ const additional=rows.filter(x=>x.evaluation_mode==='INDEPENDENT_CHECK'&&['BLOCKED','UNKNOWN'].includes(x.status)).map(x=>`${labelStage(x.stage)} (${x.status==='BLOCKED'?'차단 요인':'미확정'}): ${describeStage(x)}`);
+ if(rev&&f.request_status!=='CONDITIONAL_CANDIDATE')return {status,title:'응답 경로 미평가',body:'요청 전달이 확인되지 않아 응답 경로를 성립한 것으로 평가하지 않습니다. 아래 독립 검사는 실제 도달을 의미하지 않습니다.',additional};
+ if(hit&&['BLOCKED','UNKNOWN'].includes(status))return {status,title:(status==='BLOCKED'?'최초 차단: ':'최초 미확정: ')+labelStage(stop),body:describeStage(hit),additional};
+ if(status==='CONDITIONAL_CANDIDATE')return {status,title:'정적 검사상 차단 요인 없음',body:(rev?'요청 전달 및 연결 추적이 성립한다는 가정에서 ':'입력 구성 및 지원 범위에서 ')+'검사 대상 정책과 전달 조건을 통과할 후보입니다. 실제 TCP 연결, DB 리스너, TLS, DB 인증 및 SQL 실행은 미검증입니다.',additional};
+ return {status,title:status==='BLOCKED'?'차단 판정 (위치 미확인)':status==='NOT_EVALUATED'?'경로 미평가':'분석 미확정',body:explainReason({reason:l.reason}),additional};
+}
+// END LOCAL_DIAGNOSTICS
+function diagnosisCard(l,rev){const x=legDiagnosis(l,rev);const f=l.f,src=l.src||(f?.source_ip?f.source_ip+':'+f.source_port:null),dst=l.dst||(f?.destination_ip?f.destination_ip+':'+f.destination_port:null);const tuple=src&&dst?(rev?dst+' → '+src:src+' → '+dst):null;const n=card(x.title,[tuple,x.body],x.status);if(x.additional.length){n.append(el('h3','추가 독립 검사 · 실제 도달 아님'));const ul=el('ul');for(const a of x.additional)ul.append(el('li',a));n.append(ul);}return n;}
+function renderDiagnostics(r){const root=$('diagnosis-summary');root.replaceChildren(el('h3','진단 요약 · 정적 구성 기준'));for(const l of legs){const n=diagnosisCard(l,false);n.prepend(el('p',l.label,'muted'));root.append(n);if(l.f?.request_status==='CONDITIONAL_CANDIDATE'&&['BLOCKED','UNKNOWN'].includes(l.f?.response_status)){const reply=diagnosisCard(l,true);reply.prepend(el('p',l.label+' · 조건부 응답','muted'));root.append(reply);}}if(!legs.length)root.append(card(r.status==='UNKNOWN'?'구성 분석 미확정':'구성 관계 검사',[r.status==='UNKNOWN'?explainReason(r):'구성 관계 분석 결과입니다. 통신 성공 또는 차단 여부를 평가한 결과는 아닙니다.'],r.status));for(const c of r.comparisons||[])root.append(card('과거 CNI 증거 · '+labelStage(c.stage),[explainReason(c)],c.status));}
+function renderPath(){const d=$('diagram');d.replaceChildren();const l=legs[Number($('leg').value)];$('path-diagnosis').replaceChildren();if(!l)return;const f=l.f,rev=$('direction').value==='response';$('path-diagnosis').append(diagnosisCard(l,rev));if(!f){$('path-note').textContent='미지원 또는 미확정 · '+(l.reason||'UNKNOWN');return;}const rows=f[rev?'response':'request']||[];let active=(!rev||f.request_status==='CONDITIONAL_CANDIDATE')&&rows.length>0;const src=l.src||(f.source_ip?f.source_ip+':'+f.source_port:'Source 미확인'),dst=l.dst||(f.destination_ip?f.destination_ip+':'+f.destination_port:'Destination 미확인');$('path-note').textContent=(f[rev?'response_status':'request_status']||'UNKNOWN')+' · '+(rev?'응답은 요청 전달 및 연결 추적 가정. ':'조건부 독립 구간. ')+'실제 전달 및 리스너 미검증.';d.append(el('div',rev?dst:src,'endpoint'));const arrow=()=>{const n=el('div',rev?'┊ ↓':'↓','arrow'+(rev?' response':''));n.dataset.path='true';d.append(n);};for(const x of rows){const independent=x.evaluation_mode==='INDEPENDENT_CHECK';if(independent)active=false;const skip=x.status==='NOT_APPLICABLE';if(active&&!skip)arrow();const n=el('div',undefined,'stage '+cls(x.status)+(independent?' independent':'')+(skip?' inactive':''));n.dataset.stage=x.stage;n.dataset.status=x.status;n.dataset.mode=x.evaluation_mode;n.append(el('strong',labelStage(x.stage)),el('p',x.status+' · '+x.reason),el('p',describeStage(x)),el('p',skip?'미적용 · 통과 경로 아님':active?'조건부 경로 검사':'후속 독립 검사 · 연결선 없음','muted'));const det=el('details');det.append(el('summary','검사 근거'),el('pre',JSON.stringify(x,null,2)));n.append(det);d.append(n);if(!['ALLOW_CANDIDATE','CONDITIONAL','NOT_APPLICABLE'].includes(x.status))active=false;}if(active)arrow();d.append(el('div',rev?src:dst,'endpoint'+(!active?' inactive':'')));}
+$('leg').onchange=renderPath;$('direction').onchange=renderPath;$('save').onclick=()=>{if(!current)return;const u=URL.createObjectURL(new Blob([JSON.stringify(current,null,2)],{type:'application/json'}));const a=el('a');a.href=u;a.download='cloudpath-rds-result.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};
+</script></body></html>

@@ -1,0 +1,58 @@
+{
+  "format": "cloudpath-vpc-endpoints-v1",
+  "inventory_identity": "sha256-aws-v2:ef5af3f90441894c03b9ad4dbc099ba75bf4c3c23093c0aec4f0bcc33e97c150",
+  "region": "ap-northeast-2",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "complete": true,
+  "VpcEndpoints": [
+    {
+      "VpcId": "vpc-12345678",
+      "State": "available",
+      "IpAddressType": "ipv4",
+      "PolicyDocument": "{\"Version\":\"2012-10-17\",\"Statement\":[]}",
+      "ServiceRegion": "ap-northeast-2",
+      "VpcEndpointId": "vpce-11111111",
+      "VpcEndpointType": "Interface",
+      "ServiceName": "com.amazonaws.ap-northeast-2.s3",
+      "SubnetIds": [
+        "subnet-12345678",
+        "subnet-87654321"
+      ],
+      "NetworkInterfaceIds": [
+        "eni-99999991",
+        "eni-99999992"
+      ],
+      "Groups": [
+        {
+          "GroupId": "sg-12345678"
+        }
+      ],
+      "RouteTableIds": [],
+      "PrivateDnsEnabled": false,
+      "DnsEntries": [
+        {
+          "DnsName": "*.vpce-11111111-example.s3.ap-northeast-2.vpce.amazonaws.com",
+          "HostedZoneId": "ZEXAMPLE"
+        }
+      ]
+    },
+    {
+      "VpcId": "vpc-12345678",
+      "State": "available",
+      "IpAddressType": "ipv4",
+      "PolicyDocument": "{\"Version\":\"2012-10-17\",\"Statement\":[]}",
+      "ServiceRegion": "ap-northeast-2",
+      "VpcEndpointId": "vpce-22222222",
+      "VpcEndpointType": "Gateway",
+      "ServiceName": "com.amazonaws.ap-northeast-2.s3",
+      "SubnetIds": [],
+      "NetworkInterfaceIds": [],
+      "Groups": [],
+      "RouteTableIds": [
+        "rtb-12345678",
+        "rtb-87654321"
+      ],
+      "DnsEntries": []
+    }
+  ]
+}

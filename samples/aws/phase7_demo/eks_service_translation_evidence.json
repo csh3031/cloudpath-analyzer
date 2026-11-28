@@ -1,0 +1,18 @@
+{
+  "format": "cloudpath-eks-service-translation-v1",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "eks_input_identity": "sha256-eks-pod-v1:7167078379d56710a50d9a54129104cb699b47d77d3e4cf44e5bb4ef3ec4512e",
+  "service_input_identity": "sha256-eks-service-v1:3bc83a19f7b503082f6533c3a68e99f9858e6df76a993e249261b44afb12b4d7",
+  "policy_input_identity": "sha256-eks-network-policy-v1:e313ac75832592a5e15669729095ff5758f7c6fbcd2551b6de0a7f34bfb3b8cb",
+  "source_pod_uid": "00000000-0000-0000-0000-000000000021",
+  "complete": true,
+  "profile": {
+    "proxy_mode": "iptables",
+    "cluster_internal_ipv4": true,
+    "proxy_rules_assumed_current": true,
+    "no_alternate_proxy_or_mesh": true,
+    "cross_node_source_ip_and_port_preserved": true,
+    "policy_backend_tuple_assumed": true,
+    "reverse_conntrack_assumed": true
+  }
+}

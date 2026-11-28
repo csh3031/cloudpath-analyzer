@@ -1,0 +1,100 @@
+{
+  "format": "cloudpath-eks-cni-observation-v1",
+  "collected_at": "2026-11-25T11:00:00Z",
+  "eks_input_identity": "sha256-eks-pod-v1:79ae224f9a41e83f17bb520830e0b43d051e3ccc87c3f0150f0ec83e0fa8136f",
+  "policy_input_identity": "sha256-eks-network-policy-v1:c87d7911b078d05fef636c6d2cbbaa857cabd7dd63b8012a9d66aa239e44d5db",
+  "cluster_arn": "arn:aws:eks:ap-northeast-2:000000000000:cluster/demo-eks",
+  "complete": true,
+  "nodes": [
+    {
+      "node_uid": "00000000-0000-0000-0000-000000000011",
+      "agent_ready": true,
+      "policy_enabled": true,
+      "event_logging_enabled": true,
+      "attached_pod_uids": [
+        "00000000-0000-0000-0000-000000000021"
+      ]
+    },
+    {
+      "node_uid": "00000000-0000-0000-0000-000000000012",
+      "agent_ready": true,
+      "policy_enabled": true,
+      "event_logging_enabled": true,
+      "attached_pod_uids": [
+        "00000000-0000-0000-0000-000000000022"
+      ]
+    }
+  ],
+  "policyEndpoints": [
+    {
+      "namespace": "demo",
+      "policy_uid": "00000000-0000-0000-0000-000000000041",
+      "pod_uid": "00000000-0000-0000-0000-000000000021",
+      "endpoint_uid": "00000000-0000-0000-0000-000000000080"
+    },
+    {
+      "namespace": "demo",
+      "policy_uid": "00000000-0000-0000-0000-000000000042",
+      "pod_uid": "00000000-0000-0000-0000-000000000022",
+      "endpoint_uid": "00000000-0000-0000-0000-000000000081"
+    }
+  ],
+  "events": [
+    {
+      "node_uid": "00000000-0000-0000-0000-000000000011",
+      "pod_uid": "00000000-0000-0000-0000-000000000021",
+      "log": {
+        "timestamp": "2026-11-25T11:00:00Z",
+        "msg": "Flow Info: ",
+        "Src IP": "10.0.1.70",
+        "Src Port": 50000,
+        "Dest IP": "10.0.2.70",
+        "Dest Port": 443,
+        "Proto": "TCP",
+        "Verdict": "ACCEPT"
+      }
+    },
+    {
+      "node_uid": "00000000-0000-0000-0000-000000000011",
+      "pod_uid": "00000000-0000-0000-0000-000000000021",
+      "log": {
+        "timestamp": "2026-11-25T11:00:00Z",
+        "msg": "Flow Info: ",
+        "Src IP": "10.0.1.70",
+        "Src Port": 50000,
+        "Dest IP": "10.0.2.70",
+        "Dest Port": 8080,
+        "Proto": "TCP",
+        "Verdict": "DENY"
+      }
+    },
+    {
+      "node_uid": "00000000-0000-0000-0000-000000000012",
+      "pod_uid": "00000000-0000-0000-0000-000000000022",
+      "log": {
+        "timestamp": "2026-11-25T11:00:00Z",
+        "msg": "Flow Info: ",
+        "Src IP": "10.0.1.70",
+        "Src Port": 50000,
+        "Dest IP": "10.0.2.70",
+        "Dest Port": 443,
+        "Proto": "TCP",
+        "Verdict": "ACCEPT"
+      }
+    },
+    {
+      "node_uid": "00000000-0000-0000-0000-000000000011",
+      "pod_uid": "00000000-0000-0000-0000-000000000021",
+      "log": {
+        "timestamp": "2026-11-25T11:00:00Z",
+        "msg": "Flow Info: ",
+        "Src IP": "10.0.1.70",
+        "Src Port": 50000,
+        "Dest IP": "10.0.2.70",
+        "Dest Port": 8443,
+        "Proto": "TCP",
+        "Verdict": "DENY"
+      }
+    }
+  ]
+}

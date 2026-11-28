@@ -1,0 +1,12 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'../frontend/static/rds_viewer.html'),'utf8');
+const code=html.split('// BEGIN LOCAL_DIAGNOSTICS')[1].split('// END LOCAL_DIAGNOSTICS')[0].replace(/^.*\n/,'');const c=vm.createContext({});vm.runInContext(code,c);
+const row=(stage,status,reason,extra={})=>({stage,status,reason,evaluation_mode:'PREDICTED_PATH',...extra});
+const leg=(status,stop,request=[],extra={})=>({f:{request_status:status,first_request_stop:stop,request,...extra}});
+test('allow does not claim database success',()=>assert.match(c.legDiagnosis(leg('CONDITIONAL_CANDIDATE',null),false).body,/DB 인증 및 SQL 실행은 미검증/));
+test('RDS scope missing evidence is unknown',()=>{const x=c.legDiagnosis(leg('UNKNOWN','RDS_SCOPE',[row('RDS_SCOPE','UNKNOWN','RDS_DNS_ENI_EVIDENCE_MISSING')]),false);assert.match(x.title,/최초 미확정/);assert.match(x.body,/DNS 응답과 ENI 연결 증거가 없습니다/);});
+test('first NP block with independent SG block',()=>{const a=row('SOURCE_NETWORK_POLICY_EGRESS','BLOCKED','ISOLATED_NO_MATCHING_ALLOW',{selected_policies:['policy-demo']});const b=row('DESTINATION_SG_INGRESS','BLOCKED','NO_MATCHING_SG_ALLOW',{evaluation_mode:'INDEPENDENT_CHECK',group_ids:['sg-demo']});const x=c.legDiagnosis(leg('BLOCKED',a.stage,[a,b]),false);assert.match(x.body,/policy-demo/);assert.match(x.additional[0],/sg-demo/);});
+test('blocked request does not establish response',()=>assert.match(c.legDiagnosis(leg('BLOCKED','DESTINATION_SG_INGRESS',[],{response_status:'NOT_EVALUATED'}),true).title,/응답 경로 미평가/));
+test('writer role change is not a causal claim',()=>assert.match(c.explainReason({reason:'RDS_WRITER_ROLE_CHANGE_CANDIDATE'}),/정책 변화도 별도로/));
+test('unregistered reason does not infer',()=>assert.match(c.explainReason({reason:'__proto__'}),/등록되지 않은/));
+test('conditional reply stop is distinct',()=>{const a=row('DESTINATION_NACL_INGRESS','BLOCKED','MATCHING_ACL_RULE',{acl_id:'acl-demo',rule_number:100,evaluation_mode:'CONDITIONAL_CHECK'});const x=c.legDiagnosis(leg('CONDITIONAL_CANDIDATE',null,[],{response_status:'BLOCKED',conditional_first_response_stop:a.stage,response:[a]}),true);assert.match(x.title,/목적지 NACL/);assert.match(x.body,/규칙 100.*차단/);});

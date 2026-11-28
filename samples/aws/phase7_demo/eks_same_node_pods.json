@@ -1,0 +1,177 @@
+{
+  "format": "cloudpath-eks-pod-evidence-v1",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "inventory_identity": "sha256-aws-v2:fcbbcffa8a98ab22a73e2e059422069203cb7b5c013fdbcc0e0574c3898c8507",
+  "complete": true,
+  "cluster": {
+    "arn": "arn:aws:eks:ap-northeast-2:000000000000:cluster/demo-eks",
+    "name": "demo-eks",
+    "status": "ACTIVE",
+    "resourcesVpcConfig": {
+      "vpcId": "vpc-12345678",
+      "subnetIds": [
+        "subnet-12345678",
+        "subnet-87654321"
+      ]
+    }
+  },
+  "cni": {
+    "plugin": "aws-vpc-cni",
+    "address_mode": "secondary-ip",
+    "custom_networking": false,
+    "security_groups_for_pods": false,
+    "prefix_delegation": false,
+    "auto_mode": false
+  },
+  "namespaces": [
+    {
+      "metadata": {
+        "name": "demo",
+        "uid": "00000000-0000-0000-0000-000000000001",
+        "labels": {
+          "kubernetes.io/metadata.name": "demo",
+          "team": "demo"
+        }
+      },
+      "status": {
+        "phase": "Active"
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "metadata": {
+        "name": "node-1",
+        "uid": "00000000-0000-0000-0000-000000000011",
+        "labels": {
+          "kubernetes.io/os": "linux",
+          "topology.kubernetes.io/zone": "ap-northeast-2a"
+        }
+      },
+      "spec": {
+        "providerID": "aws:///ap-northeast-2a/i-12345678"
+      },
+      "status": {
+        "addresses": [
+          {
+            "type": "InternalIP",
+            "address": "10.0.1.10"
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {
+        "name": "node-2",
+        "uid": "00000000-0000-0000-0000-000000000012",
+        "labels": {
+          "kubernetes.io/os": "linux",
+          "topology.kubernetes.io/zone": "ap-northeast-2c"
+        }
+      },
+      "spec": {
+        "providerID": "aws:///ap-northeast-2c/i-87654321"
+      },
+      "status": {
+        "addresses": [
+          {
+            "type": "InternalIP",
+            "address": "10.0.2.10"
+          }
+        ]
+      }
+    }
+  ],
+  "pods": [
+    {
+      "metadata": {
+        "name": "app-1",
+        "uid": "00000000-0000-0000-0000-000000000021",
+        "namespace": "demo",
+        "labels": {
+          "app": "demo-web",
+          "role": "frontend"
+        },
+        "ownerReferences": [
+          {
+            "apiVersion": "apps/v1",
+            "kind": "ReplicaSet",
+            "name": "demo-web",
+            "uid": "00000000-0000-0000-0000-000000000099",
+            "controller": true
+          }
+        ]
+      },
+      "spec": {
+        "nodeName": "node-1",
+        "containers": [
+          {
+            "name": "app",
+            "ports": [
+              {
+                "name": "http",
+                "containerPort": 8080,
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      },
+      "status": {
+        "phase": "Running",
+        "hostIP": "10.0.1.10",
+        "podIP": "10.0.1.70",
+        "podIPs": [
+          {
+            "ip": "10.0.1.70"
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {
+        "name": "app-2",
+        "uid": "00000000-0000-0000-0000-000000000022",
+        "namespace": "demo",
+        "labels": {
+          "app": "demo-web",
+          "role": "backend"
+        },
+        "ownerReferences": [
+          {
+            "apiVersion": "apps/v1",
+            "kind": "ReplicaSet",
+            "name": "demo-web",
+            "uid": "00000000-0000-0000-0000-000000000099",
+            "controller": true
+          }
+        ]
+      },
+      "spec": {
+        "nodeName": "node-1",
+        "containers": [
+          {
+            "name": "app",
+            "ports": [
+              {
+                "name": "http",
+                "containerPort": 8081,
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      },
+      "status": {
+        "phase": "Running",
+        "hostIP": "10.0.1.10",
+        "podIP": "10.0.1.71",
+        "podIPs": [
+          {
+            "ip": "10.0.1.71"
+          }
+        ]
+      }
+    }
+  ]
+}

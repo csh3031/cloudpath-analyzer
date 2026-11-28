@@ -8,14 +8,14 @@ _SNAPSHOT = 'UPLOADED_SNAPSHOT_ACCURATE_COMPLETE_AND_STABLE'
 
 
 def analyze_observed_session(raw: bytes, source_ip: str, destination_ip: str,
-                             source_port: int, destination_port: int) -> dict:
+                             source_port: int, destination_port: int, *, prefix_list_raw=None) -> dict:
     """Cross-subnet IPv4 TCP only. Reply is hypothetical and tracking unverified.
 
     Stop the predicted path on the first blocked or uncertain check. Preserve
     independent evidence without treating it as a traversed hop. No live calls.
     """
     policy = evaluate_observed_policy(raw, source_ip, destination_ip,
-                                      source_port, destination_port)
+                                      source_port, destination_port, prefix_list_raw=prefix_list_raw)
     forward = policy['forwarding']
     findings = []
 
@@ -53,7 +53,7 @@ def analyze_observed_session(raw: bytes, source_ip: str, destination_ip: str,
             fid = name + ':' + stage
             mode = ('CONDITIONAL_CHECK' if reply else 'PREDICTED_PATH') if active else 'INDEPENDENT_CHECK'
             # Conditional SG checks count toward only the hypothetical tracked branch.
-            passes = status == 'PASS' or (reply and status == 'CONDITIONAL')
+            passes = status in ('PASS','NOT_APPLICABLE') or (reply and status == 'CONDITIONAL')
             deps = ([dependency] if dependency else []) + ([stopped_at] if stopped_at else [])
             item = dict(id=fid, direction=name, stage=stage, status=status,
                         reason=reason, evidence=evidence, evaluation_mode=mode,
@@ -101,14 +101,14 @@ def analyze_observed_session(raw: bytes, source_ip: str, destination_ip: str,
                 evidence=policy, live_observation=False,
                 assumptions=[_SNAPSHOT, _TRACKED],
                 dependencies={'response': response['dependency']},
-                coverage=dict(supported=['single VPC primary IPv4', 'distinct subnets',
+                coverage=dict(supported=['single VPC primary IPv4', 'distinct ENIs; conditional same-subnet direct path',
                                          'single ENI EC2', 'explicit local route',
-                                         'TCP IPv4 CIDR SG and NACL rules'],
+                                         'TCP IPv4 CIDR SG and NACL rules; direct private ENI SG references'],
                               unverified=['snapshot authenticity, completeness, freshness and atomicity',
                                           'attachment status', 'actual connection tracking',
                                           'host firewall, TCP listener and application',
-                                          'live packet delivery', 'same-subnet and complex routes',
-                                          'SG references and prefix lists']),
+                                          'live packet delivery', 'host on-link behavior and complex routes',
+                                          'non-direct SG references, missing/unsupported prefix-list evidence and prefix-list routes']),
                 limitations=forward['limitations'] + policy['limitations'] + [
                     'REACHABLE on a direction means only a static candidate under its assumptions.',
                     'Response is conditional on request delivery and tracked TCP reply.',

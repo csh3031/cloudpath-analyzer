@@ -1,0 +1,40 @@
+{
+  "format": "cloudpath-vpc-endpoints-v1",
+  "inventory_identity": "sha256-aws-v2:f5b8599cd3aa94dd5f1dd48095dde44c005ed7879e934166f285c06123815cd1",
+  "region": "ap-northeast-2",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "complete": true,
+  "VpcEndpoints": [
+    {
+      "VpcId": "vpc-12345678",
+      "State": "available",
+      "IpAddressType": "ipv4",
+      "PolicyDocument": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::cloudpath-demo-bucket/reports/*\",\"Principal\":\"*\",\"Condition\":{\"ArnEquals\":{\"aws:PrincipalArn\":\"arn:aws:iam::123456789012:role/demo-app\"}}}]}",
+      "ServiceRegion": "ap-northeast-2",
+      "VpcEndpointId": "vpce-11111111",
+      "VpcEndpointType": "Interface",
+      "ServiceName": "com.amazonaws.ap-northeast-2.s3",
+      "SubnetIds": [
+        "subnet-12345678",
+        "subnet-87654321"
+      ],
+      "NetworkInterfaceIds": [
+        "eni-99999991",
+        "eni-99999992"
+      ],
+      "Groups": [
+        {
+          "GroupId": "sg-99999999"
+        }
+      ],
+      "RouteTableIds": [],
+      "PrivateDnsEnabled": false,
+      "DnsEntries": [
+        {
+          "DnsName": "*.vpce-11111111-example.s3.ap-northeast-2.vpce.amazonaws.com",
+          "HostedZoneId": "ZEXAMPLE"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+# CloudPath Analyzer — 기술 부채 및 출시 게이트
+
+- 기준: Phase 7-G1 사용자 환경 1,869 Python PASS 및 CLI 7/7 (2026-11-28). 7-F4 사용자 Python 1,813 PASS, JavaScript 27 PASS 및 TEST A/B/C 브라우저·JSON 검수 완료. 7-G2 목표 1,912 Python PASS 사용자 검수 대기.
+- 목적: 실제 인프라 배포 전 검증 및 배포 후 운영 진단에 활용 가능한 로컬 웹 분석기.
+- 운영 결정: V1은 사용자가 필요할 때 로컬에서 시작·종료하는 단일 사용자 도구. 공개/다중 사용자 운영은 별도 승인 및 보안 게이트가 필요하다.
+- 상태: OPEN / PARTIAL / IMPLEMENTED (합성 테스트 완료, 사용자 검수 대기) / VERIFIED (명시된 완료 증거 확보) / DEFERRED (별도 범위 결정). 합성 테스트만으로 실제 AWS 검증을 대체하지 않는다.
+
+## V1 필수 및 범위 결정 대장
+
+| ID | 문제와 영향 | 상태 | 완료 조건 | 단계 |
+|---|---|---|---|---|
+| CP-DEBT-001 | HCL 변수, locals, tfvars, 로컬 module, count/for_each, dynamic, provider alias, data source 및 Plan 해석 부족 | OPEN | 대표 복합 IaC를 배포 없이 해석; 값/관계가 불명확하면 근거와 추가 입력을 표시; 외부 코드 자동 실행 금지 | 7-H |
+| CP-DEBT-002 | SG 참조 및 self-reference, prefix list, 계정/연결 유형별 정책 | PARTIAL | 직접 동일 VPC의 확인된 ENI 참조 단위 검수; prefix list 실제 목록/버전 및 누락 처리; AWS-managed 목록과 실제 수집·통합 검수; 교차 VPC/중간장비/변환 경로에 대한 지원 범위와 실환경 교차 검증 | 7-D5e 이전/7-H |
+| CP-DEBT-003 | 동일 subnet의 EC2/ECS/서로 다른 EKS node 통신 및 실환경 검증 | PARTIAL | 직접 ENI 경로, NACL 비적용 조건 및 중간장비 예외를 구별하고 정상/차단/미확정 검수 | 7-D5f |
+| CP-DEBT-004 | 동일 node 및 동일 Pod 통신, Service hairpin/SNAT 등 | PARTIAL | node 내부 경로와 VPC 정책을 구별; 최소 지원 조건 및 미지원 판정 명시 | 7-D5f |
+| CP-DEBT-005 | ELB-to-task, 외부 client, 다중 target/가중치, ECS revision, NLB source IP 처리 | PARTIAL | 대표 외부 client→ELB→ECS→DB 경로 및 독립 backend/health checks 검수; 미지원 listener/rule/rollout 조건 표시 | 7-D5e/7-H |
+| CP-DEBT-006 | 실제 AWS/Kubernetes/CNI 원본 수집 및 스냅샷 정규화 부족 | OPEN | 읽기 전용 수집, 권한·페이지네이션·수집 시각·누락·변경 검증, 실제 원본 및 결과 대조; CNI 로그와 raw PolicyEndpoint/agent/eBPF 증거 범위 기록 | 8-A |
+| CP-DEBT-007 | Terraform/Plan/AWS 공통 모델 및 다중 VPC·서비스 연속 경로 미통합 | OPEN | 입력 출처/가정/미확정 보존; 업로드→통합 구조도→가상 Packet Trace를 CLI 없이 검수; AWS 관측과 비교 | 7-H/8-B |
+| CP-DEBT-008 | 로컬 웹 운영 보안 및 민감정보 | OPEN | 기본 loopback, 명시적 기동/종료, origin/token 및 파일 검증, 안전한 출력, 민감정보 보관/삭제, 실행 시간/메모리 제한, 동시 요청/입력 교체 격리, read-only 검수; 외부 바인딩 금지 기본값 | 8-C |
+| CP-DEBT-009 | CP-6.2-UI-001 및 브라우저 통합 검수 미완료 | OPEN | 재현/수정/회귀 및 실제 브라우저 검수; 배치 편집·복원·입력 교체·차단 표시 검증 | 8-B |
+| CP-DEBT-010 | 대규모 입력 분석·렌더링·성능 | OPEN | 합의된 규모 및 시간 목표, 측정 환경·결과 기록; 초과 시 취소/부분 분석/명확한 오류 | 8-C |
+| CP-DEBT-011 | Service DNAT 및 CNI 실제 적용 증거, proxy/conntrack 미검증 | PARTIAL | D5c/D5d 합성 시나리오 유지; 실제 원본 수집과 비교; 동일 node/포트 변환 등의 지원 범위 명시 | 7-D5f/8-A |
+| CP-DEBT-012 | DNS/TLS/OS firewall/runtime listener·application 상태 | OPEN | 지원/미지원 매트릭스에 명시, 별도 증거 없으면 실제 서비스 성공 확정 금지 | 7-H/8-A |
+| CP-DEBT-013 | 관리형 서비스 RDS/S3/Endpoint 및 IAM | PARTIAL | V1 지원 경로 및 정책 평가, 네트워크와 인증·인가 결과 구분 | 7-E~G |
+| CP-DEBT-014 | 실제 AWS 비교 검증 및 출시 증거 | OPEN | 대표 HCL/Plan/Inventory 시나리오의 일치 또는 차이 설명, 실제 구성과 관측 비교, 전체 회귀·E2E 증거, Git 태그 | 8-A~E |
+| CP-DEBT-016 | 사용자 친화적 자연어 진단 및 증거 연결 | PARTIAL | 모든 V1 분석 화면에서 최초 차단/미확정과 독립 검사, 조건부 응답, 관련 리소스 및 근거, 미지원 사유를 설명; 판정 코드·원본 JSON 보존; 외부 AI 없이 재현 가능; 미등록 사유는 명시하고 출시 전 범위 검수 | 7-D6r/7-H/8-B |
+| CP-DEBT-015 | Docker 기반 로컬 설치·배포 | OPEN | Dockerfile/Compose/ignore, non-root, localhost port, 최소 권한, 자원 제한, 의존성 고정 및 이미지 스캔, 데이터 보호, clean-host pull/start/stop/restart, 브라우저 E2E, 버전 태그와 digest 검수 | 8-D~E |
+
+## 공개 운영 확장 게이트 (V1 로컬 출시와 분리)
+
+CP-DEBT-PUBLIC-001 — DEFERRED: 인증·인가, TLS, 테넌트 격리, 운영 서버, 안전한 자격증명 관리, 업로드 보관/삭제 정책, 운영 모니터링 및 동시 사용자 부하. 공개 또는 다중 사용자 운영을 시작하기 전 별도 승인 및 검수. 로컬 서버를 그대로 외부에 공개하지 않는다.
+
+## 관리 규칙
+
+- 기존 V1 필수 범위는 유지한다. V1에서 제외하려면 사용자 동의 및 영향/대안/후속 시점을 기록한다.
+- 매 단계에서 변경된 ID, 지원 프로파일, 남은 제한, 회귀 테스트와 CLI/브라우저/실환경 증거를 기록한다.
+- OPEN/PARTIAL인 필수 과제는 출시 전에 해결하거나 사용자가 승인한 범위 제한과 안전한 UNKNOWN 처리 및 검증 증거를 남긴다. 필수 E2E 및 실제 AWS 검증 자체는 생략하지 않는다.
+- 정책 규칙이 확인되지 않으면 허용/차단을 추측하지 않는다. 최초 차단 후 검사는 독립 근거이며 실제 도달을 의미하지 않는다.
+
+## 변경 이력
+
+- 2026-11-28 / 7-D5d-SG: 공통 정책 평가에 직접 동일 VPC private ENI SG 참조 후보를 추가. EC2/ECS/EKS의 기존 cross-subnet 검증에서만 opt-in. 동일 SG 소속만으로 허용하지 않으며 명시적 self-reference 필요. CIDR 규칙의 기존 합집합 및 조건부 응답 의미 유지. Prefix List, 교차 VPC 참조, 동일 subnet, ELB 경로, 실제 AWS 검증은 미완료. CP-DEBT-002는 PARTIAL 유지.
+
+- 2026-11-28 / 7-D5d-PL: customer-managed IPv4 SG Prefix List 정규화 보조 증거 및 EC2/ECS/EKS 직접 통신 분석 opt-in. 동일 inventory digest, region, 300초 전체 수집 창, 안정 상태, metadata before/after 및 entries version 일치, 완전한 페이지 수집 주장, CIDR 검증 필요. 누락/불일치/미지원은 UNKNOWN; 명확한 다른 허용 규칙은 유지. 실제 수집·AWS-managed 목록·prefix-list route·ELB/peering/TGW/Service/CNI 웹 통합은 후속. CP-DEBT-002 PARTIAL 유지. Docker Hub 이미지 배포 및 로컬 컨테이너 실행을 V1 게이트 CP-DEBT-015로 추가.
+
+- 2026-11-28 / 7-D5e: CP-DEBT-005 PARTIAL (internal same-VPC cross-subnet node-specific ALB and non-preserving NLB conditional frontend/backend/health legs implemented; SG reference and optional customer-managed prefix list reuse). Preserve-client NLB forwarding/SG semantics and return tuple, external ingress, same-subnet, full multi-target/rollout and actual node mapping/collection remain open; target health and live session not inferred. CP-DEBT-002 remains PARTIAL. Synthetic tests are not real AWS validation.
+
+- 2026-11-28 / 7-D5f: CP-DEBT-003/004 PARTIAL. EC2, ECS, cross-node EKS and correlated ELB-to-task direct same-subnet IPv4 TCP legs use distinct ENI evidence and a normal local configuration guard, not a route-table traversal. No NACL boundary on the conditional direct path; SG checks remain. Unusual/missing local configuration is UNKNOWN. Ordinary secondary-IP VPC CNI same-node distinct Pod direct path checks NetworkPolicy, with conditional host-local delivery and no VPC boundary; actual host routes, hooks and listeners unverified. Same Pod container listener, same-node Service/hairpin/SNAT, same-node historical CNI event direction, and legacy hypothetical ELB node path remain unresolved. Cross-node same-subnet Service translation reuses the direct leg; no target or conntrack attestation. EC2 viewer contract skips NACL and Route Table anchors and checks local configuration against graph. Actual browser and AWS validation pending. CP-DEBT-005/011 remain PARTIAL.
+
+- 2026-11-28 / 7-D6: Added separate workload snapshot viewer and bounded stateless web adapter for existing ECS/EKS engines, with configuration relationship cards, independent trace legs and historical CNI comparisons. Existing CP-DEBT-002/003/004/005/011 limitations remain; no new runtime semantics claimed. CP-DEBT-007/009 remain OPEN: unified Terraform/Plan/AWS topology, full browser acceptance, upload/layout defects and real-world scenarios are not closed by this viewer. CP-DEBT-008/014/015 remain open for local operations, real evidence and Docker release checks.
+
+- 2026-11-28 / 7-D6r: workload viewer rule-based Korean diagnostics, first stop and independent checks separated; request/conditional response and historical CNI evidence distinct. Engine verdict and raw JSON unchanged. Other viewers and full reason coverage remain CP-DEBT-016 PARTIAL. No actual AWS or browser HTTP acceptance claimed by this change.
+
+- 2026-11-28 / 7-E1: CP-DEBT-013 PARTIAL — RDS logical configuration and provisioned private IPv4 instance/cluster endpoint candidates, subnet group and SG correlation, writer/reader member roles. No inferred IP/ENI or runtime target. Classic Multi-AZ standby, actual DNS/ENI association, EC2/ECS/EKS network legs, failover, other endpoint profiles, DB authentication, raw collection, web diagnostics and real AWS validation remain open. CP-DEBT-012/016 remain open/partial respectively.
+
+- 2026-11-28 / 7-E2: CP-DEBT-013 remains PARTIAL. Private same-VPC RDS instance TCP conditional path for EC2/ECS/EKS with source-specific normalized DNS/ENI assertions, TTL/collection window and exact configuration correlation; SG references, optional customer-managed prefix lists, same-subnet/NACL and conditional return checks reused. EKS standard non-Pod external IPv4 egress ipBlock/except supported only under direct untranslated profile; Pod-to-Pod ipBlock remains unresolved. DNS/ENI assertions not authenticated; no raw DNS or AWS collection, current ownership, actual traffic, DNS transport, failover, writer/reader routing, proxy, TLS or DB authentication proof. 7-E3/E4 and 8-A acceptance remain required; CP-DEBT-012/016 unchanged.
+
+- 2026-11-28 / 7-E3: CP-DEBT-013 PARTIAL. Private IPv4 provisioned cluster writer/reader DNS/member/ENI correlation reuses instance network checks (EC2/ECS/EKS); one source-specific DNS candidate, no reader selection guarantee; Aurora reader fallback only with no configured readers. Non-Aurora cluster requires three members in three AZs. Historical EC2 comparison validates both snapshots independently, stable resource/member identity, time order and same logical endpoint/source. Writer role or classic Multi-AZ primary AZ change candidate is not proof of failover, recovery or downtime. Raw collection, real AWS, reader distribution, transient DNS behavior, other profiles, web diagnostics remain pending.
+
+## V1 기술 부채 집중 상환 순서 (2026-11-28 합의)
+
+- 7-E3~E4, 7-F, 7-G: 관리형 서비스와 IAM 분석 완료.
+- 7-H1: 공통 SG/Prefix List/전달 예외, 외부 ELB, NLB source preservation, 대표 다중 target/revision, 기존 엔진 연계 보완.
+- 7-H2: HCL 변수/locals/tfvars/module/count/for_each 및 Plan 해석 고도화.
+- 7-H3: 공통 모델 및 연속 경로 통합.
+- 7-H4: 통합 웹 및 자연어 진단.
+- 8-A~E: 실제 읽기 전용 수집·AWS 교차 검증, 브라우저 E2E/UI 결함, 보안·성능, Docker 패키징과 독립 호스트 검수.
+- 기존 필수 조건을 제거하지 않는다. V1.x 이관은 별도 사용자 동의와 UNKNOWN 처리 및 검수 증거 필요.
+
+- 2026-11-28 / 7-E4: RDS snapshot web adapter and Korean diagnostics added; configuration, source-specific session, historical comparison, raw export. CP-DEBT-013/016 remain PARTIAL. Existing engine semantics and all V1 requirements preserved. Actual browser HTTP acceptance, real AWS collection and unified analysis remain open.
+
+- 2026-11-28 / 7-F1: CP-DEBT-013 PARTIAL. Same-region IPv4 Interface ENI/subnet/SG and declared DNS configuration, S3/DynamoDB Gateway active prefix-list route-table correlation. No service prefix-list identity/entries/route selection, actual DNS, network policy verdict or authorization. CP-DEBT-002 remains PARTIAL (AWS-managed prefix lists and route selection pending); CP-DEBT-006/014 raw collection and real validation remain OPEN. CP-DEBT-016 Korean diagnostics required in 7-F4. No existing release requirement removed.
+
+- 2026-11-28 / 7-F2: CP-DEBT-013 PARTIAL. Source-bound explicit Interface Endpoint DNS/ENI observation (single IPv4 answer, declared endpoint-specific name), same-VPC EC2/ECS/EKS conditional TCP/443 network legs, shared RDS direct policy evaluator, SG reference and optional customer-managed prefix list, ordinary EKS non-Pod egress policy, same-subnet and conditional reply. Private DNS service-name selection including S3 inbound-only mode, multiple answers, DNS transport, coexisting gateway prefix-list route resolution, service-side forwarding, endpoint policy/IAM/TLS/API success and raw/actual AWS evidence remain unresolved. CP-DEBT-002/006/012/014/016 unchanged; 7-F3/F4, 7-G, 7-H and actual acceptance remain mandatory. No release requirement removed. User-confirmed baseline: 1676 Python + 17 JS; F2 expected 1721 Python pending user regression.
+
+- 2026-11-28 / 7-F3: CP-DEBT-002/013 PARTIAL. Versionless AWS-managed S3/DynamoDB IPv4 prefix lists (asserted AWS identity, complete matching reads, v2 envelope); opt-in prefix expansion and route priority with ambiguous overlap UNKNOWN; Gateway TCP/443 conditional source-bound DNS/route and EC2/ECS/EKS source policies, no invented endpoint ENI or SG, conditional source return only. RDS/Interface direct evaluator opt-in prefix selection; other callers, broader managed-list profiles, inter-VPC SG, collection and actual AWS validation remain open. Alternate NAT/IGW route selected but not composed. Private DNS, all answers, S3 bucket-specific hostnames, source translation, endpoint policy/IAM/API and web diagnostics remain pending. CP-DEBT-006/012/014/016 unchanged; no existing V1 requirement removed.
+
+- 2026-11-28 / 7-F4: CP-DEBT-013/016 remain PARTIAL. Separate local Endpoint web viewer for configuration and EC2/ECS/EKS Interface/Gateway TCP constraints; Korean first-stop/independent/conditional response diagnostics, DNS/prefix-list and selected route evidence, alternate route UNKNOWN, unchanged result JSON. Existing engine verdicts and topology input preserved. HTTP API and offline Chromium checks independently passed; user HTTP browser and real AWS verification pending. Private DNS, multi-answer selection, alternate route composition, broader caller integration, IAM and resource policy still required. No V1 requirement removed.
+
+- 2026-11-28 / 7-G1: CP-DEBT-013 PARTIAL. Offline same-account S3 GetObject/ListBucket policy candidates, hypothetical IAM role/user ARN, complete asserted identity/bucket/endpoint documents, bounded Action/Resource/Principal and selected scalar Condition operators. Explicit deny precedence; identity or bucket grant plus endpoint allow within asserted profile only. Missing/unsupported evidence remains UNKNOWN, not inferred default endpoint policy. No authenticated policy attachment or network correlation, actual identity, session/boundary/SCP/RCP, cross-account, KMS/ACL/access points, API or live AWS validation. 7-G2+ network binding, scope extensions and Korean web diagnostics still required. No V1 requirement removed; F4 user TEST B/C and regression logs pending.
+
+- 2026-11-28 / 7-G2: CP-DEBT-013 PARTIAL. Recompute existing Interface/Gateway network and S3 policy results independently; explicit hypothetical request binding over network result and authorization evidence identities, same endpoint/VPC/service, HTTPS assertion, snapshot/TTL window and exact submitted Endpoint Policy content. Separate network request/conditional return, authorization and overall access candidates; later policy denial is independent if network blocked, alternative NAT route cannot establish Endpoint Policy applicability. Actual principal attachment, identity/bucket policy provenance, context authentication, additional policy layers, KMS/ACL, cross-account, API success, web diagnostics and real validation remain pending. No V1 requirement removed. G1 corrected deployment script verified by user.
+
+- 2026-11-28 / 7-G3a: CP-DEBT-013 PARTIAL. Separate offline IAM role/user direct attachment evidence linked to exact G1 input digest; stable principal ID, repeated complete attachment lists, inline owner/content and managed policy default version/ID, exact identity document multiset. User groups, boundary/session, actual source role/STS, bucket provenance, organizations, cross-account, KMS/ACL, G2 network binding, web diagnostics and real AWS validation remain open. No existing engine or release requirement changed. 50 new focused tests; user full regression pending (1962 expected). CP-DEBT-016 unchanged.
+
+- 2026-11-28 / 7-G3a.1: CP-DEBT-013 remains PARTIAL. Normalized IAM registration accepts three asserted provenance layers and account-bound identity/policy/attachment references, with explicit isolated what-if operations tied to the base digest. No permission verdict, no effective completeness attestation, no AWS API or source changes. Raw AWS/Terraform adapters, membership, workload binding, boundary/session and broader authorization, unified evaluation, manual web management and live validation remain required. CP-DEBT-007/008/014/016 unchanged. 7-G5 local IAM management and 7-H2/8-A adapter scope added without removing any V1 requirement. User-confirmed G3a baseline 1962 Python tests.
+
+- 2026-11-28 / 7-G3a.2: CP-DEBT-013 PARTIAL. Exact-scenario normalized relationship assertions; User-to-Group membership, separate EC2/ECS/EKS application and auxiliary role candidates, direct/group policy references and separate boundary references. No trust, actual service record correlation, runtime identity or authorization evaluation; missing/ambiguous references remain UNKNOWN. Raw adapters, membership/binding overlay editing, G1/G2/G3a integration, remaining authorization layers, UI and live validation remain required. User-confirmed G3a.1 baseline 2004 Python tests; 40 new focused tests, full regression target 2044 pending. No V1 requirement removed.
+
+- 2026-11-28 / 7-G3b: CP-DEBT-013 PARTIAL. Independent identity-grant restriction analysis with exact G1/G3a input binding, asserted boundary attachment/version correlation, explicit absent/present/unknown completeness, hypothetical role-session inline/managed policy set and separate layer results. No final resource authorization, actual STS session or source binding, G3a.1/.2 effective policy composition, SCP/RCP, cross-account, KMS/ACL, G2 integration, raw collection, web UI or live validation. Resource-policy implicit-denial exceptions remain mandatory for G3e. User-confirmed G3a.2 baseline 2044 Python; 40 new focused tests, full regression target 2084 pending. No V1 requirement removed.
+
+- 2026-11-28 / 7-G3c: CP-DEBT-013 PARTIAL. Independent same-account asserted Organizations SCP/RCP controls, exact G1 digest, root/OU/account path, per-level attachment completeness, explicit scope and enablement, SCP level allow and deny precedence, RCP default and custom deny checks. No actual organization collection or authenticated policy provenance, broader Organizations policy grammar/context, cross-account principal/resource account separation, STS binding, IAM inventory and G2/G3 unified composition, web UI or live validation. User-confirmed G3b baseline 2084 Python; 52 new focused tests; target 2136 pending user regression. No existing V1 requirement removed.
+
+- 2026-11-28 / 7-G3d.1: CP-DEBT-013 remains PARTIAL. Separate direct cross-account S3 policy-path candidate diagnostic using G1 request validation and supported policy grammar, distinct principal and bucket accounts, identity + bucket + endpoint allow requirement, explicit deny precedence, asserted ownership scope and UNKNOWN for incomplete/unsupported evidence. No account delegation, AssumeRole, STS session, cross-account SCP/RCP or boundary/session integration, attachment/ownership provenance, public access controls, KMS/ACL, network integration, web or actual validation. Final authorization/API remain UNKNOWN. User-confirmed G3c baseline 2136 Python; 38 new focused tests; full regression target 2174 pending. No V1 requirement removed.
+
+- 2026-11-28 / 7-G3d.2: CP-DEBT-013 remains PARTIAL. Independent S3 object encryption and KMS decrypt policy-path candidates bound to exact authorization digest and object/key ARN. SSE-S3/no KMS, ListBucket, symmetric customer-managed SSE-KMS, asserted key state, direct/delegated key policy grants, key-account distinction and bounded ViaService/CallerAccount/encryption context conditions. Unsupported modes, KMS grants, custom context, AWS-managed same-account policy, Bucket Key caching, live provenance/runtime identity, guardrails, ACL/ownership, public access, unified evaluation, adapters, web and real AWS validation remain open. No final authorization or API success claim. User-confirmed G3d.1 baseline 2174; 42 focused tests; full regression target 2216 pending user verification. No V1 requirement removed.
+
+- 2026-11-28 / 7-G3d.3: CP-DEBT-013 remains PARTIAL. Independent asserted ownership, account ACL grant and public access block candidates for S3 read requests, exact G1 digest and resource binding, canonical-account mapping, public ACL suppression and cross-account public bucket restriction. No actual public policy classification or source provenance, no public grant applicability or third-party object policy integration, organization collection, unified authorization, adapters, UI or live validation. User-confirmed G3d.2 baseline 2216; 56 focused tests; full regression target 2272 pending user verification. No V1 requirement removed.

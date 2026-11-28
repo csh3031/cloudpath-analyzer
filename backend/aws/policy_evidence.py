@@ -3,9 +3,11 @@
 No live reachability, connection tracking observation or session verdict.
 """
 from ipaddress import IPv4Address, IPv4Network
+from backend.aws.local_delivery_evidence import subnet_policy
 from backend.aws.forwarding_evidence import trace_observed_forwarding
 from backend.aws.snapshot import sanitize_inventory
 from backend.iac.plan_adapter import _read
+from backend.aws.prefix_list_evidence import load_prefix_lists, match_prefix_list
 
 
 def _port(n):
@@ -41,9 +43,37 @@ def _result(status, reason, **details):
     return dict(status=status, reason=reason, **details)
 
 
-def _sg(groups, endpoint, peer, egress, port):
+def _local_reference(groups, endpoint, peer, pair, direct_same_vpc):
+    """Match only verified direct private ENI peer membership in a single VPC.
+
+    Callers must establish endpoint correlation and a direct local route first.
+    No inference from a CIDR, a group name, a translated IP, or a rule's own SG.
+    Unknown references remain unresolved (including absent group metadata).
+    """
+    if not direct_same_vpc or not isinstance(pair, dict):
+        return None
+    ref = pair.get('GroupId')
+    if not isinstance(ref, str) or ref not in groups:
+        return None
+    # The v1/v2 normalized snapshot retains GroupId, not account/peering
+    # metadata. Only groups positively present in this selected VPC qualify.
+    if set(pair) != {'GroupId'}:
+        return None
+    a, b = endpoint.get('security_group_ids'), peer.get('security_group_ids')
+    if not all(isinstance(ids, list) and ids and all(isinstance(g,str) and g in groups for g in ids) and len(ids)==len(set(ids)) for ids in (a,b)):
+        return None
+    vpcs = {groups[g].get('VpcId') for g in a+b+[ref]}
+    if len(vpcs)!=1 or not next(iter(vpcs)):
+        return None
+    if not endpoint.get('eni_id') or not peer.get('eni_id') or endpoint['eni_id']==peer['eni_id']:
+        return None
+    return ref in b
+
+
+def _sg(groups, endpoint, peer, egress, port, *, direct_same_vpc=False, prefix_lists=None):
     ids = endpoint['security_group_ids']
     uncertain = False
+    unresolved_prefixes = []
     for gid in ids:
         for i, rule in enumerate(groups[gid]['IpPermissionsEgress' if egress else 'IpPermissions']):
             protocol = _protocol(rule['IpProtocol'])
@@ -53,14 +83,28 @@ def _sg(groups, endpoint, peer, egress, port):
             if ports is False:
                 continue
             cidrs = [_cidr(r['CidrIp'], IPv4Address(peer['private_ip'])) for r in rule.get('IpRanges', [])]
-            # v1 omits SG reference account/peering metadata and prefix-list contents.
-            unresolved = bool(rule.get('UserIdGroupPairs') or rule.get('PrefixListIds')) or None in cidrs
+            refs = [(pair, _local_reference(groups, endpoint, peer, pair, direct_same_vpc))
+                    for pair in rule.get('UserIdGroupPairs', [])]
+            prefixes = [match_prefix_list(pair, prefix_lists or {}, peer['private_ip'])
+                        for pair in rule.get('PrefixListIds', [])]
+            unresolved_prefixes.extend(detail for match,detail in prefixes if match is None)
+            unresolved = any(match is None for match,_ in prefixes) or None in cidrs or any(match is None for _,match in refs)
             if protocol is True and ports is True and True in cidrs:
                 return _result('ALLOW_CANDIDATE', 'MATCHING_IPV4_SG_RULE', group_id=gid, rule_index=i, rule=rule)
-            if unresolved or ((protocol is None or ports is None) and True in cidrs):
+            for pair, match in refs:
+                if match is True and protocol is True and ports is True:
+                    return _result('ALLOW_CANDIDATE', 'MATCHING_DIRECT_PEER_SG_REFERENCE', group_id=gid,
+                                   rule_index=i, rule=rule, referenced_group_id=pair['GroupId'],
+                                   peer_eni_id=peer['eni_id'], peer_private_ip=peer['private_ip'],
+                                   reference_scope='DIRECT_SAME_VPC_PRIVATE_ENI')
+            for match, detail in prefixes:
+                if match is True and protocol is True and ports is True:
+                    return _result('ALLOW_CANDIDATE', 'MATCHING_IPV4_PREFIX_LIST_RULE', group_id=gid, rule_index=i, rule=rule, **detail)
+            if unresolved or ((protocol is None or ports is None) and (True in cidrs or any(match is True for _,match in refs) or any(match is True for match,_ in prefixes))):
                 uncertain = True
     return _result('UNKNOWN' if uncertain else 'BLOCKED',
-                   'SG_RULE_UNRESOLVED' if uncertain else 'NO_MATCHING_SG_ALLOW', group_ids=ids)
+                   'SG_RULE_UNRESOLVED' if uncertain else 'NO_MATCHING_SG_ALLOW', group_ids=ids,
+                   **({'unresolved_prefix_lists':unresolved_prefixes} if unresolved_prefixes else {}))
 
 
 def _acl(acls, endpoint, peer, egress, port):
@@ -89,7 +133,7 @@ def _acl(acls, endpoint, peer, egress, port):
     return _result('UNKNOWN', 'ACL_NO_EXPLICIT_MATCH_OR_DEFAULT', acl_id=aid)
 
 
-def evaluate_observed_policy(raw: bytes, source_ip: str, destination_ip: str, source_port: int, destination_port: int) -> dict:
+def evaluate_observed_policy(raw: bytes, source_ip: str, destination_ip: str, source_port: int, destination_port: int, *, prefix_list_raw=None) -> dict:
     """Evaluate independent request/conditional reply policies; TCP ports explicit.
 
     Static matches rely on uploaded rule lists; no completeness/freshness guarantee.
@@ -98,28 +142,32 @@ def evaluate_observed_policy(raw: bytes, source_ip: str, destination_ip: str, so
         raise ValueError('Expected explicit TCP source and destination ports in 1..65535')
     forward = trace_observed_forwarding(raw, source_ip, destination_ip)
     inv = sanitize_inventory(_read(raw)['inventory'])
+    prefix_lists, prefix_summary = load_prefix_lists(prefix_list_raw, forward['input_identity'], forward['region'], forward['collected_at'])
     groups = {g['GroupId']:g for g in inv['SecurityGroups']}
     src, dst = (forward['endpoints'][k] for k in ('source','destination'))
     def checks(a,b,port,reply):
         stages = ('SOURCE_SG_EGRESS','SOURCE_NACL_EGRESS','DESTINATION_NACL_INGRESS','DESTINATION_SG_INGRESS')
-        supported = all(e['status']=='ENDPOINT_CANDIDATE' for e in (a,b)) and a['subnet_id'] != b['subnet_id'] and all(not forward[d]['reason'].endswith('AWS_RESERVED_SUBNET_ADDRESS') for d in ('request','response'))
+        supported = all(e['status']=='ENDPOINT_CANDIDATE' for e in (a,b)) and a['eni_id']!=b['eni_id'] and a['private_ip']!=b['private_ip'] and all(not forward[d]['reason'].endswith('AWS_RESERVED_SUBNET_ADDRESS') for d in ('request','response')) and (a['subnet_id']!=b['subnet_id'] or forward['request']['status']==forward['response']['status']=='FORWARDING_CANDIDATE')
         if not supported:
             rows = [_result('NOT_EVALUATED','ENDPOINT_OR_SCOPE_UNCONFIRMED') for _ in stages]
         else:
             # No tracked-state assertion; F must establish request and connection conditions.
             conditional = _result('CONDITIONAL','REQUIRES_ESTABLISHED_TRACKED_REQUEST')
-            rows = [conditional if reply else _sg(groups,a,b,True,port),
-                    _acl(inv['NetworkAcls'],a,b,True,port),
-                    _acl(inv['NetworkAcls'],b,a,False,port),
-                    conditional if reply else _sg(groups,b,a,False,port)]
+            direct = forward['request']['status']=='FORWARDING_CANDIDATE' and not reply
+            local=forward['response' if reply else 'request'].get('local_delivery',{})
+            rows = [conditional if reply else _sg(groups,a,b,True,port,direct_same_vpc=direct,prefix_lists=prefix_lists),
+                    subnet_policy(_acl,inv,a,b,True,port,local),
+                    subnet_policy(_acl,inv,b,a,False,port,local),
+                    conditional if reply else _sg(groups,b,a,False,port,direct_same_vpc=direct,prefix_lists=prefix_lists)]
         return dict(conditional=reply, destination_port=port,
                     checks=[dict(r,stage=s,independent=True) for s,r in zip(stages,rows)])
     return dict(analysis_type='STATIC_AWS_INVENTORY_POLICY', input_identity=forward['input_identity'],
                 collected_at=forward['collected_at'], protocol='tcp', source_port=source_port,
                 destination_port=destination_port, forwarding=forward,
                 request=checks(src,dst,destination_port,False), response=checks(dst,src,source_port,True),
+                **({'prefix_list_evidence':prefix_summary} if prefix_summary is not None else {}),
                 session_status='NOT_EVALUATED', live_observation=False,
                 limitations=['Independent policy checks are not traversed packet hops.',
                              'SG reply requires tracked connection evidence/assumption; untracked and runtime tracking behavior not established.',
-                             'SG references and prefix-list contents are unresolved; IPv4 CIDR TCP only.',
+                             'Direct same-VPC verified private ENI SG references are supported; other references unresolved; optional version-bound customer-managed IPv4 prefix list evidence only; no prefix-list routes.',
                              'Snapshot freshness, completeness and authenticity not established; host firewall and application not evaluated.'])

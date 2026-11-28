@@ -1,0 +1,46 @@
+{
+  "schema": "cloudpath-iam-inventory-v1",
+  "account_id": "123456789012",
+  "layer": "OBSERVED",
+  "source": "AWS_SNAPSHOT",
+  "registered_at": "2026-11-28T05:00:20Z",
+  "complete": {
+    "identities": true,
+    "policies": true,
+    "attachments": true
+  },
+  "identities": [
+    {
+      "arn": "arn:aws:iam::123456789012:role/demo-app",
+      "kind": "ROLE",
+      "unique_id": "AROASYNTHETICDEMO12345"
+    }
+  ],
+  "policies": [
+    {
+      "ref": "arn:aws:iam::123456789012:policy/demo-read",
+      "kind": "MANAGED",
+      "owner_arn": null,
+      "policy_id": "ANPASYNTHETICDEMO12345",
+      "default_version": "v2",
+      "document_version": "v2",
+      "document": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::cloudpath-demo-bucket/reports/*"
+          }
+        ]
+      }
+    }
+  ],
+  "attachments": [
+    {
+      "identity_arn": "arn:aws:iam::123456789012:role/demo-app",
+      "policy_ref": "arn:aws:iam::123456789012:policy/demo-read",
+      "kind": "IDENTITY_POLICY"
+    }
+  ]
+}

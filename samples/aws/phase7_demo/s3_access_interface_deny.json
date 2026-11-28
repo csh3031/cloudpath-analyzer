@@ -1,0 +1,72 @@
+{
+  "schema": "cloudpath-s3-authz-v1",
+  "request": {
+    "principal_arn": "arn:aws:iam::123456789012:role/demo-app",
+    "bucket_account": "123456789012",
+    "action": "s3:GetObject",
+    "resource": "arn:aws:s3:::cloudpath-demo-bucket/reports/demo.json",
+    "endpoint_id": "vpce-11111111",
+    "endpoint_type": "Interface",
+    "vpc_id": "vpc-12345678",
+    "secure_transport": true
+  },
+  "policies": {
+    "identity": [
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::cloudpath-demo-bucket/reports/*"
+          }
+        ]
+      }
+    ],
+    "bucket": [
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Deny",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::cloudpath-demo-bucket/reports/*",
+            "Principal": "*"
+          }
+        ]
+      }
+    ],
+    "endpoint": [
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::cloudpath-demo-bucket/reports/*",
+            "Principal": "*",
+            "Condition": {
+              "ArnEquals": {
+                "aws:PrincipalArn": "arn:aws:iam::123456789012:role/demo-app"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "complete": {
+    "identity": true,
+    "bucket": true,
+    "endpoint": true
+  },
+  "assertions": {
+    "no_permissions_boundary": true,
+    "no_session_policy": true,
+    "no_scp_rcp": true,
+    "bucket_owner_enforced": true,
+    "no_additional_service_restrictions": true,
+    "object_owned_by_bucket_account": true,
+    "no_kms_requirement": true
+  }
+}

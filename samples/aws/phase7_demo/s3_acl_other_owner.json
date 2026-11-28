@@ -1,0 +1,48 @@
+{
+  "schema": "cloudpath-s3-acl-v1",
+  "authorization_input_identity": "sha256-s3-authz-v1:8252fd1712fe6e5fc992617b2863037b186f299c5fb6be5524aa40ab25fe31b5",
+  "ownership": {
+    "resource": "arn:aws:s3:::cloudpath-demo-bucket/reports/demo.json",
+    "complete": true,
+    "mode": "ObjectWriter",
+    "bucket_account": "222222222222",
+    "resource_owner_account": "123456789012"
+  },
+  "public_access": {
+    "bucket_flags": {
+      "BlockPublicAcls": false,
+      "IgnorePublicAcls": false,
+      "BlockPublicPolicy": false,
+      "RestrictPublicBuckets": false
+    },
+    "account_flags": {
+      "BlockPublicAcls": false,
+      "IgnorePublicAcls": false,
+      "BlockPublicPolicy": false,
+      "RestrictPublicBuckets": false
+    },
+    "account_includes_org_controls": true,
+    "bucket_policy_public": false
+  },
+  "acl": {
+    "resource": "arn:aws:s3:::cloudpath-demo-bucket/reports/demo.json",
+    "complete": true,
+    "owner_canonical_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "canonical_accounts": {
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": "123456789012",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": "222222222222"
+    },
+    "grants": [
+      {
+        "type": "CanonicalUser",
+        "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "permission": "READ"
+      },
+      {
+        "type": "CanonicalUser",
+        "id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "permission": "FULL_CONTROL"
+      }
+    ]
+  }
+}

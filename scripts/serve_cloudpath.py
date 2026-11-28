@@ -263,6 +263,12 @@ def create_server(app, port=8001):
                 return self.reply(200, (ROOT/'frontend/static/tgw_viewer.html').read_bytes(), 'text/html; charset=utf-8')
             if urlsplit(self.path).path == '/elb':
                 return self.reply(200, (ROOT/'frontend/static/elb_viewer.html').read_bytes(), 'text/html; charset=utf-8')
+            if urlsplit(self.path).path == '/workloads':
+                return self.reply(200, (ROOT/'frontend/static/workload_viewer.html').read_bytes(), 'text/html; charset=utf-8')
+            if urlsplit(self.path).path == '/endpoints':
+                return self.reply(200, (ROOT/'frontend/static/endpoint_viewer.html').read_bytes(), 'text/html; charset=utf-8')
+            if urlsplit(self.path).path == '/rds':
+                return self.reply(200, (ROOT/'frontend/static/rds_viewer.html').read_bytes(), 'text/html; charset=utf-8')
             if urlsplit(self.path).path == '/api/context':
                 return self.reply(200, app.context())
             return self.reply(404, {'error':'Not found'})
@@ -271,11 +277,11 @@ def create_server(app, port=8001):
             if not self.host_ok() or self.headers.get('Origin') != 'http://' + self.headers.get('Host','') or not secrets.compare_digest(self.headers.get('X-CloudPath-Token',''),app.token):
                 return self.reply(403, {'error':'Local origin/token required'})
             path = urlsplit(self.path).path
-            if path not in ('/api/analyze', '/api/aws-analyze', '/api/aws-egress', '/api/aws-evidence', '/api/upload', '/api/aws-peering', '/api/aws-tgw', '/api/aws-elb'):
+            if path not in ('/api/analyze', '/api/aws-analyze', '/api/aws-egress', '/api/aws-evidence', '/api/upload', '/api/aws-peering', '/api/aws-tgw', '/api/aws-elb', '/api/aws-workload', '/api/aws-rds', '/api/aws-endpoint'):
                 return self.reply(404, {'error':'Not found'})
             try:
                 length = int(self.headers.get('Content-Length','0'))
-                limit = MAX_BODY if path in ('/api/upload','/api/aws-evidence','/api/aws-peering','/api/aws-tgw', '/api/aws-elb') else 16384
+                limit = MAX_BODY if path in ('/api/upload','/api/aws-evidence','/api/aws-peering','/api/aws-tgw', '/api/aws-elb', '/api/aws-workload', '/api/aws-rds', '/api/aws-endpoint') else 16384
                 if not 0 < length <= limit or self.headers.get_content_type() != 'application/json' or self.headers.get('Transfer-Encoding'):
                     raise ValueError('JSON body required within size limit')
                 body = json.loads(self.rfile.read(length))
@@ -299,6 +305,15 @@ def create_server(app, port=8001):
                 elif path == '/api/aws-elb':
                     from backend.aws.elb_web import analyze_elb_upload
                     result = analyze_elb_upload(body, app.identity)
+                elif path == '/api/aws-workload':
+                    from backend.aws.workload_web import analyze_workload_upload
+                    result = analyze_workload_upload(body, app.identity)
+                elif path == '/api/aws-endpoint':
+                    from backend.aws.vpc_endpoint_web import analyze_endpoint_upload
+                    result = analyze_endpoint_upload(body, app.identity)
+                elif path == '/api/aws-rds':
+                    from backend.aws.rds_web import analyze_rds_upload
+                    result = analyze_rds_upload(body, app.identity)
                 elif path == '/api/aws-evidence':
                     result = app.compare_aws_evidence(body)
                 else:

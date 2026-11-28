@@ -37,7 +37,7 @@ def test_sg_no_match(field,idx):
     d=setup();d['inventory']['SecurityGroups'][0][field]=[]
     assert statuses(run(d),'request')[idx]=='BLOCKED'
 
-@pytest.mark.parametrize('field,value',[('UserIdGroupPairs',[{'GroupId':G}]),('PrefixListIds',[{'PrefixListId':'pl-12345678'}])])
+@pytest.mark.parametrize('field,value',[('UserIdGroupPairs',[{'GroupId':'sg-aaaaaaaa'}]),('PrefixListIds',[{'PrefixListId':'pl-12345678'}])])
 def test_sg_unresolved(field,value):
     d=setup();d['inventory']['SecurityGroups'][0]['IpPermissions']=[dict(IpProtocol='tcp',FromPort=443,ToPort=443,**{field:value})]
     assert statuses(run(d),'request')[3]=='UNKNOWN'

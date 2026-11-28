@@ -1,0 +1,188 @@
+{
+  "format": "cloudpath-rds-config-v1",
+  "inventory_identity": "sha256-aws-v2:da33324a4e782d615275f4fb766b39709321a33f4dde7392da6701b2703c6ab8",
+  "region": "ap-northeast-2",
+  "account_id": "000000000000",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "complete": true,
+  "DBInstances": [
+    {
+      "DBInstanceIdentifier": "demo-mysql",
+      "DBInstanceArn": "arn:aws:rds:ap-northeast-2:000000000000:db:demo-mysql",
+      "Engine": "mysql",
+      "DBInstanceStatus": "available",
+      "PubliclyAccessible": false,
+      "NetworkType": "IPV4",
+      "DBSubnetGroup": {
+        "DBSubnetGroupName": "demo-db-subnets",
+        "VpcId": "vpc-12345678",
+        "SubnetGroupStatus": "Complete",
+        "Subnets": [
+          {
+            "SubnetIdentifier": "subnet-12345678",
+            "SubnetAvailabilityZone": {
+              "Name": "ap-northeast-2a"
+            },
+            "SubnetStatus": "Active"
+          },
+          {
+            "SubnetIdentifier": "subnet-87654321",
+            "SubnetAvailabilityZone": {
+              "Name": "ap-northeast-2c"
+            },
+            "SubnetStatus": "Active"
+          }
+        ]
+      },
+      "AvailabilityZone": "ap-northeast-2a",
+      "VpcSecurityGroups": [
+        {
+          "VpcSecurityGroupId": "sg-99999999",
+          "Status": "active"
+        }
+      ],
+      "Endpoint": {
+        "Address": "demo-mysql.example.ap-northeast-2.rds.amazonaws.com",
+        "Port": 3306
+      },
+      "MultiAZ": true
+    },
+    {
+      "DBInstanceIdentifier": "demo-writer",
+      "DBInstanceArn": "arn:aws:rds:ap-northeast-2:000000000000:db:demo-writer",
+      "Engine": "aurora-postgresql",
+      "DBInstanceStatus": "available",
+      "PubliclyAccessible": false,
+      "NetworkType": "IPV4",
+      "DBSubnetGroup": {
+        "DBSubnetGroupName": "demo-db-subnets",
+        "VpcId": "vpc-12345678",
+        "SubnetGroupStatus": "Complete",
+        "Subnets": [
+          {
+            "SubnetIdentifier": "subnet-12345678",
+            "SubnetAvailabilityZone": {
+              "Name": "ap-northeast-2a"
+            },
+            "SubnetStatus": "Active"
+          },
+          {
+            "SubnetIdentifier": "subnet-87654321",
+            "SubnetAvailabilityZone": {
+              "Name": "ap-northeast-2c"
+            },
+            "SubnetStatus": "Active"
+          }
+        ]
+      },
+      "AvailabilityZone": "ap-northeast-2a",
+      "VpcSecurityGroups": [
+        {
+          "VpcSecurityGroupId": "sg-12345678",
+          "Status": "active"
+        }
+      ],
+      "Endpoint": {
+        "Address": "demo-writer.example.ap-northeast-2.rds.amazonaws.com",
+        "Port": 5432
+      },
+      "MultiAZ": false,
+      "DBClusterIdentifier": "demo-aurora"
+    },
+    {
+      "DBInstanceIdentifier": "demo-reader",
+      "DBInstanceArn": "arn:aws:rds:ap-northeast-2:000000000000:db:demo-reader",
+      "Engine": "aurora-postgresql",
+      "DBInstanceStatus": "available",
+      "PubliclyAccessible": false,
+      "NetworkType": "IPV4",
+      "DBSubnetGroup": {
+        "DBSubnetGroupName": "demo-db-subnets",
+        "VpcId": "vpc-12345678",
+        "SubnetGroupStatus": "Complete",
+        "Subnets": [
+          {
+            "SubnetIdentifier": "subnet-12345678",
+            "SubnetAvailabilityZone": {
+              "Name": "ap-northeast-2a"
+            },
+            "SubnetStatus": "Active"
+          },
+          {
+            "SubnetIdentifier": "subnet-87654321",
+            "SubnetAvailabilityZone": {
+              "Name": "ap-northeast-2c"
+            },
+            "SubnetStatus": "Active"
+          }
+        ]
+      },
+      "AvailabilityZone": "ap-northeast-2c",
+      "VpcSecurityGroups": [
+        {
+          "VpcSecurityGroupId": "sg-12345678",
+          "Status": "active"
+        }
+      ],
+      "Endpoint": {
+        "Address": "demo-reader.example.ap-northeast-2.rds.amazonaws.com",
+        "Port": 5432
+      },
+      "MultiAZ": false,
+      "DBClusterIdentifier": "demo-aurora"
+    }
+  ],
+  "DBClusters": [
+    {
+      "DBClusterIdentifier": "demo-aurora",
+      "DBClusterArn": "arn:aws:rds:ap-northeast-2:000000000000:cluster:demo-aurora",
+      "Status": "available",
+      "Engine": "aurora-postgresql",
+      "EngineMode": "provisioned",
+      "NetworkType": "IPV4",
+      "DBSubnetGroup": "demo-db-subnets",
+      "VpcSecurityGroups": [
+        {
+          "VpcSecurityGroupId": "sg-12345678",
+          "Status": "active"
+        }
+      ],
+      "Endpoint": "demo-aurora.cluster-example.ap-northeast-2.rds.amazonaws.com",
+      "ReaderEndpoint": "demo-aurora.cluster-ro-example.ap-northeast-2.rds.amazonaws.com",
+      "Port": 5432,
+      "DBClusterMembers": [
+        {
+          "DBInstanceIdentifier": "demo-writer",
+          "IsClusterWriter": true
+        },
+        {
+          "DBInstanceIdentifier": "demo-reader",
+          "IsClusterWriter": false
+        }
+      ]
+    }
+  ],
+  "DBSubnetGroups": [
+    {
+      "DBSubnetGroupName": "demo-db-subnets",
+      "VpcId": "vpc-12345678",
+      "SubnetGroupStatus": "Complete",
+      "Subnets": [
+        {
+          "SubnetIdentifier": "subnet-12345678",
+          "SubnetAvailabilityZone": {
+            "Name": "ap-northeast-2a"
+          },
+          "SubnetStatus": "Active"
+        },
+        {
+          "SubnetIdentifier": "subnet-87654321",
+          "SubnetAvailabilityZone": {
+            "Name": "ap-northeast-2c"
+          },
+          "SubnetStatus": "Active"
+        }
+      ]
+    }
+  ]
+}

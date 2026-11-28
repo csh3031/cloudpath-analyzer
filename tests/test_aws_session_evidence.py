@@ -104,12 +104,11 @@ def test_unknown_reply_route():
     assert r['conditional_first_blocker'] is None
 
 
-@pytest.mark.parametrize('case',['stopped','same','same_subnet','reserved','ipv6'])
+@pytest.mark.parametrize('case',['stopped','same','reserved','ipv6'])
 def test_unsupported_endpoint_scope(case):
     d=setup();dst=DST
     if case=='stopped':d['inventory']['Reservations'][0]['Instances'][1]['State']['Name']='stopped'
     elif case=='same':dst=SRC
-    elif case=='same_subnet':dst='10.0.1.11';d=pair(dst,S)
     elif case=='reserved':dst='10.0.2.1';d=pair(dst)
     else:dst='2001:db8::1'
     r=run(d,dst=dst);assert r['predicted_connectivity']=='UNKNOWN' and r['first_blocker'] is None

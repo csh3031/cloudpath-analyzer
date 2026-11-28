@@ -1,0 +1,17 @@
+// Optional presentation regression: node --test tests/workload_diagnostics.test.cjs
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'../frontend/static/workload_viewer.html'),'utf8');
+const code=html.split('// BEGIN LOCAL_DIAGNOSTICS')[1].split('// END LOCAL_DIAGNOSTICS')[0].replace(/^.*\n/,'');
+const c=vm.createContext({});vm.runInContext(code,c);
+const stage=(stage,status,reason,extra={})=>({stage,status,reason,evaluation_mode:'PREDICTED_PATH',...extra});
+const leg=(status,stop,request=[],extra={})=>({f:{request_status:status,first_request_stop:stop,request,...extra}});
+test('allow is conditional, never a successful session',()=>{const x=c.legDiagnosis(leg('CONDITIONAL_CANDIDATE',null),false);assert.match(x.body,/미검증/);assert.match(x.title,/정적 검사/);});
+test('first network policy block and independent SG block',()=>{const a=stage('SOURCE_NETWORK_POLICY_EGRESS','BLOCKED','ISOLATED_NO_MATCHING_ALLOW',{selected_policies:['source-egress']});const b=stage('DESTINATION_SG_INGRESS','BLOCKED','NO_MATCHING_SG_ALLOW',{evaluation_mode:'INDEPENDENT_CHECK',group_ids:['sg-demo']});const x=c.legDiagnosis(leg('BLOCKED',a.stage,[a,b]),false);assert.match(x.title,/출발지 NetworkPolicy/);assert.match(x.body,/source-egress/);assert.match(x.additional[0],/sg-demo/);});
+test('SG block does not turn later allowed policy into reached stage',()=>{const a=stage('DESTINATION_SG_INGRESS','BLOCKED','NO_MATCHING_SG_ALLOW',{group_ids:['sg-demo']});const b=stage('DESTINATION_NETWORK_POLICY_INGRESS','ALLOW_CANDIDATE','ADDITIVE_POLICY_ALLOW_MATCH',{evaluation_mode:'INDEPENDENT_CHECK'});const x=c.legDiagnosis(leg('BLOCKED',a.stage,[a,b]),false);assert.match(x.title,/목적지 Security Group/);assert.equal(x.additional.length,0);});
+test('unknown and missing prefix evidence stay unknown',()=>{const a=stage('DESTINATION_SG_INGRESS','UNKNOWN','SG_RULE_UNRESOLVED',{unresolved_prefix_lists:[{reason:'PREFIX_LIST_EVIDENCE_MISSING'}]});const x=c.legDiagnosis(leg('UNKNOWN',a.stage,[a]),false);assert.match(x.title,/최초 미확정/);assert.match(x.body,/제공되지 않았습니다/);});
+test('response after blocked request not evaluated',()=>{const x=c.legDiagnosis(leg('BLOCKED','DESTINATION_SG_INGRESS',[],{response_status:'NOT_EVALUATED',response:[]}),true);assert.match(x.title,/응답 경로 미평가/);});
+test('reverse first stop is separate',()=>{const a=stage('DESTINATION_NACL_INGRESS','BLOCKED','MATCHING_ACL_RULE',{acl_id:'acl-demo',rule_number:100,evaluation_mode:'CONDITIONAL_CHECK'});const x=c.legDiagnosis(leg('CONDITIONAL_CANDIDATE',null,[],{response_status:'BLOCKED',conditional_first_response_stop:a.stage,response:[a]}),true);assert.match(x.title,/목적지 NACL/);assert.match(x.body,/규칙 100.*차단/);});
+test('unsupported backend is not a blocked path',()=>{const x=c.legDiagnosis({f:null,reason:'NLB_PRESERVED_CLIENT_PATH_NOT_COMPOSED'},false);assert.equal(x.status,'UNKNOWN');assert.match(x.body,/Client IP 보존/);});
+test('historical mismatch never claims current enforcement',()=>{assert.match(c.explainReason({reason:'DECLARATION_EVENT_MISMATCH'}),/과거 이벤트가 불일치하는 후보/);});
+test('unregistered reason is explicit, not inferred',()=>{assert.match(c.explainReason({reason:'__proto__'}),/등록되지 않은/);});
+test('not-applicable is not an allow result',()=>{assert.match(c.explainReason({reason:'DIRECT_SAME_SUBNET_NO_NACL_BOUNDARY',status:'NOT_APPLICABLE'}),/통과하지 않습니다/);});

@@ -1,0 +1,56 @@
+{
+  "schema": "cloudpath-s3-identity-v1",
+  "authorization_input_identity": "sha256-s3-authz-v1:f5c49c6add712bb977ecb52bba284b07723404536d4ecf82d810b8e4b16a0afb",
+  "request_at": "2026-11-28T05:00:30Z",
+  "started_at": "2026-11-28T05:00:00Z",
+  "collected_at": "2026-11-28T05:00:20Z",
+  "complete": {
+    "principal": true,
+    "inline_list": true,
+    "managed_list": true,
+    "group_list": true,
+    "documents": true
+  },
+  "principal_before": {
+    "arn": "arn:aws:iam::123456789012:role/demo-app",
+    "unique_id": "AROASYNTHETICDEMO12345",
+    "permissions_boundary_arn": null
+  },
+  "principal_after": {
+    "arn": "arn:aws:iam::123456789012:role/demo-app",
+    "unique_id": "AROASYNTHETICDEMO12345",
+    "permissions_boundary_arn": null
+  },
+  "inline_names_before": [],
+  "inline_names_after": [],
+  "managed_arns_before": [
+    "arn:aws:iam::123456789012:policy/demo-read"
+  ],
+  "managed_arns_after": [
+    "arn:aws:iam::123456789012:policy/demo-read"
+  ],
+  "groups_before": [],
+  "groups_after": [],
+  "inline_policies": [],
+  "managed_policies": [
+    {
+      "arn": "arn:aws:iam::123456789012:policy/demo-read",
+      "policy_id_before": "ANPASYNTHETICDEMO12345",
+      "policy_id_after": "ANPASYNTHETICDEMO12345",
+      "default_version_before": "v2",
+      "default_version_after": "v3",
+      "document_version": "v2",
+      "is_default_version": true,
+      "document": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::cloudpath-demo-bucket/reports/*"
+          }
+        ]
+      }
+    }
+  ]
+}

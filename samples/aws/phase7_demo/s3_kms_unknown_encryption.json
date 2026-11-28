@@ -1,0 +1,42 @@
+{
+  "schema": "cloudpath-s3-kms-v1",
+  "authorization_input_identity": "sha256-s3-authz-v1:c816061a11311c731daac5f9b1f48ca35d29e5568c3b11b3e2c4db2defb645cb",
+  "object": {
+    "resource": "arn:aws:s3:::cloudpath-demo-bucket/reports/demo.json",
+    "metadata_complete": false,
+    "encryption_mode": "SSE_KMS",
+    "region": "ap-northeast-2",
+    "bucket_key_enabled": false,
+    "key_arn": "arn:aws:kms:ap-northeast-2:222222222222:key/12345678-1234-1234-1234-123456789012"
+  },
+  "key": {
+    "arn": "arn:aws:kms:ap-northeast-2:222222222222:key/12345678-1234-1234-1234-123456789012",
+    "state": "Enabled",
+    "manager": "CUSTOMER",
+    "spec": "SYMMETRIC_DEFAULT",
+    "usage": "ENCRYPT_DECRYPT",
+    "policy_complete": true,
+    "no_grants_asserted": true,
+    "policy": [
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "AWS": "arn:aws:iam::123456789012:role/demo-app"
+            },
+            "Action": "kms:Decrypt",
+            "Resource": "*",
+            "Condition": {
+              "StringEquals": {
+                "kms:ViaService": "s3.ap-northeast-2.amazonaws.com",
+                "kms:EncryptionContext:aws:s3:arn": "arn:aws:s3:::cloudpath-demo-bucket/reports/demo.json"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

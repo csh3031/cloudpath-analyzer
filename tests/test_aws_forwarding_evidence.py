@@ -114,7 +114,7 @@ def test_same_endpoint_unknown():
 
 def test_same_subnet_unknown():
     r=run(pair('10.0.1.11',S),dst='10.0.1.11')
-    assert r['request']['reason']==r['response']['reason']=='SAME_SUBNET_FORWARDING_NOT_IN_SCOPE'
+    assert r['request']['reason']==r['response']['reason']=='CONDITIONAL_SAME_SUBNET_DIRECT_DELIVERY'
     assert r['request']['route_lookup'] is None
 
 

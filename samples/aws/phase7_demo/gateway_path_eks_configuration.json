@@ -1,0 +1,27 @@
+{
+  "format": "cloudpath-vpc-endpoints-v1",
+  "inventory_identity": "sha256-aws-v2:c292a4666f9271b5fadcece03ba8980c3af340fb3c255c12c7514fd2d09dbf06",
+  "region": "ap-northeast-2",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "complete": true,
+  "VpcEndpoints": [
+    {
+      "VpcId": "vpc-12345678",
+      "State": "available",
+      "IpAddressType": "ipv4",
+      "PolicyDocument": "{\"Version\":\"2012-10-17\",\"Statement\":[]}",
+      "ServiceRegion": "ap-northeast-2",
+      "VpcEndpointId": "vpce-22222222",
+      "VpcEndpointType": "Gateway",
+      "ServiceName": "com.amazonaws.ap-northeast-2.s3",
+      "SubnetIds": [],
+      "NetworkInterfaceIds": [],
+      "Groups": [],
+      "RouteTableIds": [
+        "rtb-12345678",
+        "rtb-87654321"
+      ],
+      "DnsEntries": []
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "schema": "cloudpath-iam-relationships-v1",
+  "account_id": "123456789012",
+  "base_identity": "sha256-iam-inventory-v1:cf8fc804578b0d2a0772cdd1ef04c3d55bfd0f2d37496a6fa1f5c6845dad21a1",
+  "overlay_identity": null,
+  "registered_at": "2026-11-28T05:00:20Z",
+  "complete": {
+    "memberships": true,
+    "bindings": true
+  },
+  "memberships": [
+    {
+      "user_arn": "arn:aws:iam::123456789012:user/demo-user",
+      "group_arn": "arn:aws:iam::123456789012:group/demo-group"
+    }
+  ],
+  "bindings": [
+    {
+      "service": "EC2",
+      "workload_ref": "demo-instance",
+      "kind": "INSTANCE_PROFILE",
+      "via_ref": "demo-profile",
+      "role_arn": "arn:aws:iam::123456789012:role/demo-app"
+    },
+    {
+      "service": "ECS",
+      "workload_ref": "demo-task",
+      "kind": "TASK_ROLE",
+      "via_ref": "demo-taskdef:1",
+      "role_arn": "arn:aws:iam::123456789012:role/demo-app"
+    },
+    {
+      "service": "ECS",
+      "workload_ref": "demo-task",
+      "kind": "EXECUTION_ROLE",
+      "via_ref": "demo-taskdef:1",
+      "role_arn": "arn:aws:iam::123456789012:role/demo-execution"
+    },
+    {
+      "service": "EKS",
+      "workload_ref": "demo-pod",
+      "kind": "IRSA",
+      "via_ref": "demo-cluster/default/demo-sa",
+      "role_arn": "arn:aws:iam::123456789012:role/demo-app"
+    },
+    {
+      "service": "EKS",
+      "workload_ref": "demo-pod",
+      "kind": "NODE_ROLE",
+      "via_ref": "demo-node",
+      "role_arn": "arn:aws:iam::123456789012:role/demo-execution"
+    }
+  ]
+}

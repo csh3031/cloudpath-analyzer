@@ -1,0 +1,21 @@
+{
+  "format": "cloudpath-aws-prefix-lists-v1",
+  "inventory_identity": "sha256-aws-v2:538c7b01daff5b743afed0a57f2c4e12d2c62f5ce073f1358493f9ec4d7c582c",
+  "region": "ap-northeast-2",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "prefix_lists": [
+    {
+      "id": "pl-11111111",
+      "kind": "CUSTOMER_MANAGED",
+      "address_family": "IPv4",
+      "state": "create-complete",
+      "version_before": 2,
+      "version_after": 2,
+      "entries_version": 2,
+      "complete": true,
+      "entries": [
+        "10.0.1.0/24"
+      ]
+    }
+  ]
+}

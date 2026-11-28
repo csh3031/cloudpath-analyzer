@@ -1,0 +1,172 @@
+{
+  "format": "cloudpath-eks-service-evidence-v1",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "eks_input_identity": "sha256-eks-pod-v1:7167078379d56710a50d9a54129104cb699b47d77d3e4cf44e5bb4ef3ec4512e",
+  "complete": true,
+  "services": [
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "namespace": "demo",
+        "name": "demo-tls-443",
+        "uid": "00000000-0000-0000-0000-000000000061"
+      },
+      "spec": {
+        "type": "ClusterIP",
+        "clusterIP": "172.20.0.11",
+        "clusterIPs": [
+          "172.20.0.11"
+        ],
+        "ipFamilies": [
+          "IPv4"
+        ],
+        "ipFamilyPolicy": "SingleStack",
+        "selector": {
+          "role": "backend"
+        },
+        "ports": [
+          {
+            "name": "tls",
+            "port": 443,
+            "targetPort": 443,
+            "protocol": "TCP"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "namespace": "demo",
+        "name": "demo-tls-8443",
+        "uid": "00000000-0000-0000-0000-000000000062"
+      },
+      "spec": {
+        "type": "ClusterIP",
+        "clusterIP": "172.20.0.12",
+        "clusterIPs": [
+          "172.20.0.12"
+        ],
+        "ipFamilies": [
+          "IPv4"
+        ],
+        "ipFamilyPolicy": "SingleStack",
+        "selector": {
+          "role": "backend"
+        },
+        "ports": [
+          {
+            "name": "tls-alt",
+            "port": 8443,
+            "targetPort": 8443,
+            "protocol": "TCP"
+          }
+        ]
+      }
+    }
+  ],
+  "endpointSlices": [
+    {
+      "apiVersion": "discovery.k8s.io/v1",
+      "kind": "EndpointSlice",
+      "metadata": {
+        "name": "demo-tls-443-1",
+        "namespace": "demo",
+        "uid": "00000000-0000-0000-0000-000000000071",
+        "labels": {
+          "kubernetes.io/service-name": "demo-tls-443",
+          "endpointslice.kubernetes.io/managed-by": "endpointslice-controller.k8s.io"
+        },
+        "ownerReferences": [
+          {
+            "apiVersion": "v1",
+            "kind": "Service",
+            "name": "demo-tls-443",
+            "uid": "00000000-0000-0000-0000-000000000061",
+            "controller": true
+          }
+        ]
+      },
+      "addressType": "IPv4",
+      "ports": [
+        {
+          "name": "tls",
+          "protocol": "TCP",
+          "port": 443
+        }
+      ],
+      "endpoints": [
+        {
+          "addresses": [
+            "10.0.2.70"
+          ],
+          "conditions": {
+            "ready": true,
+            "serving": true,
+            "terminating": false
+          },
+          "nodeName": "node-2",
+          "targetRef": {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "name": "app-2",
+            "namespace": "demo",
+            "uid": "00000000-0000-0000-0000-000000000022"
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "discovery.k8s.io/v1",
+      "kind": "EndpointSlice",
+      "metadata": {
+        "name": "demo-tls-8443-1",
+        "namespace": "demo",
+        "uid": "00000000-0000-0000-0000-000000000072",
+        "labels": {
+          "kubernetes.io/service-name": "demo-tls-8443",
+          "endpointslice.kubernetes.io/managed-by": "endpointslice-controller.k8s.io"
+        },
+        "ownerReferences": [
+          {
+            "apiVersion": "v1",
+            "kind": "Service",
+            "name": "demo-tls-8443",
+            "uid": "00000000-0000-0000-0000-000000000062",
+            "controller": true
+          }
+        ]
+      },
+      "addressType": "IPv4",
+      "ports": [
+        {
+          "name": "tls-alt",
+          "protocol": "TCP",
+          "port": 8443
+        }
+      ],
+      "endpoints": [
+        {
+          "addresses": [
+            "10.0.2.70"
+          ],
+          "conditions": {
+            "ready": true,
+            "serving": true,
+            "terminating": false
+          },
+          "nodeName": "node-2",
+          "targetRef": {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "name": "app-2",
+            "namespace": "demo",
+            "uid": "00000000-0000-0000-0000-000000000022"
+          }
+        }
+      ]
+    }
+  ]
+}

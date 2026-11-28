@@ -1,0 +1,141 @@
+{
+  "schema": "cloudpath-iam-organization-limits-v1",
+  "authorization_input_identity": "sha256-s3-authz-v1:7f1106fae81dda1a42e305f010d0cba4b35e9b5e9d153ec32b0335d1ecf25878",
+  "account_id": "123456789012",
+  "organization_id": "o-abcdefghij",
+  "management_account_id": "111111111111",
+  "membership": "MEMBER",
+  "scope_complete": true,
+  "principal_kind": "IAM_ROLE",
+  "scp_state": "ENABLED",
+  "rcp_state": "ENABLED",
+  "path_complete": true,
+  "levels": [
+    {
+      "kind": "ROOT",
+      "id": "r-abcd",
+      "parent_id": null,
+      "scp_complete": true,
+      "rcp_complete": true,
+      "scps": [
+        {
+          "id": "p-FullAWSAccess",
+          "name": "FullAWSAccess",
+          "aws_managed": true,
+          "document": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": "*",
+                "Resource": "*"
+              }
+            ]
+          }
+        }
+      ],
+      "rcps": [
+        {
+          "id": "p-RCPFullAWSAccess",
+          "name": "RCPFullAWSAccess",
+          "aws_managed": true,
+          "document": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": "*",
+                "Resource": "*",
+                "Principal": "*"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "kind": "OU",
+      "id": "ou-abcd-abcdefgh",
+      "parent_id": "r-abcd",
+      "scp_complete": true,
+      "rcp_complete": true,
+      "scps": [
+        {
+          "id": "p-ec2allowaa",
+          "name": "EC2Only",
+          "aws_managed": false,
+          "document": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": "ec2:*",
+                "Resource": "*"
+              }
+            ]
+          }
+        }
+      ],
+      "rcps": [
+        {
+          "id": "p-RCPFullAWSAccess",
+          "name": "RCPFullAWSAccess",
+          "aws_managed": true,
+          "document": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": "*",
+                "Resource": "*",
+                "Principal": "*"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "kind": "ACCOUNT",
+      "id": "123456789012",
+      "parent_id": "ou-abcd-abcdefgh",
+      "scp_complete": true,
+      "rcp_complete": true,
+      "scps": [
+        {
+          "id": "p-FullAWSAccess",
+          "name": "FullAWSAccess",
+          "aws_managed": true,
+          "document": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": "*",
+                "Resource": "*"
+              }
+            ]
+          }
+        }
+      ],
+      "rcps": [
+        {
+          "id": "p-RCPFullAWSAccess",
+          "name": "RCPFullAWSAccess",
+          "aws_managed": true,
+          "document": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": "*",
+                "Resource": "*",
+                "Principal": "*"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

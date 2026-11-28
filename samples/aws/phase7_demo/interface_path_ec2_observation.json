@@ -1,0 +1,19 @@
+{
+  "format": "cloudpath-interface-endpoint-path-v1",
+  "inventory_identity": "sha256-aws-v2:21dce18cca273c22750cfe0c588e86756bbc6185731c2e646cff0fe27083ce1f",
+  "endpoint_input_identity": "sha256-vpc-endpoints-v1:bf45de30e1e03e6e47a264ce818c284d6e8da872f3549cd8457db877c0fcdeac",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "complete": true,
+  "endpoint_id": "vpce-11111111",
+  "hostname": "bucket.vpce-11111111-example.s3.ap-northeast-2.vpce.amazonaws.com",
+  "source_ip": "10.0.1.10",
+  "source_eni_id": "eni-12345678",
+  "resolver_scope": "SOURCE_VPC_VIEW",
+  "resolved_at": "2026-11-25T11:00:00+00:00",
+  "ttl_seconds": 60,
+  "answers": [
+    "10.0.1.90"
+  ],
+  "eni_id": "eni-99999991",
+  "direct_private_ipv4_no_translation": true
+}

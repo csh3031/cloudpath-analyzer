@@ -9,7 +9,7 @@ from backend.aws.snapshot import load_aws_snapshot, sanitize_inventory
 from backend.iac.plan_adapter import _read
 
 
-def lookup_observed_route(raw: bytes, source_subnet_id: str, destination_ip: str) -> dict:
+def lookup_observed_route(raw: bytes, source_subnet_id: str, destination_ip: str, *, prefix_lists=None) -> dict:
     """Evaluate a single source-subnet route lookup in an uploaded snapshot.
 
     Invalid snapshot -> ValueError (same contract as the inventory loader).
@@ -69,7 +69,7 @@ def lookup_observed_route(raw: bytes, source_subnet_id: str, destination_ip: str
     if source_net.overlaps(dest_net):
         return unknown('OVERLAPPING_SUBNETS')
 
-    selection = select_subnet_ipv4_route(inventory, source_subnet_id, dst)
+    selection = select_subnet_ipv4_route(inventory, source_subnet_id, dst, prefix_lists=prefix_lists)
     result.update({key: selection[key] for key in ('route_table_id', 'association_type', 'selected_route')})
     if selection['status'] != 'ACTIVE_ROUTE_CANDIDATE':
         return finish(selection['status'], selection['reason'])
@@ -85,7 +85,7 @@ def lookup_observed_route(raw: bytes, source_subnet_id: str, destination_ip: str
     return finish('LOCAL_CANDIDATE', 'OBSERVED_ACTIVE_LOCAL_ROUTE')
 
 
-def select_subnet_ipv4_route(inventory, source_subnet_id, dst):
+def select_subnet_ipv4_route(inventory, source_subnet_id, dst, *, prefix_lists=None):
     """Shared selection only; caller verifies scope, endpoint and target semantics."""
     result = dict(route_table_id=None, association_type=None, selected_route=None)
 
@@ -123,24 +123,49 @@ def select_subnet_ipv4_route(inventory, source_subnet_id, dst):
 
     matches = []
     for route in table['Routes']:
-        # Prefix-list contents are absent from v1 inventory; they may overlap.
         destinations = [k for k in ('DestinationCidrBlock', 'DestinationIpv6CidrBlock',
                                     'DestinationPrefixListId') if k in route]
         if len(destinations) != 1:
             return unknown('ROUTE_DESTINATION_UNRESOLVED')
         if 'DestinationPrefixListId' in route:
-            return unknown('PREFIX_LIST_CONTENTS_NOT_COLLECTED')
-        if 'DestinationCidrBlock' in route:
+            pid=route['DestinationPrefixListId']
+            if prefix_lists is None:
+                return unknown('PREFIX_LIST_CONTENTS_NOT_COLLECTED')
+            row=prefix_lists.get(pid)
+            if not row or row['reason']:
+                return unknown('PREFIX_LIST_ROUTE_EVIDENCE_UNRESOLVED')
+            nets=[n for n in row['networks'] if dst in n]
+            if nets:
+                net=max(nets,key=lambda n:n.prefixlen)
+                matches.append((net.prefixlen,route,str(net)))
+        elif 'DestinationCidrBlock' in route:
             net = IPv4Network(route['DestinationCidrBlock'])
             if dst in net:
-                matches.append((net.prefixlen, route))
+                matches.append((net.prefixlen,route,str(net)))
     if not matches:
         return unknown('NO_EXPLICIT_MATCHING_ROUTE')
-    longest = max(prefix for prefix, _ in matches)
-    selected = [route for prefix, route in matches if prefix == longest]
-    if len(selected) != 1:
-        return unknown('EQUAL_PREFIX_ROUTE_PRIORITY_UNSUPPORTED')
-    route = selected[0]
+    # Different targets of overlapping prefix lists may have a persistent
+    # AWS-selected priority not present in the snapshot. Do not infer it.
+    pl_matches=[r for _,r,_ in matches if 'DestinationPrefixListId' in r]
+    if len(pl_matches)>1:
+        return unknown('OVERLAPPING_PREFIX_LIST_ROUTE_PRIORITY_UNCONFIRMED')
+    longest=max(prefix for prefix,_,_ in matches)
+    selected=[(r,n) for p,r,n in matches if p==longest]
+    if len(selected)!=1:
+        if prefix_lists is None:
+            return unknown('EQUAL_PREFIX_ROUTE_PRIORITY_UNSUPPORTED')
+        def rank(r):
+            if 'DestinationPrefixListId' in r: return 1
+            if r.get('Origin') in ('CreateRoute','CreateRouteTable'): return 2
+            if r.get('Origin')=='EnableVgwRoutePropagation': return 0
+            return None
+        ranks=[rank(r) for r,_ in selected]
+        if None in ranks or ranks.count(max(ranks))!=1:
+            return unknown('EQUAL_PREFIX_ROUTE_PRIORITY_UNSUPPORTED')
+        selected=[selected[ranks.index(max(ranks))]]
+    route,net=selected[0]
+    if prefix_lists is not None:
+        result['matched_cidr']=net
     result['selected_route'] = route
     if route.get('State') == 'blackhole':
         return finish('BLOCKED', 'SELECTED_ROUTE_BLACKHOLE')

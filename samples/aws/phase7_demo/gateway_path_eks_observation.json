@@ -1,0 +1,18 @@
+{
+  "format": "cloudpath-gateway-endpoint-path-v1",
+  "inventory_identity": "sha256-aws-v2:c292a4666f9271b5fadcece03ba8980c3af340fb3c255c12c7514fd2d09dbf06",
+  "endpoint_input_identity": "sha256-vpc-endpoints-v1:bda0ae461ea878f3f5a711551ed3ca5a3acc3e6845ac47fde0ec2baa4e75eb53",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "complete": true,
+  "endpoint_id": "vpce-22222222",
+  "hostname": "s3.ap-northeast-2.amazonaws.com",
+  "source_ip": "10.0.2.70",
+  "source_eni_id": "eni-87654321",
+  "resolver_scope": "SOURCE_VPC_VIEW",
+  "resolved_at": "2026-11-25T11:00:00+00:00",
+  "ttl_seconds": 60,
+  "answers": [
+    "198.51.100.80"
+  ],
+  "direct_ipv4_no_translation": true
+}

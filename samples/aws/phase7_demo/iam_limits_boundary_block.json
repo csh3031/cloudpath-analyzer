@@ -1,0 +1,44 @@
+{
+  "schema": "cloudpath-iam-permission-limits-v1",
+  "authorization_input_identity": "sha256-s3-authz-v1:05d9f8bf3763b0989d7f64daca68f28149a5505e629f7237dd41917905e28c49",
+  "identity_input_identity": "sha256-s3-identity-v1:207eb9213d992158c1e88a264a1a7d2f0ca471ea4f25fd69cdefce1fd6457cb9",
+  "boundary": {
+    "state": "PRESENT",
+    "complete": true,
+    "policy": {
+      "arn": "arn:aws:iam::123456789012:policy/demo-boundary",
+      "policy_id_before": "ANPASYNTHETICDEMO12345",
+      "policy_id_after": "ANPASYNTHETICDEMO12345",
+      "default_version_before": "v2",
+      "default_version_after": "v2",
+      "document_version": "v2",
+      "is_default_version": true,
+      "document": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": "s3:ListBucket",
+            "Resource": "*"
+          }
+        ]
+      }
+    }
+  },
+  "session": {
+    "state": "PRESENT",
+    "complete": true,
+    "session_kind": "ASSUMED_ROLE",
+    "inline_document": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": "s3:GetObject",
+          "Resource": "*"
+        }
+      ]
+    },
+    "managed_policies": []
+  }
+}

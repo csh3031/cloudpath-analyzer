@@ -81,7 +81,7 @@ def test_reply_block(inputs,egress,stop):
 
 
 def test_unresolved_sg_reference(inputs):
-    inputs[0]['inventory']['SecurityGroups'][0]['IpPermissions']=[dict(IpProtocol='tcp',FromPort=443,ToPort=443,UserIdGroupPairs=[{'GroupId':'sg-12345678'}])]
+    inputs[0]['inventory']['SecurityGroups'][0]['IpPermissions']=[dict(IpProtocol='tcp',FromPort=443,ToPort=443,UserIdGroupPairs=[{'GroupId':'sg-aaaaaaaa'}])]
     r=run(inputs)
     assert r['first_request_stop']=='DESTINATION_SG_INGRESS' and r['request_status']=='UNKNOWN'
     assert r['session_status']=='UNKNOWN'
@@ -144,4 +144,5 @@ def test_same_subnet(inputs):
         if detail['name']=='subnetId': detail['value']='subnet-87654321'
         if detail['name']=='privateIPv4Address': detail['value']='10.0.2.61'
     r=run(inputs)
-    assert r['reason']=='SAME_SUBNET_NOT_IN_SCOPE' and r['response_status']=='NOT_EVALUATED'
+    assert r['request_status']==r['response_status']=='CONDITIONAL_CANDIDATE'
+    assert r['request'][1]['status']==r['request'][3]['status']=='NOT_APPLICABLE'

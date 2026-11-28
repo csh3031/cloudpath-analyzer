@@ -1,0 +1,18 @@
+{
+  "schema": "cloudpath-iam-overlay-v1",
+  "account_id": "123456789012",
+  "base_identity": "sha256-iam-inventory-v1:beb75565670d2f24c0829f1e3b77aa692f0798b0d50184d0c20636cde9de6991",
+  "registered_at": "2026-11-28T05:01:00Z",
+  "operations": [
+    {
+      "operation": "DELETE",
+      "collection": "attachments",
+      "key": [
+        "arn:aws:iam::123456789012:role/demo-app",
+        "IDENTITY_POLICY",
+        "arn:aws:iam::123456789012:policy/demo-read"
+      ],
+      "record": null
+    }
+  ]
+}

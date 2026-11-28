@@ -1,0 +1,21 @@
+{
+  "format": "cloudpath-aws-prefix-lists-v2",
+  "inventory_identity": "sha256-aws-v2:86d1e28cbb030a5e41d64babae510fcf5b79557392e389dfa8ea2ed460927276",
+  "region": "ap-northeast-2",
+  "collected_at": "2026-11-25T11:00:00+00:00",
+  "prefix_lists": [
+    {
+      "id": "pl-11111111",
+      "kind": "AWS_MANAGED",
+      "address_family": "IPv4",
+      "state": "create-complete",
+      "owner_id": "AWS",
+      "name": "com.amazonaws.ap-northeast-2.s3",
+      "entries_confirmed": true,
+      "complete": true,
+      "entries": [
+        "198.51.100.0/24"
+      ]
+    }
+  ]
+}

@@ -227,6 +227,9 @@
       <a class="peering-link" href="/peering">VPC Peering</a>
       <a class="peering-link" href="/tgw">Transit Gateway</a>
       <a class="peering-link" href="/elb">ALB / NLB</a>
+      <a class="peering-link" href="/workloads">ECS / EKS</a>
+      <a class="peering-link" href="/rds">RDS</a>
+      <a class="peering-link" href="/endpoints">VPC Endpoint</a>
     </nav>
   </header>
   <section class="shell" id="upload-panel" hidden style="padding-bottom:0">
@@ -1147,22 +1150,25 @@ function validateAwsResult(d) {
   const fail=()=>{throw Error('AWS 정적 세션 JSON 형식 또는 검사 순서 오류');};
   const stages=['ENDPOINT_SCOPE','SOURCE_SG_EGRESS','SOURCE_NACL_EGRESS','ROUTE_LOOKUP','DESTINATION_NACL_INGRESS','DESTINATION_SG_INGRESS'];
   const verdicts=['REACHABLE','BLOCKED','UNKNOWN','NOT_EVALUATED'];
-  const states=['PASS','BLOCKED','UNKNOWN','NOT_EVALUATED','CONDITIONAL'];
+  const states=['PASS','BLOCKED','UNKNOWN','NOT_EVALUATED','CONDITIONAL','NOT_APPLICABLE'];
   const port=x=>Number.isInteger(x)&&x>=1&&x<=65535;
   if(!obj(d)||d.analysis_type!=='STATIC_AWS_INVENTORY_PREDICTION'||d.live_observation!==false||!/^sha256-aws-v[12]:[0-9a-f]{64}$/.test(d.input_identity)||!str(d.collected_at)||!obj(d.scenario)||d.scenario.protocol!=='tcp'||!str(d.scenario.source_ip)||!str(d.scenario.destination_ip)||!port(d.scenario.source_port)||!port(d.scenario.destination_port)||!arr(d.findings)||d.findings.length!==12)fail();
   const map=new Map();
   for(const f of d.findings){
     if(!obj(f)||!['request','response'].includes(f.direction)||!stages.includes(f.stage)||f.id!==f.direction+':'+f.stage||map.has(f.id)||!states.includes(f.status)||!str(f.reason)||!obj(f.evidence)||!arr(f.assumptions)||!arr(f.dependencies)||!arr(f.web_resource_ids)||f.web_resource_ids.length>1000||!f.web_resource_ids.every(str)||!['PREDICTED_PATH','CONDITIONAL_CHECK','INDEPENDENT_CHECK'].includes(f.evaluation_mode))fail();
+    if(f.status==='NOT_APPLICABLE'&&(!f.stage.includes('_NACL_')||f.reason!=='DIRECT_SAME_SUBNET_NO_NACL_BOUNDARY'))fail();
     map.set(f.id,f);
   }
   for(const key of ['request','response']){
     const lane=d[key], reply=key==='response', enabled=!reply||d.request.status==='REACHABLE';
     if(!obj(lane)||!arr(lane.trace)||!verdicts.includes(lane.status))fail();
+    const pre=map.get(key+':ENDPOINT_SCOPE').evidence, same=pre.source?.subnet_id&&pre.source.subnet_id===pre.destination?.subnet_id;
+    if(!same&&stages.some(stage=>map.get(key+':'+stage).status==='NOT_APPLICABLE'))fail();
     const trace=[];let active=enabled,stopped=null,blocker=null;
     for(const stage of stages){
       const id=key+':'+stage,f=map.get(id);if(!f)fail();
       if(f.evaluation_mode!==(active?(reply?'CONDITIONAL_CHECK':'PREDICTED_PATH'):'INDEPENDENT_CHECK'))fail();
-      if(active){trace.push(id);if(f.status!=='PASS'&&!(reply&&f.status==='CONDITIONAL')){active=false;stopped=id;if(f.status==='BLOCKED')blocker=id;}}
+      if(active){trace.push(id);if(!['PASS','NOT_APPLICABLE'].includes(f.status)&&!(reply&&f.status==='CONDITIONAL')){active=false;stopped=id;if(f.status==='BLOCKED')blocker=id;}}
     }
     const status=!enabled?'NOT_EVALUATED':blocker?'BLOCKED':stopped?'UNKNOWN':'REACHABLE';
     if(JSON.stringify(lane.trace)!==JSON.stringify(trace)||lane.status!==status||lane.path_complete!==(status==='REACHABLE')||lane.stopped_at!==stopped||lane.first_blocker!==blocker)fail();
@@ -1189,6 +1195,8 @@ function explainAwsFinding(d,f){
   else if(f.reason==='NO_MATCHING_SG_ALLOW'&&f.status==='BLOCKED')message=`${policy} ${dir} 차단: 상대 IP ${peer}, TCP 목적지 포트 ${port}에 일치하는 허용 규칙이 수집된 보안그룹에 없습니다.`;
   else if(f.reason==='MATCHING_ACL_RULE'&&['PASS','BLOCKED'].includes(f.status))message=`${policy} ${dir} ${f.status==='PASS'?'허용 후보':'차단'}: 규칙 번호 ${e.rule_number??'미확인'}이 상대 IP ${peer}, TCP 목적지 포트 ${port}에 첫 번째로 일치합니다.`;
   else if(f.reason==='REQUIRES_ESTABLISHED_TRACKED_REQUEST'&&f.status==='CONDITIONAL')message=`${policy} ${dir} 조건부 허용: 요청 전달과 유효한 연결 추적이 필요하며 실제 상태는 확인하지 않았습니다.`;
+  else if(f.reason==='CONDITIONAL_SAME_SUBNET_DIRECT_DELIVERY')message='동일 Subnet 직접 전달 후보: Route Table 경유가 아니라 정상 local 구성 조건을 확인했습니다.';
+  else if(f.status==='NOT_APPLICABLE')message='동일 Subnet 직접 전달 가정: NACL 경계를 통과하지 않습니다.';
   else if(f.stage==='ROUTE_LOOKUP'&&f.status==='PASS')message='라우팅 전달 후보: 수집된 활성 Local Route가 목적지 주소에 일치합니다.';
   else if(f.stage==='ROUTE_LOOKUP'&&f.status==='BLOCKED')message='라우팅 차단: 선택된 경로가 Blackhole 상태입니다.';
   else if(f.stage==='ENDPOINT_SCOPE'&&f.status==='PASS')message='엔드포인트 검증 통과: 지원 범위의 EC2 및 ENI 구성으로 확인됐습니다.';
@@ -1271,10 +1279,16 @@ function planAwsLocalPath(d,g,identity,direction){
   const ep=x=>({instance:id('instance',x?.instance_id),eni:id('network_interface',x?.eni_id),subnet:id('subnet',x?.subnet_id),vpc:id('vpc',x?.vpc_id),groups:x?.security_group_ids,ip:x?.private_ip});
   const src=ep(a),dst=ep(b), reply=direction==='response';
   const valid=x=>known.get(x.instance)==='instance'&&known.get(x.eni)==='network_interface'&&known.get(x.subnet)==='subnet'&&known.get(x.vpc)==='vpc'&&edge(x.eni,x.instance,'attached_to')&&edge(x.subnet,x.eni,'contains')&&edge(x.subnet,x.instance,'contains')&&edge(x.vpc,x.subnet,'contains');
-  if(pre.status!=='PASS'||!valid(src)||!valid(dst)||src.vpc!==dst.vpc||src.subnet===dst.subnet||src.ip!==(reply?d.scenario.destination_ip:d.scenario.source_ip)||dst.ip!==(reply?d.scenario.source_ip:d.scenario.destination_ip))return {...out,note:'지원 범위 또는 엔드포인트 근거 미확인'};
+  if(pre.status!=='PASS'||!valid(src)||!valid(dst)||src.vpc!==dst.vpc||src.ip!==(reply?d.scenario.destination_ip:d.scenario.source_ip)||dst.ip!==(reply?d.scenario.source_ip:d.scenario.destination_ip))return {...out,note:'지원 범위 또는 엔드포인트 근거 미확인'};
   out.anchors.push({id:src.eni,target:null,stage:'SOURCE_ENDPOINT',label:'출발 EC2 '+src.ip,status:'PASS'});
   for(const fid of lane.trace.slice(1)){
     const f=map.get(fid),e=f.evidence,x=f.stage.startsWith('DESTINATION')?dst:src;
+    if(src.subnet===dst.subnet&&f.status==='NOT_APPLICABLE'&&f.reason==='DIRECT_SAME_SUBNET_NO_NACL_BOUNDARY'&&f.stage.includes('_NACL_'))continue;
+    if(src.subnet===dst.subnet&&f.stage==='ROUTE_LOOKUP'&&f.status==='PASS'&&f.reason==='CONDITIONAL_SAME_SUBNET_DIRECT_DELIVERY'){
+      const guard=e.local_delivery?.configuration_guard,route=guard?.selected_route,table=id('route_table',guard?.route_table_id);
+      if(e.local_delivery?.status!=='ALLOW_CANDIDATE'||guard?.status!=='ACTIVE_ROUTE_CANDIDATE'||route?.GatewayId!=='local'||route?.State!=='active'||known.get(table)!=='route_table'||!edge(src.subnet,table,'uses_route_table')||!g.route_rules.some(q=>q.route_table===table&&q.target==='local'&&q.destination===route.DestinationCidrBlock&&q.status==='RESOLVED'&&q.observed_state==='active')){out.note='동일 Subnet local 구성 근거 불일치';out.stop=f.stage;return out;}
+      out.path_kind='SAME_SUBNET_DIRECT';out.note='동일 Subnet 직접 전달 가정 · NACL/Route Table 경유 없음';continue;
+    }
     let resource,target,label;
     const pass=f.status==='PASS'||(reply&&f.status==='CONDITIONAL');
     if(f.stage.includes('_SG_')){
@@ -1550,7 +1564,7 @@ function renderAwsLocalPath(d){
     path.dataset.source=a.a.id;path.dataset.target=b.a.id;path.dataset.direction=direction;path.dataset.stage=b.a.stage;
     const title=svgEl('title',{});title.textContent='논리적 검사 순서 · 물리 홉 아님: '+a.a.label+' → '+b.a.label;path.append(title);linkLayer.append(path);shown++;
   }
-  return ` · ${direction==='response'?'조건부 응답':'내부 요청'} 검사 연결 ${shown}/${Math.max(0,plan.anchors.length-1)}${note?' · '+note:''} · ${plan.complete?'분석상 목적지 후보':'목적지 도달 미확정/중단'} · ${plan.anchors.some(a=>a.stage==='ROUTE_LOOKUP'&&a.status==='PASS')?'local 확인 · NAT/IGW 미경유':'local 전달 미확정'} `;
+  return ` · ${direction==='response'?'조건부 응답':'내부 요청'} 검사 연결 ${shown}/${Math.max(0,plan.anchors.length-1)}${note?' · '+note:''} · ${plan.complete?'분석상 목적지 후보':'목적지 도달 미확정/중단'} · ${(plan.path_kind==='SAME_SUBNET_DIRECT'||plan.anchors.some(a=>a.stage==='ROUTE_LOOKUP'&&a.status==='PASS'))?'local 확인 · NAT/IGW 미경유':'local 전달 미확정'} `;
 }
 function renderOverlay(){
   overlayBar.hidden=mode!=='network_graph';

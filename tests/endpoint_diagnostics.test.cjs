@@ -1,0 +1,15 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'../frontend/static/endpoint_viewer.html'),'utf8');
+const code=html.split('// BEGIN LOCAL_DIAGNOSTICS')[1].split('// END LOCAL_DIAGNOSTICS')[0].replace(/^.*\n/,'');const c=vm.createContext({});vm.runInContext(code,c);
+const row=(stage,status,reason,extra={})=>({stage,status,reason,evaluation_mode:'PREDICTED_PATH',...extra});
+const leg=(status,stop,request=[],extra={})=>({f:{request_status:status,first_request_stop:stop,request,...extra}});
+test('conditional allow is not service authorization',()=>assert.match(c.legDiagnosis(leg('CONDITIONAL_CANDIDATE',null),false).body,/Endpoint Policy, IAM, TLS 및 AWS API 성공은 미검증/));
+test('missing managed list is unknown',()=>{const x=c.legDiagnosis(leg('UNKNOWN','ENDPOINT_SCOPE',[row('ENDPOINT_SCOPE','UNKNOWN','GATEWAY_SERVICE_PREFIX_LIST_UNCONFIRMED')]),false);assert.match(x.title,/최초 미확정/);assert.match(x.body,/관리형 Prefix List/);});
+test('missing interface DNS remains unknown',()=>assert.match(c.explainReason({reason:'ENDPOINT_DNS_ENI_EVIDENCE_MISSING'}),/DNS 응답과 ENI 연결 증거가 없습니다/));
+test('alternate route does not assert connectivity',()=>{const x=c.legDiagnosis(leg('UNKNOWN','GATEWAY_ROUTE',[row('GATEWAY_ROUTE','UNKNOWN','ALTERNATE_ROUTE_NOT_COMPOSED',{route_evidence:{matched_cidr:'198.51.100.80/32'}})]),false);assert.match(x.body,/대체 경로 전체 통신은 평가하지 않았습니다/);assert.match(x.body,/198.51.100.80\/32/);});
+test('first NP block and independent route unknown',()=>{const a=row('SOURCE_NETWORK_POLICY_EGRESS','BLOCKED','ISOLATED_NO_MATCHING_ALLOW',{selected_policies:['policy-demo']});const b=row('GATEWAY_ROUTE','UNKNOWN','ALTERNATE_ROUTE_NOT_COMPOSED',{evaluation_mode:'INDEPENDENT_CHECK'});const x=c.legDiagnosis(leg('BLOCKED',a.stage,[a,b]),false);assert.match(x.body,/policy-demo/);assert.match(x.additional[0],/대체 경로/);});
+test('blocked request does not establish reply',()=>assert.match(c.legDiagnosis(leg('BLOCKED','SOURCE_SG_EGRESS',[],{response_status:'NOT_EVALUATED'}),true).title,/응답 경로 미평가/));
+test('gateway return remains conditional',()=>assert.match(c.explainReason({reason:'REQUIRES_SERVICE_RETURN_TO_SOURCE'}),/서비스 측 경로는 미검증/));
+test('reverse stop separate',()=>{const a=row('DESTINATION_NACL_INGRESS','BLOCKED','MATCHING_ACL_RULE',{acl_id:'acl-demo',rule_number:100,evaluation_mode:'CONDITIONAL_CHECK'});const x=c.legDiagnosis(leg('CONDITIONAL_CANDIDATE',null,[],{response_status:'BLOCKED',conditional_first_response_stop:a.stage,response:[a]}),true);assert.match(x.body,/규칙 100.*차단/);});
+test('unknown reason is explicit',()=>assert.match(c.explainReason({reason:'__proto__'}),/등록되지 않은/));
+test('managed prefix match does not invent version',()=>assert.match(c.explainReason({reason:'MATCHING_IPV4_PREFIX_LIST_RULE'}),/제출된 Prefix List 증거/));
