@@ -1,0 +1,24 @@
+{
+  "schema": "cloudpath-s3-unified-v1",
+  "digests": {
+    "authorization": "f5c49c6add712bb977ecb52bba284b07723404536d4ecf82d810b8e4b16a0afb",
+    "identity": "da696ebdba1c6ce26bad22b9566e53e29e9396d9297fb18e4fc74a18154fd056",
+    "limits": "d9591286518b209b81388e86fd489397cf7025b7798e53ad96bbf995ad2d6144",
+    "organization": "34b4906db994fa08f4a1d150953f6beb9a3363dc32454fd12a7720b26cf9bb89",
+    "encryption": "092ef96b78bf79d84ffec5d95513d62a0311281afd28a5867c514479bd3c1c25",
+    "acl": "7f7eba9832d683d5b8a474455da83d9d85416331291a5241928ef21b0543d0a1",
+    "network_binding": "cba2904a3ae289729ec674ece45a26ef9a2c3e8f3d457eef2e779432d8948e63"
+  },
+  "observed_at": {
+    "authorization": "2026-11-25T11:00:00+00:00",
+    "identity": "2026-11-25T10:59:50+00:00",
+    "limits": "2026-11-25T11:00:00+00:00",
+    "organization": "2026-11-25T11:00:00+00:00",
+    "encryption": "2026-11-25T11:00:00+00:00",
+    "acl": "2026-11-25T11:00:00+00:00",
+    "network_binding": "2026-11-25T11:00:00+00:00"
+  },
+  "request_at": "2026-11-25T11:00:00+00:00",
+  "same_hypothetical_request": true,
+  "network_result_identity": "sha256-s3-network-result-v1:c109ff6721bc5901f5452a5cfeba46c2c96e6245d1bbdf923116eccda2ec3505"
+}

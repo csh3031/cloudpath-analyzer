@@ -1,0 +1,13 @@
+{
+  "schema": "cloudpath-s3-kms-v1",
+  "authorization_input_identity": "sha256-s3-authz-v1:f5c49c6add712bb977ecb52bba284b07723404536d4ecf82d810b8e4b16a0afb",
+  "object": {
+    "resource": "arn:aws:s3:::cloudpath-demo-bucket/reports/demo.json",
+    "metadata_complete": true,
+    "encryption_mode": "SSE_S3",
+    "region": "ap-northeast-2",
+    "bucket_key_enabled": null,
+    "key_arn": null
+  },
+  "key": null
+}

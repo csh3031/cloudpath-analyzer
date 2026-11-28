@@ -1,0 +1,17 @@
+{
+  "schema": "cloudpath-iam-permission-limits-v1",
+  "authorization_input_identity": "sha256-s3-authz-v1:f5c49c6add712bb977ecb52bba284b07723404536d4ecf82d810b8e4b16a0afb",
+  "identity_input_identity": "sha256-s3-identity-v1:da696ebdba1c6ce26bad22b9566e53e29e9396d9297fb18e4fc74a18154fd056",
+  "boundary": {
+    "state": "ABSENT",
+    "complete": true,
+    "policy": null
+  },
+  "session": {
+    "state": "ABSENT",
+    "complete": true,
+    "session_kind": "ASSUMED_ROLE",
+    "inline_document": null,
+    "managed_policies": []
+  }
+}

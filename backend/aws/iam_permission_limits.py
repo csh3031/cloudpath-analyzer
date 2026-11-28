@@ -46,13 +46,13 @@ def _eval(docs, request, context):
     return {'status':r['status'], 'reason':'ASSERTED_POLICY_EVALUATED', 'evaluation':r}
 
 
-def analyze_iam_permission_limits(authorization_raw, identity_raw=None, limits_raw=None):
+def analyze_iam_permission_limits(authorization_raw, identity_raw=None, limits_raw=None, *, cross_account=False):
     """Assess direct identity grant path for the same hypothetical S3 request.
 
     A blocked identity grant path is not a final denial: resource grants may differ.
     The sidecar is asserted, not authenticated, and no real session is identified.
     """
-    identity = analyze_s3_identity(authorization_raw, identity_raw)
+    identity = analyze_s3_identity(authorization_raw, identity_raw, cross_account=cross_account)
     auth = identity['authorization']
     result = {'analysis_type':'STATIC_IAM_IDENTITY_GRANT_LIMITS', 'identity':identity,
               'limits_input_identity':None, 'boundary':_unknown('NOT_EVALUATED'),
@@ -115,7 +115,9 @@ def analyze_iam_permission_limits(authorization_raw, identity_raw=None, limits_r
             docs = ([s['inline_document']] if s['inline_document'] is not None else []) + [row['document'] for row in s['managed_policies']]
             sr = _eval(docs,request,context)
     result.update(boundary=br,session=sr)
-    base = auth['layers']['identity']['status']
+    # G1 intentionally has no evaluated layers for cross-account requests.
+    base = (_layer(a['policies']['identity'], a['complete']['identity'], request, context, 'identity')['status']
+            if cross_account and account != request['bucket_account'] else auth['layers']['identity']['status'])
     statuses = [base,br['status'],sr['status']]
     if 'EXPLICIT_DENY' in statuses:
         status,reason = 'EXPLICIT_DENY_CANDIDATE','MATCHING_ASSERTED_DENY'

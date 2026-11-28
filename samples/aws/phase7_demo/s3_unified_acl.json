@@ -1,0 +1,28 @@
+{
+  "schema": "cloudpath-s3-acl-v1",
+  "authorization_input_identity": "sha256-s3-authz-v1:f5c49c6add712bb977ecb52bba284b07723404536d4ecf82d810b8e4b16a0afb",
+  "ownership": {
+    "resource": "arn:aws:s3:::cloudpath-demo-bucket/reports/demo.json",
+    "complete": true,
+    "mode": "BucketOwnerEnforced",
+    "bucket_account": "123456789012",
+    "resource_owner_account": "123456789012"
+  },
+  "public_access": {
+    "bucket_flags": {
+      "BlockPublicAcls": false,
+      "IgnorePublicAcls": false,
+      "BlockPublicPolicy": false,
+      "RestrictPublicBuckets": false
+    },
+    "account_flags": {
+      "BlockPublicAcls": false,
+      "IgnorePublicAcls": false,
+      "BlockPublicPolicy": false,
+      "RestrictPublicBuckets": false
+    },
+    "account_includes_org_controls": true,
+    "bucket_policy_public": false
+  },
+  "acl": null
+}

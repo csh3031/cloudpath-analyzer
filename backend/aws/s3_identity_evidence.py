@@ -62,7 +62,7 @@ def _rows(rows, fields):
     return rows
 
 
-def analyze_s3_identity(authorization_raw, identity_raw=None):
+def analyze_s3_identity(authorization_raw, identity_raw=None, *, cross_account=False):
     """Correlate a hypothetical IAM ARN and identity document set; never infer effective session."""
     auth=analyze_s3_authorization(authorization_raw)
     result={'analysis_type':'STATIC_AWS_S3_IDENTITY_ATTACHMENT_CONSTRAINTS',
@@ -104,7 +104,7 @@ def analyze_s3_identity(authorization_raw, identity_raw=None):
         return stop('IAM_AUTHORIZATION_IDENTITY_MISMATCH')
     if not start<=end<=request_at or (request_at-start).total_seconds()>300:
         return stop('IAM_EVIDENCE_TIME_SCOPE_UNCONFIRMED')
-    if p['arn']!=auth['scenario']['principal_arn'] or account!=auth['scenario']['bucket_account']:
+    if p['arn']!=auth['scenario']['principal_arn'] or (not cross_account and account!=auth['scenario']['bucket_account']):
         return stop('IAM_PRINCIPAL_SCOPE_MISMATCH')
     if p!=q:
         return stop('IAM_PRINCIPAL_CHANGED')
@@ -149,5 +149,6 @@ def analyze_s3_identity(authorization_raw, identity_raw=None):
         return stop('IAM_PERMISSIONS_BOUNDARY_PENDING')
     if not json.loads(authorization_raw)['complete']['identity']:
         return stop('IAM_AUTHORIZATION_IDENTITY_INCOMPLETE')
+    # Attachment correlation does not itself authorize cross-account access.
     result['correlated_authorization_status']=auth['authorization_status']
     return stop('IAM_ASSERTED_ATTACHMENT_CORRELATED')

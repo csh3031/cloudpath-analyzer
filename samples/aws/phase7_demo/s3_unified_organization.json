@@ -1,0 +1,14 @@
+{
+  "schema": "cloudpath-iam-organization-limits-v1",
+  "authorization_input_identity": "sha256-s3-authz-v1:f5c49c6add712bb977ecb52bba284b07723404536d4ecf82d810b8e4b16a0afb",
+  "account_id": "123456789012",
+  "organization_id": null,
+  "management_account_id": null,
+  "membership": "STANDALONE",
+  "scope_complete": true,
+  "principal_kind": "IAM_ROLE",
+  "scp_state": "DISABLED",
+  "rcp_state": "DISABLED",
+  "path_complete": false,
+  "levels": []
+}
